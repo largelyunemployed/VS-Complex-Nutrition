@@ -73,6 +73,10 @@ Turning one module off never breaks the others, and with all modules off the gam
 - **Water-soluble vitamins:** C, B-complex
 - **Minerals:** calcium, iron, potassium
 
+## Compatibility with other food mods
+
+Foods from other mods work straight away, using an estimate based on their vanilla food category. To give them proper numbers, a mod (or a modpack maker) only needs to add one JSON file, with no code and no hard dependency. The guide is in [docs/COMPATIBILITY.md](docs/COMPATIBILITY.md), and a ready-to-fill compat mod is in [templates/compat-mod](templates/compat-mod/).
+
 ## Inspiration
 
 The per-food nutrient profiles and diet-driven buffs are inspired by the metabolism system in SCUM, adapted to suit Vintage Story.

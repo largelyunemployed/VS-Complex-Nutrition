@@ -54,6 +54,11 @@ namespace ComplexNutrition.Core
                     .WithArgs(sapi.ChatCommands.Parsers.Word("container"), sapi.ChatCommands.Parsers.Float("servings"), sapi.ChatCommands.Parsers.All("ingredients"))
                     .HandleWith(args => MealCommand(sapi, (string)args[0], (float)args[1], (string)args[2]))
                 .EndSubCommand()
+                .BeginSubCommand("template")
+                    .WithDescription("Write a ready-to-edit profile file for every food on the category estimate, optionally only one mod's (by domain), to ModData/complexnutrition/")
+                    .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("domain"))
+                    .HandleWith(args => TextCommandResult.Success(WriteTemplate(sapi, args.Parsers[0].IsMissing ? null : (string)args[0])))
+                .EndSubCommand()
                 .BeginSubCommand("dump")
                     .WithDescription("Write every food item, its vanilla values and its profile to ModData/complexnutrition/foods.json")
                     .HandleWith(_ => TextCommandResult.Success(DumpFoods(sapi)))
@@ -196,6 +201,39 @@ namespace ComplexNutrition.Core
             var sb = new System.Text.StringBuilder();
             dish.Collectible.GetHeldItemInfo(new DummySlot(dish), sb, sapi.World, false);
             return TextCommandResult.Success($"{containerCode} with {ingredientList}:\n{sb}");
+        }
+
+        /// <summary>
+        /// Writes a foodprofiles file covering every food that has no profile of its own (optionally one domain),
+        /// pre-filled with the category estimate it gets today, so a modder only has to correct the numbers.
+        /// </summary>
+        private string WriteTemplate(ICoreServerAPI sapi, string domain)
+        {
+            var profiles = new List<object>();
+            foreach (var (coll, vanilla, resolved) in Foods.Survey(sapi.World).OrderBy(t => t.coll.Code.ToString()))
+            {
+                if (resolved == null || !resolved.IsFallback) continue;
+                if (domain != null && !string.Equals(coll.Code.Domain, domain, StringComparison.OrdinalIgnoreCase)) continue;
+                profiles.Add(new
+                {
+                    code = coll.Code.ToString(),
+                    portionGrams = (float)Math.Round(resolved.PortionGrams),
+                    portionUnit = resolved.IsLiquid ? "litre" : "item",
+                    per100g = resolved.Profile.Per100g,
+                    notes = $"TODO {coll.GetHeldItemName(new ItemStack(coll))}: {vanilla.Category} category estimate, sized from satiety {vanilla.Satiety}. Set a real weight and real values, or replace per100g with \"like\": \"<vanilla item code>\"."
+                });
+            }
+            if (profiles.Count == 0) return domain == null ? "Every food has a profile; nothing to write." : $"No foods from '{domain}' are on the category estimate.";
+
+            var file = new Dictionary<string, object>
+            {
+                ["_comment"] = "Complex Nutrition food profiles. Put this file in assets/<your mod id>/config/foodprofiles/. See docs/COMPATIBILITY.md in the Complex Nutrition repo.",
+                ["profiles"] = profiles
+            };
+            string dir = sapi.GetOrCreateDataPath(Path.Combine("ModData", ModId));
+            string path = Path.Combine(dir, $"template-{domain ?? "all"}.json");
+            File.WriteAllText(path, JsonConvert.SerializeObject(file, Formatting.Indented));
+            return $"Wrote {profiles.Count} foods to {path}";
         }
 
         private string DumpFoods(ICoreServerAPI sapi)

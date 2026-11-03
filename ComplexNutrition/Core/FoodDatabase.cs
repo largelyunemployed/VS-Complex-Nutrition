@@ -36,7 +36,7 @@ namespace ComplexNutrition.Core
     /// <summary>
     /// Holds every food profile and answers "what is in this item?".
     /// Profiles are JSON assets under config/foodprofiles/ in any domain, so other mods
-    /// can add their own files or patch ours.
+    /// can add their own files (see docs/COMPATIBILITY.md), override ours by priority, or patch ours.
     /// </summary>
     public class FoodDatabase
     {
@@ -58,6 +58,8 @@ namespace ComplexNutrition.Core
             itemCache.Clear();
             blockCache.Clear();
 
+            // Profiles may come from any mod: every config/foodprofiles/*.json in every asset domain is read.
+            var loaded = new List<(FoodProfile profile, string file)>();
             foreach (var asset in api.Assets.GetManyInCategory("config", "foodprofiles/", null, true))
             {
                 if (!asset.Name.EndsWith(".json", StringComparison.OrdinalIgnoreCase)) continue;
@@ -71,26 +73,90 @@ namespace ComplexNutrition.Core
                     api.Logger.Error("[complexnutrition] Could not read {0}: {1}", asset.Location, e.Message);
                     continue;
                 }
-
+                if (file?.Profiles == null) continue;
                 foreach (var p in file.Profiles)
                 {
-                    if (string.IsNullOrWhiteSpace(p.Code)) continue;
-                    WarnUnknownNutrients(api, registry, p, asset.Location.ToString());
-                    var loc = new AssetLocation(p.Code);
-                    if (loc.Path.Contains('*'))
-                    {
-                        wildcards.Add((loc, p));
-                    }
-                    else if (!exact.TryAdd(loc.ToString(), p))
-                    {
-                        api.Logger.Warning("[complexnutrition] {0} has a second profile in {1}; keeping the first.", loc, asset.Location);
-                    }
+                    if (p == null || string.IsNullOrWhiteSpace(p.Code)) continue;
+                    loaded.Add((p, asset.Location.ToString()));
                 }
             }
+
+            // Higher priority first; equal priorities keep load order and the first one wins.
+            var winners = new Dictionary<string, (int priority, string file)>();
+            foreach (var (p, fileName) in loaded.OrderByDescending(x => x.profile.Priority))
+            {
+                var loc = new AssetLocation(p.Code);
+                string key = loc.ToString();
+                if (winners.TryGetValue(key, out var won))
+                {
+                    if (won.priority == p.Priority)
+                        api.Logger.Warning("[complexnutrition] {0} has profiles in both {1} and {2} at priority {3}; keeping {1}. Set \"priority\" to choose.", key, won.file, fileName, p.Priority);
+                    continue;
+                }
+                winners[key] = (p.Priority, fileName);
+                if (loc.Path.Contains('*')) wildcards.Add((loc, p));
+                else exact[key] = p;
+            }
+
+            foreach (var (p, fileName) in loaded)
+            {
+                if (winners.TryGetValue(new AssetLocation(p.Code).ToString(), out var w) && w.file == fileName)
+                {
+                    ResolveLike(api, p, fileName, new HashSet<FoodProfile>());
+                    WarnUnknownNutrients(api, registry, p, fileName);
+                }
+            }
+
+            // Drop profiles that ended up unusable, so those foods use the category estimate instead.
+            foreach (var key in exact.Where(kv => !IsUsable(kv.Value)).Select(kv => kv.Key).ToList())
+            {
+                api.Logger.Warning("[complexnutrition] Profile {0} has no portionGrams or no nutrients; using the category estimate instead.", key);
+                exact.Remove(key);
+            }
+            wildcards.RemoveAll(w => !IsUsable(w.profile));
 
             var fallbackAsset = api.Assets.TryGet(new AssetLocation(ComplexNutritionModSystem.ModId, FallbackPath));
             Fallbacks = fallbackAsset?.ToObject<FoodFallbackFile>() ?? new FoodFallbackFile();
             foreach (var kv in Fallbacks.ByCategory) WarnUnknownNutrients(api, registry, kv.Value, FallbackPath);
+        }
+
+        private static bool IsUsable(FoodProfile p) => p.PortionGrams > 0 && p.Per100g != null && p.Per100g.Count > 0;
+
+        /// <summary>Fills a profile from the food named in its "like" field, then applies "scale".</summary>
+        private void ResolveLike(ICoreAPI api, FoodProfile p, string fileName, HashSet<FoodProfile> visiting)
+        {
+            if (!visiting.Add(p)) return;
+            if (!string.IsNullOrWhiteSpace(p.Like))
+            {
+                var baseProfile = FindOwnProfile(new AssetLocation(p.Like));
+                if (baseProfile == null || baseProfile == p)
+                {
+                    api.Logger.Warning("[complexnutrition] {0}: profile {1} is \"like\" {2}, which has no profile.", fileName, p.Code, p.Like);
+                }
+                else
+                {
+                    ResolveLike(api, baseProfile, fileName, visiting);   // in case the base is itself "like" something
+                    var merged = new Dictionary<string, float>(baseProfile.Per100g ?? new Dictionary<string, float>());
+                    if (p.Per100g != null) foreach (var kv in p.Per100g) merged[kv.Key] = kv.Value;
+                    p.Per100g = merged;
+                    if (p.PortionGrams <= 0) p.PortionGrams = baseProfile.PortionGrams;
+                    p.PortionUnit ??= baseProfile.PortionUnit;
+                    p.Source ??= baseProfile.Source;
+                    p.Notes ??= "Based on " + p.Like + ".";
+                }
+                p.Like = null;   // resolved once
+            }
+            if (p.Scale != null && p.Per100g != null)
+            {
+                p.Scale.TryGetValue("all", out var all);
+                foreach (var key in p.Per100g.Keys.ToList())
+                {
+                    float f = p.Scale.TryGetValue(key, out var s) ? s : 1f;
+                    if (all > 0) f *= all;
+                    p.Per100g[key] *= f;
+                }
+                p.Scale = null;
+            }
         }
 
         private static void WarnUnknownNutrients(ICoreAPI api, NutrientRegistry registry, FoodProfile p, string where)

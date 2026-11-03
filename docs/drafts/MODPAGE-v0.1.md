@@ -47,9 +47,9 @@ A few honest caveats:
 
 ## For modpack makers and other modders
 
-- Food data lives in JSON (`assets/complexnutrition/config/foodprofiles/`) and can be patched like any other asset.
-- Foods from other mods get an estimated profile from their vanilla food category, and the server log lists every one, so you know which ones to fill in.
-- Server admins can run `/cnutrition coverage` to see that list in game, and `/cnutrition info <item code>` to see any food's numbers.
+- Foods from other mods work out of the box: each gets an estimate from its vanilla food category, and the server log lists every one, so you know which ones to fill in.
+- Adding real data for them takes one JSON file and no code. Food mods can include it with no dependency (it's ignored without Complex Nutrition), or anyone can ship it as a small compat mod. `/cnutrition template <mod id>` writes a pre-filled file for every food in a mod, and a profile can just say "like a vanilla blueberry". The guide and a template compat mod are on [GitHub](https://github.com/largelyunemployed/VS-Complex-Nutrition/blob/main/docs/COMPATIBILITY.md).
+- Server admins can run `/cnutrition coverage` to see the foods still on an estimate, and `/cnutrition info <item code>` to see any food's numbers.
 
 ## Installation
 

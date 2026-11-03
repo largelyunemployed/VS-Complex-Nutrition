@@ -28,8 +28,26 @@ namespace ComplexNutrition.Core
         /// <summary>Weight of one in-game portion in grams. For liquids, grams per litre.</summary>
         [JsonProperty("portionGrams")] public float PortionGrams;
 
-        /// <summary>"item" (one item or block) or "litre" (liquid portions).</summary>
-        [JsonProperty("portionUnit")] public string PortionUnit = "item";
+        /// <summary>"item" (one item or block) or "litre" (liquid portions). Left out, it means "item",
+        /// or the unit of the <see cref="Like"/> food.</summary>
+        [JsonProperty("portionUnit")] public string PortionUnit;
+
+        /// <summary>
+        /// Optional item code of a food that already has a profile (for example "game:fruit-blueberry").
+        /// Its per-100 g values are copied, then any <see cref="Per100g"/> entries here replace them,
+        /// and <see cref="Scale"/> is applied. portionGrams and portionUnit are copied too when left out.
+        /// Meant for other mods' foods that are close to a vanilla one.
+        /// </summary>
+        [JsonProperty("like")] public string Like;
+
+        /// <summary>Optional per-nutrient multipliers applied after <see cref="Like"/> ("all" scales every nutrient).</summary>
+        [JsonProperty("scale")] public Dictionary<string, float> Scale;
+
+        /// <summary>
+        /// When two files give a profile for the same code, the higher priority wins (default 0;
+        /// this mod's own files use 0). Use a higher number to override a value this mod ships.
+        /// </summary>
+        [JsonProperty("priority")] public int Priority;
 
         /// <summary>Nutrient code to amount per 100 g, in the unit the registry gives for that nutrient.</summary>
         [JsonProperty("per100g")] public Dictionary<string, float> Per100g = new();

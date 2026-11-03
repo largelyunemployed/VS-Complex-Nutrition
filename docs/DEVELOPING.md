@@ -40,6 +40,7 @@ The log should show `Loaded 14 nutrients and 164 food profiles`, `Nutrient info 
 
 - `/cnutrition coverage` lists foods without their own profile.
 - `/cnutrition info game:fruit-blueberry` prints that item's full tooltip, including our block, through the game's own tooltip code.
+- `/cnutrition template [domain]` writes a ready-to-edit profile file for every food still on the category estimate (one mod's, or all) to `ModData/complexnutrition/template-<domain>.json`.
 - `/cnutrition dump` writes every food with its vanilla values to `ModData/complexnutrition/foods.json` (this is how `tools/data/vanilla_foods_1.22.7.json` was made).
 
 ## Changing food data
@@ -60,4 +61,4 @@ The script refuses to run if any vanilla food is left without an entry. After a 
 
 ## For other mods
 
-Add a JSON file under `assets/<yourdomain>/config/foodprofiles/` in the same format, or patch ours. Any food without a profile gets its vanilla category's template, sized by its satiety, and is listed in the server log.
+See [COMPATIBILITY.md](COMPATIBILITY.md). In short: any mod can add a JSON file under `assets/<yourdomain>/config/foodprofiles/` (profiles can copy a vanilla food with `like`, adjust it with `scale`, and override ours with `priority`), and `/cnutrition template <domain>` writes a pre-filled file for a mod's foods. A ready-made content mod is in `templates/compat-mod/`. Any food without a profile gets its vanilla category's template, sized by its satiety, and is listed in the server log.
