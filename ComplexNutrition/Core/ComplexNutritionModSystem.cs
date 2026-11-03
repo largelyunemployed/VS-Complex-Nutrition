@@ -155,17 +155,13 @@ namespace ComplexNutrition.Core
             if (coll == null || coll.Id == 0) return TextCommandResult.Error("No item or block called " + loc);
             var resolved = Foods.Resolve(coll);
             if (resolved == null) return TextCommandResult.Success(loc + " has no nutrient data (not a food, or a meal made from ingredients).");
-            // Run the item's real tooltip pipeline, so this also checks that our behaviour is attached.
-            var sb = new System.Text.StringBuilder();
-            coll.GetHeldItemInfo(new DummySlot(new ItemStack(coll)), sb, sapi.World, true);
-            string text = sb.ToString();
-            bool attached = coll.CollectibleBehaviors.Any(b => b is CollectibleBehaviorNutrientInfo);
-            return TextCommandResult.Success($"{loc} (nutrient behaviour attached: {attached}) full tooltip:\n{text}");
+            // The tooltip behaviour lives on the client only, so build the same block directly.
+            return TextCommandResult.Success($"{loc}:" + CollectibleBehaviorNutrientInfo.BuildTooltip(Nutrients, resolved, true));
         }
 
         /// <summary>
         /// Builds a dish the way the cooking pot stores it (one serving's ingredients plus a serving count)
-        /// and shows its full tooltip. For pies, the ingredients are the whole pie's and servings is the slice count.
+        /// and shows its nutrient block. For pies, the ingredients are the whole pie's and servings is the slice count.
         /// </summary>
         private TextCommandResult MealCommand(ICoreServerAPI sapi, string containerCode, float servings, string ingredientList)
         {
@@ -198,9 +194,9 @@ namespace ComplexNutrition.Core
                 container.SetContents("meatystew", dish, stacks.ToArray(), servings);
             }
 
-            var sb = new System.Text.StringBuilder();
-            dish.Collectible.GetHeldItemInfo(new DummySlot(dish), sb, sapi.World, false);
-            return TextCommandResult.Success($"{containerCode} with {ingredientList}:\n{sb}");
+            var meal = MealNutrition.Compute(this, sapi.World, dish);
+            if (meal == null) return TextCommandResult.Error("Could not work out that dish.");
+            return TextCommandResult.Success($"{containerCode} with {ingredientList}:" + CollectibleBehaviorNutrientInfo.BuildMealTooltip(Nutrients, meal, false));
         }
 
         /// <summary>

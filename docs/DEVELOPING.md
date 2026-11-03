@@ -39,7 +39,7 @@ dotnet VintagestoryServer.dll --dataPath ./data
 The log should show `Loaded 14 nutrients and 164 food profiles`, `Nutrient info added to 341 foods`, and a coverage line listing the three insect foods on the fallback. Then, in the server console:
 
 - `/cnutrition coverage` lists foods without their own profile.
-- `/cnutrition info game:fruit-blueberry` prints that item's full tooltip, including our block, through the game's own tooltip code.
+- `/cnutrition info game:fruit-blueberry` prints the nutrient block that item's tooltip shows.
 - `/cnutrition template [domain]` writes a ready-to-edit profile file for every food still on the category estimate (one mod's, or all) to `ModData/complexnutrition/template-<domain>.json`.
 - `/cnutrition dump` writes every food with its vanilla values to `ModData/complexnutrition/foods.json` (this is how `tools/data/vanilla_foods_1.22.7.json` was made).
 
