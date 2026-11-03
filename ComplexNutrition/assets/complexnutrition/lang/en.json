@@ -1,0 +1,24 @@
+{
+	"nutrient-calories": "Calories",
+	"nutrient-protein": "Protein",
+	"nutrient-carbohydrate": "Carbohydrate",
+	"nutrient-fat": "Fat",
+	"nutrient-fiber": "Fiber",
+	"nutrient-vitaminA": "Vitamin A",
+	"nutrient-vitaminD": "Vitamin D",
+	"nutrient-vitaminE": "Vitamin E",
+	"nutrient-vitaminK": "Vitamin K",
+	"nutrient-vitaminC": "Vitamin C",
+	"nutrient-vitaminB": "B vitamins",
+	"nutrient-calcium": "Calcium",
+	"nutrient-iron": "Iron",
+	"nutrient-potassium": "Potassium",
+
+	"tooltip-header-portion": "<font color=\"#c8b48c\">Nutrition per portion (about {0} g):</font>",
+	"tooltip-header-litre": "<font color=\"#c8b48c\">Nutrition per litre:</font>",
+	"tooltip-macros": "{0} kcal · protein {1} g · carbs {2} g · fat {3} g · fiber {4} g",
+	"tooltip-dv": "{0} {1}%",
+	"tooltip-richin": "Daily value: {0}",
+	"tooltip-estimated": "<font color=\"#a0a0a0\">Estimated from its food category</font>",
+	"tooltip-source": "<font color=\"#a0a0a0\">Source: USDA FoodData Central, {0} (FDC {1})</font>"
+}

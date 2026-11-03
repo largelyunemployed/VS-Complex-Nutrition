@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Complex Nutrition roadmap</title>
+<style>
+  @font-face { font-family: 'Fell'; src: url(fonts/IMFellEnglish-Regular.ttf); }
+  @font-face { font-family: 'Fell'; font-style: italic; src: url(fonts/IMFellEnglish-Italic.ttf); }
+  @font-face { font-family: 'FellSC'; src: url(fonts/IMFellEnglishSC-Regular.ttf); }
+  html, body { margin: 0; background: #222; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg id="art" width="1920" height="720" viewBox="0 0 1920 720"></svg>
+<script src="common.js"></script>
+<script>
+// ===== Edit this list and re-run `node art/render.js` as versions ship. status: done | next | planned =====
+const MILESTONES = [
+  { v: 'v0.1',  title: 'Food data',              note: 'every vanilla food, USDA sourced', icon: 'wheat',   status: 'done' },
+  { v: 'v0.2',  title: 'Nutrient tracking',      note: 'plus the handbook guide',          icon: 'scales',  status: 'next' },
+  { v: 'v0.3',  title: 'Nutrition UI',           note: '',                                 icon: 'book',    status: 'planned' },
+  { v: 'v0.4',  title: 'Diet tiers & effects',   note: '',                                 icon: 'heart',   status: 'planned' },
+  { v: 'v0.5',  title: 'Health & effects UI',    note: '',                                 icon: 'flask',   status: 'planned' },
+  { v: 'v1.0',  title: 'Settings menu',          note: '',                                 icon: 'cog',     status: 'planned' },
+  { v: 'v1.01', title: 'Uptake modifiers',       note: 'stretch goal',                     icon: 'thermo',  status: 'planned' },
+  { v: 'v1.02', title: 'Exercise & fitness',     note: 'stretch goal',                     icon: 'boot',    status: 'planned' },
+  { v: 'v1.03', title: 'Who knows!',             note: 'suggestions welcome',              icon: 'question', status: 'planned' },
+];
+// ==========================================================================================================
+
+(async () => {
+await Promise.all(['72px FellSC', '28px Fell', 'italic 28px Fell'].map(f => document.fonts.load(f)));
+const W = 1920, H = 720;
+const svg = document.getElementById('art');
+addDefs(svg, W, H);
+parchment(svg, W, H, 9);
+
+// border rule, like a journal page
+const frame = el('g', { filter: 'url(#ink)', fill: 'none', stroke: INK }, svg);
+el('rect', { x: 30, y: 30, width: W - 60, height: H - 60, 'stroke-width': 3 }, frame);
+el('rect', { x: 40, y: 40, width: W - 80, height: H - 80, 'stroke-width': 1.2, 'stroke-opacity': 0.6 }, frame);
+
+const t = el('text', { x: 96, y: 118, 'font-family': 'FellSC', 'font-size': 72, fill: INK, filter: 'url(#ink)' }, svg);
+t.textContent = 'Complex Nutrition';
+const t2 = el('text', { x: 100, y: 156, 'font-family': 'Fell', 'font-style': 'italic', 'font-size': 32, fill: INK_SOFT }, svg);
+t2.textContent = 'the road ahead';
+const tEnd = t.getBBox().x + t.getBBox().width;
+icon(svg, 'bread', tEnd + 52, 92, 56, -8);
+icon(svg, 'carrot', tEnd + 112, 96, 56, 18);
+icon(svg, 'berry', tEnd + 166, 92, 50, 0);
+
+// node positions: a gentle zig-zag trail across the page
+const n = MILESTONES.length, x0 = 210, x1 = W - 210, NR = 56;
+const pts = MILESTONES.map((m, i) => ({ x: x0 + (x1 - x0) * i / (n - 1), y: i % 2 === 0 ? 470 : 330 }));
+
+let trail = `M${pts[0].x - 90},${pts[0].y + 40}`;
+trail += ` Q${pts[0].x - 40},${pts[0].y + 10} ${pts[0].x},${pts[0].y}`;
+for (let i = 1; i < n; i++) {
+  const a = pts[i - 1], b = pts[i], mx = (a.x + b.x) / 2;
+  trail += ` C${mx},${a.y} ${mx},${b.y} ${b.x},${b.y}`;
+}
+el('path', { d: trail, fill: 'none', stroke: INK_SOFT, 'stroke-width': 4, 'stroke-dasharray': '2 14', 'stroke-linecap': 'round', filter: 'url(#ink)' }, svg);
+
+const GLYPH = {
+  wheat(g) {
+    el('path', { d: 'M0,40 C0,10 2,-20 6,-42' }, g);
+    for (let i = 0; i < 4; i++) {
+      const y = -32 + i * 14;
+      el('path', { d: `M${3 - i * 0.6},${y} q-14,-4 -16,-16 q12,2 16,16 Z M${4 - i * 0.6},${y} q14,-4 16,-16 q-12,2 -16,16 Z` }, g);
+    }
+  },
+  scales(g) {
+    el('path', { d: 'M0,-40 L0,36 M-22,36 L22,36 M-34,-26 L34,-26 M-34,-26 L-46,6 M-34,-26 L-22,6 M34,-26 L22,6 M34,-26 L46,6' }, g);
+    el('path', { d: 'M-48,6 Q-34,22 -20,6 Z M20,6 Q34,22 48,6 Z' }, g);
+    el('circle', { cx: 0, cy: -42, r: 4 }, g);
+  },
+  book(g) {
+    el('path', { d: 'M0,-26 C-14,-34 -34,-34 -44,-28 L-44,30 C-34,24 -14,24 0,32 C14,24 34,24 44,30 L44,-28 C34,-34 14,-34 0,-26 Z M0,-26 L0,32' }, g);
+    for (const y of [-14, -2, 10]) el('path', { d: `M-34,${y} q14,-4 26,0 M8,${y} q14,-4 26,0`, 'stroke-width': 2.5 }, g);
+  },
+  heart(g) {
+    el('path', { d: 'M0,34 C-30,10 -44,-6 -40,-22 C-36,-38 -12,-40 0,-20 C12,-40 36,-38 40,-22 C44,-6 30,10 0,34 Z' }, g);
+    el('path', { d: 'M-26,-22 q4,-8 12,-8', 'stroke-width': 2.5 }, g);
+  },
+  flask(g) {
+    el('path', { d: 'M-10,-40 L10,-40 M-7,-40 L-7,-14 C-30,-4 -34,30 -14,38 L14,38 C34,30 30,-4 7,-14 L7,-40' }, g);
+    el('path', { d: 'M-24,14 C-10,8 10,20 24,12', 'stroke-width': 2.5 }, g);
+    el('path', { d: 'M-4,22 L4,22 M0,18 L0,26', 'stroke-width': 3 }, g);
+  },
+  cog(g) {
+    let d = '';
+    for (let i = 0; i < 8; i++) {
+      const a0 = (i / 8) * Math.PI * 2, a1 = a0 + Math.PI / 8, a2 = a0 + Math.PI / 4;
+      const p = (a, r) => `${r * Math.cos(a)},${r * Math.sin(a)}`;
+      d += (i === 0 ? 'M' : 'L') + p(a0 + 0.08, 38) + ' L' + p(a1 - 0.08, 38) + ' L' + p(a1 + 0.05, 28) + ' L' + p(a2 - 0.05, 28) + ' ';
+    }
+    el('path', { d: d + 'Z' }, g);
+    el('circle', { cx: 0, cy: 0, r: 11 }, g);
+  },
+  thermo(g) {
+    el('path', { d: 'M-7,18 L-7,-34 C-7,-44 7,-44 7,-34 L7,18' }, g);
+    el('circle', { cx: 0, cy: 28, r: 13 }, g);
+    el('path', { d: 'M0,28 L0,-20', 'stroke-width': 6, stroke: '#a8473a' }, g);
+    for (const y of [-24, -12, 0]) el('path', { d: `M10,${y} L18,${y}`, 'stroke-width': 2.5 }, g);
+    el('path', { d: 'M-30,-30 l0,16 M-38,-22 l16,0 M-35,-27 l10,10 M-35,-17 l10,-10', 'stroke-width': 2.5 }, g);
+  },
+  boot(g) {
+    el('path', { d: 'M-14,-40 L14,-40 L16,8 C30,10 42,16 42,30 L42,36 L-20,36 L-20,8 Z' }, g);
+    el('path', { d: 'M-20,26 L42,26 M-12,-28 L10,-28 M-12,-16 L10,-16', 'stroke-width': 2.5 }, g);
+    el('path', { d: 'M-40,-6 l12,0 M-44,6 l14,0 M-38,18 l10,0', 'stroke-width': 2.5 }, g);
+  },
+  question(g) {
+    el('path', { d: 'M-16,-18 C-16,-40 18,-42 18,-20 C18,-6 0,-4 0,10 L0,16', 'stroke-width': 6 }, g);
+    el('circle', { cx: 0, cy: 32, r: 4, fill: INK }, g);
+  }
+};
+
+const STATUS = {
+  done:    { ring: '#5f7238', fill: '#9fb070', label: 'done' },
+  next:    { ring: '#8b3a2a', fill: '#c97b5a', label: 'next' },
+  planned: { ring: INK, fill: null, label: 'planned' },
+};
+
+MILESTONES.forEach((m, i) => {
+  const p = pts[i], s = STATUS[m.status] || STATUS.planned;
+  const g = el('g', { transform: `translate(${p.x},${p.y})` }, svg);
+  el('circle', { r: NR, fill: PAPER }, g);
+  if (s.fill) el('circle', { r: NR, fill: s.fill, opacity: 0.55, filter: 'url(#wash)' }, g);
+  el('circle', { r: NR, fill: 'none', stroke: s.ring, 'stroke-width': m.status === 'planned' ? 3 : 5, filter: 'url(#ink)' }, g);
+  if (m.status === 'planned') el('circle', { r: NR - 8, fill: 'none', stroke: INK, 'stroke-width': 1.2, 'stroke-dasharray': '3 6', 'stroke-opacity': 0.6 }, g);
+  const gl = el('g', { transform: 'scale(0.74)', fill: 'none', stroke: INK, 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', filter: 'url(#ink)' }, g);
+  GLYPH[m.icon](gl);
+
+  // status marker: a small seal on the ring
+  const seal = el('g', { transform: `translate(${NR * 0.71},${-NR * 0.71})` }, g);
+  if (m.status === 'done') {
+    el('circle', { r: 17, fill: s.ring }, seal);
+    el('path', { d: 'M-8,0 L-2,7 L9,-7', fill: 'none', stroke: PAPER, 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, seal);
+  } else if (m.status === 'next') {
+    el('circle', { r: 17, fill: s.ring, filter: 'url(#ink)' }, seal);
+    el('circle', { r: 11, fill: 'none', stroke: '#e6b49a', 'stroke-width': 2 }, seal);
+    el('path', { d: 'M-5,-6 L5,0 L-5,6 Z', fill: '#f1d8c6' }, seal);
+  }
+
+  const below = i % 2 === 0;
+  const ys = below ? [NR + 44, NR + 76, NR + 102] : [-NR - 86, -NR - 54, -NR - 24];
+  const v = el('text', { x: 0, y: ys[0], 'text-anchor': 'middle', 'font-family': 'Fell', 'font-size': 38, fill: s.ring === INK ? INK : s.ring }, g);
+  v.textContent = m.v;
+  const tt = el('text', { x: 0, y: ys[1], 'text-anchor': 'middle', 'font-family': 'Fell', 'font-size': 28, fill: INK }, g);
+  tt.textContent = m.title;
+  if (m.note) {
+    const nt = el('text', { x: 0, y: ys[2], 'text-anchor': 'middle', 'font-family': 'Fell', 'font-style': 'italic', 'font-size': 21, fill: INK_SOFT }, g);
+    nt.textContent = m.note;
+  }
+});
+
+// legend
+const lg = el('g', { transform: `translate(${W - 560},104)`, 'font-family': 'Fell', 'font-size': 26, fill: INK }, svg);
+[['done', 'done'], ['next', 'up next'], ['planned', 'planned']].forEach(([k, label], i) => {
+  const s = STATUS[k], x = i * 175;
+  el('circle', { cx: x, cy: 0, r: 15, fill: k === 'planned' ? PAPER : s.ring, stroke: s.ring, 'stroke-width': 3 }, lg);
+  const tx = el('text', { x: x + 26, y: 9 }, lg);
+  tx.textContent = label;
+});
+const foot = el('text', { x: W / 2, y: H - 58, 'text-anchor': 'middle', 'font-family': 'Fell', 'font-style': 'italic', 'font-size': 24, fill: INK_SOFT }, svg);
+foot.textContent = 'Every module is optional: with all of them switched off, the game plays exactly like vanilla.';
+document.body.dataset.ready = '1';
+})();
+</script>
+</body>
+</html>

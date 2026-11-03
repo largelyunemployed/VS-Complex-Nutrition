@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>ComplexNutrition</AssemblyName>
+    <RootNamespace>ComplexNutrition</RootNamespace>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- Point this at your Vintage Story install (the folder holding VintagestoryAPI.dll),
+         or set the VINTAGE_STORY environment variable. -->
+    <VintageStoryPath Condition="'$(VintageStoryPath)' == ''">$(VINTAGE_STORY)</VintageStoryPath>
+    <ModVersion>0.1.0</ModVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VintageStoryPath)/VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>$(VintageStoryPath)/Lib/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="modinfo.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="modicon.png" CopyToOutputDirectory="PreserveNewest" Condition="Exists('modicon.png')" />
+    <None Include="assets/**/*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- Packs the build output into a mod zip that can be dropped into the game's Mods folder. -->
+  <Target Name="PackageMod" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <PropertyGroup>
+      <ModStageDir>$(BaseIntermediateOutputPath)modstage/</ModStageDir>
+      <ModZip>$(MSBuildProjectDirectory)/../release/complexnutrition_$(ModVersion).zip</ModZip>
+    </PropertyGroup>
+    <ItemGroup>
+      <ModFiles Include="$(OutDir)ComplexNutrition.dll;$(OutDir)ComplexNutrition.pdb;$(OutDir)modinfo.json" />
+      <ModFiles Include="$(OutDir)modicon.png" Condition="Exists('$(OutDir)modicon.png')" />
+      <ModAssets Include="$(OutDir)assets/**/*" />
+    </ItemGroup>
+    <RemoveDir Directories="$(ModStageDir)" />
+    <Copy SourceFiles="@(ModFiles)" DestinationFolder="$(ModStageDir)" />
+    <Copy SourceFiles="@(ModAssets)" DestinationFolder="$(ModStageDir)assets/%(RecursiveDir)" />
+    <MakeDir Directories="$(MSBuildProjectDirectory)/../release" />
+    <Delete Files="$(ModZip)" />
+    <ZipDirectory SourceDirectory="$(ModStageDir)" DestinationFile="$(ModZip)" />
+    <Message Importance="high" Text="Mod package: $(ModZip)" />
+  </Target>
+
+</Project>
