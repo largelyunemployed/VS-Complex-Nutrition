@@ -12,7 +12,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - Mod feasibility testing: the mod loads cleanly on a 1.22.7 server and a data table of every food is in [FOOD_DATA.md](FOOD_DATA.md).
 - VS Mod DB thumbnail, description and roadmap drafts.
 
-## v0.2: Nutrient tracking and the handbook guide (this release)
+## v0.2: Nutrient tracking and the handbook guide (released)
 
 - Your body gets a reserve for each nutrient. Eating fills it, time drains it toward a daily target.
 - Meals, stews and pies count their ingredients, split by servings.
@@ -32,6 +32,8 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - Effects build over in-game weeks; one bad meal does nothing.
 - Different nutrients fail on different clocks: vitamin C and B in days, minerals in a week or two, vitamins A, D, E and K over weeks.
 - Specific deficiencies have their own effects (scurvy slows healing, low iron costs max health, and so on), each with its own switch.
+- Every nutrient gets a gameplay effect of its own, even if a small one.
+- A balanced, healthy micronutrient profile raises how much protein, carbohydrate, fat and fiber you can store, and with them the calorie store.
 
 ## v0.5: Health and effects UI
 
@@ -44,19 +46,25 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - Allergens follow real allergen families mapped to vanilla foods (dairy, egg, fish, wheat-type grains, nightshades, stone fruit, berries and so on). Flax is excluded unless a sub-setting allows it.
 - You find them by tasting. Reactions, including from meals and pies, hurt and slow you for a while but never kill.
 
-## v1.0: Settings menu
+## v0.7: Body composition
 
-- Every module and number adjustable in game, with sliders and toggles, as well as in the config file and by server command.
+- A simple scale from lean and muscular to heavier and fatter, with different gameplay effects for different builds.
+- Driven by calorie surplus or deficit and how active you are: a surplus with activity builds muscle and loses fat, a surplus without activity adds fat, a deficit with activity loses muscle and fat, and a deficit without it loses a little of both.
+- Possible effects: more fat insulates against the cold and softens blows a little; more muscle hits harder and works faster but burns far more calories.
 
-## v1.01: Nutrient uptake modifiers (stretch goal)
+## v0.8: Exercise and fitness
+
+- Sprinting, swimming, mining and hauling slowly build fitness, but only while you're eating well.
+
+## v0.9: Nutrient uptake modifiers
 
 - Cold, injury and intoxication change how much you absorb and how fast you burn through it.
 - A hook for disease mods to plug into.
 
-## v1.02: Exercise and fitness (stretch goal)
+## v1.0: Settings menu
 
-- Sprinting, swimming, mining and hauling slowly build fitness, but only while you're eating well.
+- Every module and number adjustable in game, with sliders and toggles, as well as in the config file and by server command.
 
-## v1.03: Who knows!
+## After 1.0: Who knows!
 
 Suggestions welcome.

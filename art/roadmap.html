@@ -19,15 +19,16 @@
 // A '|' in a title splits it over two lines.
 const MILESTONES = [
   { v: 'v0.1',  title: 'Food data',               note: 'every vanilla food',   icon: 'wheat',    status: 'done' },
-  { v: 'v0.2',  title: 'Nutrient|tracking',       note: '+ handbook guide',     icon: 'scales',   status: 'next' },
-  { v: 'v0.3',  title: 'Nutrition UI',            note: '',                     icon: 'book',     status: 'planned' },
+  { v: 'v0.2',  title: 'Nutrient|tracking',       note: '+ handbook guide',     icon: 'scales',   status: 'done' },
+  { v: 'v0.3',  title: 'Nutrition UI',            note: '',                     icon: 'book',     status: 'next' },
   { v: 'v0.4',  title: 'Diet tiers|& effects',    note: '',                     icon: 'heart',    status: 'planned' },
   { v: 'v0.5',  title: 'Health &|effects UI',     note: '',                     icon: 'flask',    status: 'planned' },
   { v: 'v0.6',  title: 'Hidden|allergies',        note: 'off by default',       icon: 'peanut',   status: 'planned' },
+  { v: 'v0.7',  title: 'Body|composition',        note: '',                     icon: 'body',     status: 'planned' },
+  { v: 'v0.8',  title: 'Exercise|& fitness',      note: '',                     icon: 'boot',     status: 'planned' },
+  { v: 'v0.9',  title: 'Uptake|modifiers',        note: '',                     icon: 'thermo',   status: 'planned' },
   { v: 'v1.0',  title: 'Settings|menu',           note: '',                     icon: 'cog',      status: 'planned' },
-  { v: 'v1.01', title: 'Uptake|modifiers',        note: 'stretch goal',         icon: 'thermo',   status: 'planned' },
-  { v: 'v1.02', title: 'Exercise|& fitness',      note: 'stretch goal',         icon: 'boot',     status: 'planned' },
-  { v: 'v1.03', title: 'Who knows!',              note: 'suggestions welcome',  icon: 'question', status: 'planned' },
+  { v: '1.0+',  title: 'Who knows!',              note: 'suggestions welcome',  icon: 'question', status: 'planned' },
 ];
 // ==========================================================================================================
 
@@ -80,6 +81,12 @@ const GLYPH = {
     el('path', { d: 'M-20,26 L42,26 M-12,-28 L10,-28 M-12,-16 L10,-16', 'stroke-width': 2.5 }, g);
     el('path', { d: 'M-40,-6 l12,0 M-44,6 l14,0 M-38,18 l10,0', 'stroke-width': 2.5 }, g);
   },
+  body(g) {                           // a blocky figure flexing one arm
+    el('rect', { x: -9, y: -42, width: 18, height: 18 }, g);
+    el('path', { d: 'M-16,-20 L16,-20 L16,12 L-16,12 Z M-10,12 L-10,40 M10,12 L10,40' }, g);
+    el('path', { d: 'M16,-18 L34,-18 L34,-36 M-16,-18 L-30,4' }, g);
+    el('path', { d: 'M24,-18 q6,-8 10,-2', 'stroke-width': 2.5 }, g);
+  },
   peanut(g) {
     el('path', { d: 'M-6,-40 C-26,-40 -30,-18 -18,-6 C-10,2 -30,14 -22,30 C-14,44 10,44 18,32 C26,20 10,6 18,-6 C28,-20 16,-40 -6,-40 Z' }, g);
     for (const [x, y] of [[-10, -26], [4, -30], [-2, -16], [8, -14], [-8, 20], [6, 26], [0, 12], [-12, 30]]) el('circle', { cx: x, cy: y, r: 1.6, fill: 'currentColor', stroke: 'none' }, g);
@@ -111,7 +118,7 @@ lg.forEach(([label, ring], i) => {
 });
 
 // the milestone row sits in a sunken area, like an inventory grid
-const n = MILESTONES.length, S = 136, GAP = 36;
+const n = MILESTONES.length, S = 124, GAP = 28;
 const x0 = (W - (n * S + (n - 1) * GAP)) / 2;
 inset(svg, x0 - 40, 214, n * S + (n - 1) * GAP + 80, 430, 10, 12);
 

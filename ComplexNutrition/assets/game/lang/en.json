@@ -1,0 +1,11 @@
+{
+	"Satiety": "Fullness",
+	"When eaten: {0} sat, {1} hp": "When eaten: {0} fullness, {1} hp",
+	"When eaten: {0} sat": "When eaten: {0} fullness",
+	"When eaten: {0} sat, {1} hp\n": "When eaten: {0} fullness, {1} hp\n",
+	"When eaten: {0} sat\n": "When eaten: {0} fullness\n",
+	"liquid-when-drunk-saturation-hp": "When drunk: {0} fullness, {1} hp",
+	"liquid-when-drunk-saturation": "When drunk: {0} fullness",
+	"nutrition-facts-line-satiety": "- {0}: {1} fullness",
+	"handbook-mealrecipe-nutritionfactsline-satiety": "- Fullness: {0} to {1}{2}"
+}

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.1
+
+- Vanilla satiety is now called Fullness: how much your stomach holds. The Stats panel, food and drink tooltips and the handbook use the new name, and hovering over the bar next to the hotbar shows "Fullness: 1070 / 1500".
+- The nutrient bars on the Stats panel sit under a "Nutritional Reserves" heading, and every bar is split into one block per day of storage.
+- Hovering over a nutrient bar also says what the nutrient does, and that its effect in game is planned for v0.4. The handbook's nutrient page marks each one the same way.
+- Roadmap: new v0.7 body composition; exercise and fitness move to v0.8, nutrient uptake modifiers to v0.9, and "Who knows!" to after 1.0. v0.4 adds an effect for every nutrient, and larger macronutrient and calorie stores for a balanced diet.
+
 ## v0.2.0
 
 - New Tracking module (on by default, `tracking` in `ModConfig/complexnutrition.json`): every player has a reserve of each of the 14 nutrients, measured in days of supply (100% = one day's need).
