@@ -23,14 +23,14 @@ Requires Vintage Story 1.22.7. Status: in development (v0.1, food data only).
 Not a lot yet, on purpose. v0.1 is the foundation everything else gets built on:
 
 - **Nutrient data for all 341 vanilla foods.** Fruit, vegetables, mushrooms, grains, doughs, breads, meats, fish, dairy, honey, juices, ciders and spirits. The numbers come from the USDA FoodData Central database, per 100 g, and the full table (with a source link for every food) is on GitHub.
-- **Nutrition in the item tooltip.** Hover over a food to see calories, protein, carbs, fat, fiber, and the three micronutrients it is richest in, per portion.
+- **Nutrition in the item tooltip.** Hover over a food, a bowl of stew or a pie to see calories, protein, carbs, fat, fiber, and the three micronutrients it is richest in, per portion.
 - **Nothing changes how you play.** Your hunger bar, food categories and health bonus are all still vanilla. Eat what you like; the mod is only telling you what's in it for now.
 
 A few honest caveats:
 
 - Every food has a real-world weight (an apple is 180 g, a loaf of bread 225 g, a cabbage head 900 g), so its calories are what that much real food would give you. That means they don't always line up with how full vanilla says it makes you: a mushroom is filling but has almost no calories, and flax bread is the opposite.
 - USDA has never analysed a beautyberry, a saguaro fruit or a cattail root, so those borrow from their closest real relative (elderberry, prickly pear, arrowhead). Insects aren't in USDA at all and use an average "protein food" profile for now. All of these are flagged in the data table.
-- Meals, stews and pies don't show nutrition yet. From v0.2 they will add up their ingredients.
+- Soups, stews, porridges and pies add up their ingredients, then cooking gives them a boost (20% more calories, easier-to-digest protein and starch) at the cost of some vitamin C and B. Raw meat and raw grain are worth less than cooked, and burnt bread is mostly charcoal.
 
 ## Roadmap
 

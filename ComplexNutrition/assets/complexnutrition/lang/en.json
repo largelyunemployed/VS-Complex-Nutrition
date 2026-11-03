@@ -19,6 +19,11 @@
 	"tooltip-macros": "{0} kcal · protein {1} g · carbs {2} g · fat {3} g · fiber {4} g",
 	"tooltip-dv": "{0} {1}%",
 	"tooltip-richin": "Daily value: {0}",
+	"tooltip-header-serving": "<font color=\"#c8b48c\">Nutrition per serving:</font>",
+	"tooltip-header-pie": "<font color=\"#c8b48c\">Nutrition for this pie ({0} of 4 slices):</font>",
+	"tooltip-meal-cooked": "<font color=\"#a0a0a0\">Sum of its ingredients, with cooking applied</font>",
+	"tooltip-meal-uncooked": "<font color=\"#a0a0a0\">Sum of its ingredients</font>",
+	"tooltip-meal-unknown": "<font color=\"#a0a0a0\">{0} ingredient(s) without nutrient data not counted</font>",
 	"tooltip-estimated": "<font color=\"#a0a0a0\">Estimated from its food category</font>",
 	"tooltip-source": "<font color=\"#a0a0a0\">Source: USDA FoodData Central, {0} (FDC {1})</font>"
 }

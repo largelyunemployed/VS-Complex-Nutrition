@@ -20,6 +20,7 @@ namespace ComplexNutrition.Core
         public ComplexNutritionConfig Config { get; private set; } = new();
         public NutrientRegistry Nutrients { get; } = new();
         public FoodDatabase Foods { get; } = new();
+        public CookingRules Cooking { get; private set; } = new();
 
         private readonly List<INutritionModule> modules = new();
         private ICoreAPI api;
@@ -48,6 +49,11 @@ namespace ComplexNutrition.Core
                     .WithArgs(sapi.ChatCommands.Parsers.Word("code"))
                     .HandleWith(args => InfoCommand(sapi, (string)args[0]))
                 .EndSubCommand()
+                .BeginSubCommand("meal")
+                    .WithDescription("Work out a dish: /cnutrition meal <container code> <servings> <ingredient code>... (use code*N for N of one ingredient)")
+                    .WithArgs(sapi.ChatCommands.Parsers.Word("container"), sapi.ChatCommands.Parsers.Float("servings"), sapi.ChatCommands.Parsers.All("ingredients"))
+                    .HandleWith(args => MealCommand(sapi, (string)args[0], (float)args[1], (string)args[2]))
+                .EndSubCommand()
                 .BeginSubCommand("dump")
                     .WithDescription("Write every food item, its vanilla values and its profile to ModData/complexnutrition/foods.json")
                     .HandleWith(_ => TextCommandResult.Success(DumpFoods(sapi)))
@@ -58,6 +64,7 @@ namespace ComplexNutrition.Core
         {
             Nutrients.Load(api);
             Foods.Load(api, Nutrients);
+            Cooking = CookingRules.Load(api);
             api.Logger.Notification("[complexnutrition] Loaded {0} nutrients and {1} food profiles.", Nutrients.All.Count, Foods.ProfileCount);
 
             foreach (var module in OrderByDependencies(modules))
@@ -149,6 +156,46 @@ namespace ComplexNutrition.Core
             string text = sb.ToString();
             bool attached = coll.CollectibleBehaviors.Any(b => b is CollectibleBehaviorNutrientInfo);
             return TextCommandResult.Success($"{loc} (nutrient behaviour attached: {attached}) full tooltip:\n{text}");
+        }
+
+        /// <summary>
+        /// Builds a dish the way the cooking pot stores it (one serving's ingredients plus a serving count)
+        /// and shows its full tooltip. For pies, the ingredients are the whole pie's and servings is the slice count.
+        /// </summary>
+        private TextCommandResult MealCommand(ICoreServerAPI sapi, string containerCode, float servings, string ingredientList)
+        {
+            var block = sapi.World.GetBlock(new AssetLocation(containerCode));
+            if (block == null || block.Id == 0 || !MealNutrition.IsMealContainer(block))
+                return TextCommandResult.Error(containerCode + " is not a meal container (try game:bowl-blue-meal, game:claypot-blue-cooked or game:pie-perfect).");
+
+            var stacks = new List<ItemStack>();
+            foreach (var token in (ingredientList ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = token.Split('*');
+                int count = parts.Length > 1 && int.TryParse(parts[1], out var c) ? c : 1;
+                var loc = new AssetLocation(parts[0]);
+                CollectibleObject coll = (CollectibleObject)sapi.World.GetItem(loc) ?? sapi.World.GetBlock(loc);
+                if (coll == null || coll.Id == 0) return TextCommandResult.Error("Unknown ingredient " + loc);
+                stacks.Add(new ItemStack(coll, count));
+            }
+            if (stacks.Count == 0) return TextCommandResult.Error("Give at least one ingredient.");
+
+            var dish = new ItemStack(block);
+            var container = (Vintagestory.GameContent.IBlockMealContainer)block;
+            if (block is Vintagestory.GameContent.BlockPie)
+            {
+                container.SetContents(null, dish, stacks.ToArray());
+                dish.Attributes.SetInt("pieSize", (int)Math.Clamp(servings, 1, 4));
+            }
+            else
+            {
+                // Any recipe code marks the dish as cooked; the stew recipe is used for its name only.
+                container.SetContents("meatystew", dish, stacks.ToArray(), servings);
+            }
+
+            var sb = new System.Text.StringBuilder();
+            dish.Collectible.GetHeldItemInfo(new DummySlot(dish), sb, sapi.World, false);
+            return TextCommandResult.Success($"{containerCode} with {ingredientList}:\n{sb}");
         }
 
         private string DumpFoods(ICoreServerAPI sapi)

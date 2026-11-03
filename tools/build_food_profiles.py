@@ -128,6 +128,25 @@ def build_entry_profile(entry, usda):
     return prof, gaps
 
 
+def as_factor(f):
+    if isinstance(f, (int, float)):
+        return {k: float(f) for k in ALL}
+    unknown = set(f) - set(ALL)
+    if unknown:
+        sys.exit("unknown nutrient in factor: %s" % sorted(unknown))
+    return {k: float(f.get(k, 1.0)) for k in ALL}
+
+
+def describe_factor(f):
+    """'Gameplay multiplier x0.8' or 'Gameplay multiplier: vitaminC x0.6, vitaminB x0.6', or '' for none."""
+    vals = {round(v, 3) for v in f.values()}
+    if vals == {1.0}:
+        return ""
+    if len(vals) == 1:
+        return "Gameplay multiplier x%g on all nutrients" % vals.pop()
+    return "Gameplay multiplier: " + ", ".join("%s x%g" % (k, f[k]) for k in ALL if round(f[k], 3) != 1.0)
+
+
 def rnd(key, v):
     if key == "calories":
         return round(v, 1)
@@ -191,16 +210,22 @@ def main():
                 return float(e["grams"])
 
             def factor_for(code):
-                # Cooking or baking state multiplier on every nutrient, e.g. a part-baked loaf at 0.5.
+                # Gameplay multipliers on top of the USDA values: 'factor' for the whole entry, and
+                # 'stateFactors' for a cooking or baking state named in the item code. Each is either
+                # one number for every nutrient or a {nutrient: multiplier} map.
                 parts = code.split(":")[-1].split("-")
-                hits = [f for state, f in e.get("stateFactors", {}).items() if state in parts]
-                return hits[0] if hits else 1.0
+                f = as_factor(e.get("factor", 1.0))
+                for state, sf in e.get("stateFactors", {}).items():
+                    if state in parts:
+                        sf = as_factor(sf)
+                        f = {k: f[k] * sf[k] for k in ALL}
+                return f
 
             portions = {c: portion_for(c) for c in matches}
             factors = {c: factor_for(c) for c in matches}
             for c in matches:
                 slice_grams[c] = portions[c]
-            uniform = len({(round(portions[c], 3), factors[c]) for c in matches}) == 1
+            uniform = len({(round(portions[c], 3), tuple(factors[c][k] for k in ALL)) for c in matches}) == 1
             codes_out = [pattern] if ("*" in pattern and uniform) else sorted(matches)
             for code in codes_out:
                 grams = portions[code] if code in portions else next(iter(portions.values()))
@@ -210,11 +235,11 @@ def main():
                 prof["portionGrams"] = round(grams, 1)
                 if is_liquid:
                     prof["portionUnit"] = "litre"
-                prof["per100g"] = OrderedDict((k, rnd(k, per100[k] * factor)) for k in ALL)
+                prof["per100g"] = OrderedDict((k, rnd(k, per100[k] * factor[k])) for k in ALL)
                 prof["source"] = source
                 notes = e.get("notes", "")
-                if factor != 1.0:
-                    notes = (notes + " " if notes else "") + "This state keeps %d%% of the base values." % round(factor * 100)
+                if describe_factor(factor):
+                    notes = (notes + " " if notes else "") + describe_factor(factor) + "."
                 if gaps:
                     notes = (notes + " " if notes else "") + "USDA reports no value for: %s (treated as 0)." % ", ".join(gaps)
                 if notes:
@@ -223,9 +248,9 @@ def main():
 
             for c in matches:
                 rows.append({"code": c, "v": by_code[c], "fallback": False, "grams": portions[c],
-                             "per100": {k: v * factors[c] for k, v in per100.items()},
+                             "per100": {k: per100[k] * factors[c][k] for k in ALL},
                              "source": source, "liquid": is_liquid, "group": group,
-                             "notes": (e.get("notes", "") + (" %d%% of base values (%s)." % (round(factors[c] * 100), "cooking state") if factors[c] != 1.0 else "")).strip()})
+                             "notes": (e.get("notes", "") + (" " + describe_factor(factors[c]) + "." if describe_factor(factors[c]) else "")).strip()})
             if not is_liquid:
                 template_inputs[by_code[matches[0]]["category"]].append(per100)
         out_files[group] = profiles

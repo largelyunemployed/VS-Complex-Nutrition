@@ -28,14 +28,18 @@ namespace ComplexNutrition.Modules.FoodData
             {
                 foreach (var coll in api.World.Collectibles)
                 {
-                    if (coll?.Code == null || core.Foods.Resolve(coll) == null) continue;
+                    if (coll?.Code == null) continue;
+                    if (core.Foods.Resolve(coll) == null && !MealNutrition.IsMealContainer(coll)) continue;
+                    if (coll is Vintagestory.GameContent.BlockPie) continue; // handled by PieTooltipPatch
                     if (coll.CollectibleBehaviors.Any(b => b is CollectibleBehaviorNutrientInfo)) continue;
                     var behavior = new CollectibleBehaviorNutrientInfo(coll, core);
                     coll.CollectibleBehaviors = coll.CollectibleBehaviors.Append(behavior).ToArray();
                     patched.Add(coll);
                 }
-                api.Logger.Notification("[complexnutrition] Nutrient info added to {0} foods.", patched.Count);
+                api.Logger.Notification("[complexnutrition] Nutrient info added to {0} foods and meal containers.", patched.Count);
             }
+
+            PieTooltipPatch.Apply(core);
 
             if (api.Side == EnumAppSide.Server)
             {
@@ -50,6 +54,7 @@ namespace ComplexNutrition.Modules.FoodData
                 coll.CollectibleBehaviors = coll.CollectibleBehaviors.Where(b => b is not CollectibleBehaviorNutrientInfo).ToArray();
             }
             patched.Clear();
+            PieTooltipPatch.Remove();
             IsEnabled = false;
         }
     }

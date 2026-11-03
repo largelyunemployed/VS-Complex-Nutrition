@@ -1,0 +1,25 @@
+{
+	"_comment": "Cooked dishes (soups, stews and porridges from a cooking pot, served in a bowl, pot or crock) add up their ingredients' nutrients per serving and then apply cookedMultipliers. Pies add up their contents and apply cookedMultipliers times their bake-state factor; raw pies get no cooking multipliers. Crocks with no recipe (pickles, for example) are summed as they are.",
+	"cookedMultipliers": {
+		"calories": 1.2,
+		"protein": 1.1,
+		"carbohydrate": 1.2,
+		"fat": 1.0,
+		"fiber": 0.9,
+		"vitaminA": 1.1,
+		"vitaminD": 0.9,
+		"vitaminE": 0.9,
+		"vitaminK": 1.0,
+		"vitaminC": 0.5,
+		"vitaminB": 0.75,
+		"calcium": 1.0,
+		"iron": 1.0,
+		"potassium": 0.9
+	},
+	"pieStateFactors": {
+		"raw": 1.0,
+		"partbaked": 0.5,
+		"perfect": 1.0,
+		"charred": 0.2
+	}
+}
