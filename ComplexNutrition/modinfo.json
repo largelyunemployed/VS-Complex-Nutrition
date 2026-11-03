@@ -2,7 +2,7 @@
   "type": "code",
   "modid": "complexnutrition",
   "name": "Complex Nutrition",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "authors": [ "Largely Unemployed" ],
   "contributors": [ "Claude (Anthropic)" ],
   "description": "AI-assisted code disclaimer: the code, data and documentation in this mod were written with AI assistance (Anthropic's Claude), under human direction and review. Please report anything that looks or plays wrong.\n\nGives every vanilla food real-world calories, macronutrients, vitamins and minerals (per USDA FoodData Central). v0.1 shows them in item tooltips; tracking and effects come in later versions.",

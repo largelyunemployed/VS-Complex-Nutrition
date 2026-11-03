@@ -21,7 +21,7 @@ Complex Nutrition expands Vintage Story's nutrition system. Every food gets real
 
 ## Installation
 
-1. Download the latest `complexnutrition_<version>.zip` from the VS Mod DB page or the [Releases page on GitHub](https://github.com/largelyunemployed/VS-Complex-Nutrition/releases).
+1. Download the latest `complexnutrition_<version>.zip` from the [Releases page on GitHub](https://github.com/largelyunemployed/VS-Complex-Nutrition/releases).
 2. Don't unzip it. Drop the zip as it is into your Mods folder:
    - **Windows:** `%appdata%\VintagestoryData\Mods`
    - **Linux:** `~/.config/VintagestoryData/Mods`
