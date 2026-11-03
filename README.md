@@ -19,6 +19,22 @@ Complex Nutrition expands Vintage Story's nutrition system. Every food gets real
 **Court-mandated discord server:** available on YT channel page (sorry bots, not today!)
 **Website:** largelyunemployed.com
 
+## Installation
+
+1. Download the latest `complexnutrition_<version>.zip` from the VS Mod DB page or the [Releases page on GitHub](https://github.com/largelyunemployed/VS-Complex-Nutrition/releases).
+2. Don't unzip it. Drop the zip as it is into your Mods folder:
+   - **Windows:** `%appdata%\VintagestoryData\Mods`
+   - **Linux:** `~/.config/VintagestoryData/Mods`
+   - **macOS:** `~/Library/Application Support/VintagestoryData/Mods`
+3. Start the game. Complex Nutrition should show up, switched on, in the Mods list on the main menu.
+
+It has only been tested on Vintage Story 1.22.7 so far. Other versions might work, or might not.
+
+- **Multiplayer:** install it on the server. Players need it too; the game normally offers to download a server's missing mods when you join, or they can install it the same way.
+- **Settings:** the first launch creates `VintagestoryData/ModConfig/complexnutrition.json`. Each module has a `true`/`false` switch under `Modules`, and `ShowTooltip` turns the nutrition lines in item tooltips on or off. Restart the game (or server) after editing it.
+- **Removing it:** v0.1 doesn't save anything into your world, so you can take it out of the Mods folder at any time and carry on as if nothing happened. Later versions will store your body's nutrient reserves, and the mod page will say so when that changes.
+- **Building it yourself:** see [docs/DEVELOPING.md](docs/DEVELOPING.md).
+
 ## Roadmap
 
 - **v0.1:** nutrient data for all vanilla foods, mod feasibility testing, VS Mod DB thumbnail, description, and roadmap drafts.

@@ -13,4 +13,5 @@
 - Foods from other mods get an estimate from their vanilla food category; the server log lists each one.
 - Admin commands: `/cnutrition coverage`, `/cnutrition info <code>`, `/cnutrition meal ...`, `/cnutrition dump`.
 - Config file `ModConfig/complexnutrition.json` with a switch per module.
-- Mod page thumbnail and roadmap banner (`art/`).
+- Mod page thumbnail and roadmap banner (`art/`), drawn in the game's own UI style with a blocky Vintage Story character.
+- Installation steps in the README and mod page.

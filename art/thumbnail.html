@@ -4,196 +4,148 @@
 <meta charset="utf-8">
 <title>Complex Nutrition thumbnail</title>
 <style>
-  @font-face { font-family: 'Fell'; src: url(fonts/IMFellEnglish-Regular.ttf); }
-  @font-face { font-family: 'Fell'; font-style: italic; src: url(fonts/IMFellEnglish-Italic.ttf); }
-  @font-face { font-family: 'FellSC'; src: url(fonts/IMFellEnglishSC-Regular.ttf); }
+  @font-face { font-family: 'Lato'; font-weight: 400; src: url(fonts/Lato-400.ttf); }
+  @font-face { font-family: 'Lato'; font-weight: 700; src: url(fonts/Lato-700.ttf); }
+  @font-face { font-family: 'Lato'; font-weight: 900; src: url(fonts/Lato-900.ttf); }
   html, body { margin: 0; background: #222; }
   svg { display: block; }
 </style>
 </head>
 <body>
 <svg id="art" width="1024" height="1024" viewBox="0 0 1024 1024"></svg>
-<script src="common.js"></script>
+<script src="vs.js"></script>
 <script>
-// Vitruvian figure in Vintage Story journal style. 1024x1024; render.js exports 512 and 256 px versions.
+// A blocky Vintage Story character in the Vitruvian pose, shown in a game-style dialog with food in the hotbar.
+// 1024x1024; render.js also exports 512 px and the 256 px mod icon.
+(async () => {
+await Promise.all(['900 64px Lato', '700 24px Lato', '400 24px Lato'].map(f => document.fonts.load(f)));
 const W = 1024, H = 1024;
 const svg = document.getElementById('art');
-addDefs(svg, W, H);
-parchment(svg, W, H, 4);
 
-// Vitruvian proportions: the navel sits at 0.6 of the height, so the circle (centred on the navel,
-// touching the soles) reaches above the head and the raised hands meet it at about head height.
-const HEIGHT = 560;               // head to sole = arm span = side of the square
-const R = HEIGHT * 0.6;           // circle radius
-const C = { x: 512, y: 472 };     // navel, centre of the circle
-const FEET = C.y + R;
-const SQ = { x: C.x - HEIGHT / 2, y: FEET - HEIGHT, s: HEIGHT };
+// ---- dialog ----
+panel(svg, 0, 0, W, H, 11, 12);
+text(svg, W / 2, 100, 'Complex Nutrition', { 'text-anchor': 'middle', 'font-weight': 900, 'font-size': 84 });
+const IN = { x: 52, y: 140, w: W - 104, h: 694 };
+inset(svg, IN.x, IN.y, IN.w, IN.h, 12, 12);
 
-// ---- circle and square ----
-const frame = el('g', { filter: 'url(#ink)', fill: 'none', stroke: INK, 'stroke-linecap': 'round' }, svg);
-el('circle', { cx: C.x, cy: C.y, r: R, 'stroke-width': 4 }, frame);
-el('circle', { cx: C.x, cy: C.y, r: R + 7, 'stroke-width': 1.6, 'stroke-opacity': 0.7 }, frame);
-el('rect', { x: SQ.x, y: SQ.y, width: SQ.s, height: SQ.s, 'stroke-width': 4 }, frame);
-el('rect', { x: SQ.x - 6, y: SQ.y - 6, width: SQ.s + 12, height: SQ.s + 12, 'stroke-width': 1.4, 'stroke-opacity': 0.6 }, frame);
-// Leonardo's scale along the bottom of the square: palms and fingers
-for (let i = 0; i <= 24; i++) {
-  const x = SQ.x + SQ.s * i / 24;
-  el('line', { x1: x, y1: SQ.y + SQ.s, x2: x, y2: SQ.y + SQ.s + (i % 4 === 0 ? 14 : 7), 'stroke-width': 2 }, frame);
-}
-// Faint construction lines
-const guide = el('g', { stroke: INK_SOFT, 'stroke-opacity': 0.35, 'stroke-width': 1.2, filter: 'url(#ink)' }, svg);
-el('line', { x1: C.x, y1: SQ.y - 30, x2: C.x, y2: FEET + 30 }, guide);
-el('line', { x1: SQ.x - 30, y1: C.y, x2: SQ.x + SQ.s + 30, y2: C.y }, guide);
-el('line', { x1: SQ.x, y1: SQ.y, x2: SQ.x + SQ.s, y2: SQ.y + SQ.s }, guide);
-el('line', { x1: SQ.x + SQ.s, y1: SQ.y, x2: SQ.x, y2: SQ.y + SQ.s }, guide);
+// ---- figure geometry, in texels (T px each). Head 11, torso 22, legs 31: 64 tall, arm span 64 ----
+const T = 8;
+const C = { x: W / 2, y: IN.y + IN.h / 2 + 6 };    // navel: centre of the circle
+const NAVEL_ROW = 27;
+const top = C.y - NAVEL_ROW * T;                    // top of the head
+const X = u => C.x + u * T, Y = v => top + v * T;   // body texel coords -> px
+const R = 38.1 * T;                                 // reaches the raised hands and the spread feet
+const ANGLE = 25;                                   // degrees: arms raised, legs spread
 
-// ---- the figure ----
-function capsule(g, a, b, wa, wb) {
-  const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
-  const nx = -dy / len, ny = dx / len;
-  el('path', { d: `M${a.x + nx * wa / 2},${a.y + ny * wa / 2} L${b.x + nx * wb / 2},${b.y + ny * wb / 2} L${b.x - nx * wb / 2},${b.y - ny * wb / 2} L${a.x - nx * wa / 2},${a.y - ny * wa / 2} Z` }, g);
-  el('circle', { cx: a.x, cy: a.y, r: wa / 2 }, g);
-  el('circle', { cx: b.x, cy: b.y, r: wb / 2 }, g);
+// circle and square, like the drawing, in the UI's beige
+const lines = el('g', { fill: 'none', stroke: VS.text, 'stroke-opacity': 0.55, 'stroke-width': 4 }, svg);
+el('circle', { cx: C.x, cy: C.y, r: R }, lines);
+el('rect', { x: X(-32), y: Y(0), width: 64 * T, height: 64 * T }, lines);
+const faint = el('g', { stroke: VS.text, 'stroke-opacity': 0.16, 'stroke-width': 2 }, svg);
+el('line', { x1: C.x, y1: C.y - R - 18, x2: C.x, y2: C.y + R + 18 }, faint);
+el('line', { x1: C.x - R - 18, y1: Y(13.5), x2: C.x + R + 18, y2: Y(13.5) }, faint);
+el('line', { x1: X(-32), y1: Y(0), x2: X(32), y2: Y(64) }, faint);
+el('line', { x1: X(32), y1: Y(0), x2: X(-32), y2: Y(64) }, faint);
+// measuring ticks round the circle
+for (let a = 0; a < 360; a += 10) {
+  const r = a * Math.PI / 180, l = a % 30 === 0 ? 16 : 8;
+  el('line', { x1: C.x + R * Math.sin(r), y1: C.y - R * Math.cos(r), x2: C.x + (R - l) * Math.sin(r), y2: C.y - (R - l) * Math.cos(r), stroke: VS.text, 'stroke-opacity': 0.4, 'stroke-width': 3 }, svg);
 }
-function lerp(a, b, t) { return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }; }
-function bend(a, b, t, off) { // point along a-b pushed sideways, for elbows and knees
-  const p = lerp(a, b, t), dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
-  return { x: p.x - dy / len * off, y: p.y + dx / len * off };
-}
-// Point on the circle at distance `len` from `from`, searching angles (degrees clockwise from straight up).
-function onCircle(from, len, a0, a1) {
-  let best = null, bestErr = 1e9;
-  for (let a = a0; a <= a1; a += 0.1) {
-    const r = a * Math.PI / 180, p = { x: C.x + R * Math.sin(r), y: C.y - R * Math.cos(r) };
-    const err = Math.abs(Math.hypot(p.x - from.x, p.y - from.y) - len);
-    if (err < bestErr) { bestErr = err; best = p; }
+
+// Texture palettes: skin tone and breeches from the game's character creator.
+const SKIN = { base: ['#b6a361', '#b6a361', '#bba866', '#ae9c5c', '#c0ad6b', '#b3a05f'], dark: '#9e8d50', light: '#c9b777' };
+const CLOTH = { base: ['#cecbbb', '#cecbbb', '#d8d5c6', '#c4c1b1', '#e0ddd0', '#bdb9a9'], dark: '#a9a595', light: '#e6e3d8' };
+
+// One box face of w x h texels at local (0,0), shaded darker on the right and bottom edges.
+// `rowStyle(row)` picks SKIN or CLOTH per texel row; `paint(col,row)` can override single texels.
+function box(parent, w, h, seed, rowStyle, paint) {
+  const g = el('g', { 'shape-rendering': 'crispEdges' }, parent);
+  const r = rng(seed);
+  for (let v = 0; v < h; v++) {
+    for (let u = 0; u < w; u++) {
+      const st = rowStyle(v);
+      let c = st.base[Math.floor(r() * st.base.length)];
+      if (u === w - 1 || v === h - 1) c = st.dark;
+      else if (u === 0) c = st.light;
+      const p = paint && paint(u, v);
+      if (p) c = p;
+      el('rect', { x: u * T, y: v * T, width: T + 0.5, height: T + 0.5, fill: c }, g);
+    }
   }
-  return best;
+  el('rect', { x: 0, y: 0, width: w * T, height: h * T, fill: 'none', stroke: '#2a2016', 'stroke-opacity': 0.55, 'stroke-width': 2 }, g);
+  return g;
+}
+const skin = () => SKIN;
+function group(parent, x, y, rot, px, py) {   // translate to (x,y), rotate `rot` degrees about local (px,py)
+  return el('g', { transform: `translate(${x},${y}) rotate(${rot},${px},${py})` }, parent);
 }
 
-const headC = { x: C.x, y: SQ.y + 40 };
-const shoulderY = SQ.y + HEIGHT * 0.18;
-const shL = { x: C.x - 64, y: shoulderY }, shR = { x: C.x + 64, y: shoulderY };
-const ARM = shL.x - SQ.x;           // shoulder to fingertip, horizontal pose
-const hipL = { x: C.x - 26, y: FEET - HEIGHT * 0.49 }, hipR = { x: C.x + 26, y: FEET - HEIGHT * 0.49 };
-const LEG = FEET - hipL.y;
-
-function limbArm(g, sh, tip, side) {
-  const wrist = lerp(sh, tip, 0.86);
-  const elbow = bend(sh, wrist, 0.52, side * 3);
-  capsule(g, sh, elbow, 30, 22);
-  capsule(g, elbow, wrist, 22, 15);
-  const hand = lerp(sh, tip, 0.93);
-  const ang = Math.atan2(tip.y - sh.y, tip.x - sh.x) * 180 / Math.PI;
-  el('ellipse', { cx: hand.x, cy: hand.y, rx: ARM * 0.07, ry: 9, transform: `rotate(${ang} ${hand.x} ${hand.y})` }, g);
+// arm: 24 x 5 texels lying horizontally; `side` -1 left, +1 right. Pivot at the shoulder (inner end, middle).
+function arm(parent, side, rot, seed) {
+  const g = side < 0
+    ? group(parent, X(-32), Y(11), rot, 24 * T, 2.5 * T)
+    : group(parent, X(8), Y(11), rot, 0, 2.5 * T);
+  box(g, 24, 5, seed, skin, (u, v) => {
+    const hand = side < 0 ? u < 3 : u > 20;            // a slightly darker band for the hand
+    return hand && v > 0 && v < 4 && u % 2 === 0 ? '#a99656' : null;
+  });
 }
-function limbLeg(g, hip, foot, side) {
-  const ankle = lerp(hip, foot, 0.95);
-  const knee = bend(hip, ankle, 0.5, -side * 4);
-  capsule(g, hip, knee, 48, 28);
-  capsule(g, knee, ankle, 28, 15);
-  el('ellipse', { cx: foot.x + side * 12, cy: foot.y - 6, rx: 20, ry: 7 }, g);
+// leg: 8 x 31 texels, pivot at the hip (top middle). Breeches cover the top 7 rows.
+function leg(parent, side, rot, seed) {
+  const g = group(parent, side < 0 ? X(-8) : X(0), Y(33), rot, 4 * T, 0);
+  box(g, 8, 31, seed, v => (v < 7 ? CLOTH : SKIN), (u, v) => (v === 6 ? CLOTH.dark : null));
 }
 
-const body = el('g', {}, null);
-// head and neck
-el('ellipse', { cx: headC.x, cy: headC.y, rx: 30, ry: 38 }, body);
-capsule(body, { x: C.x, y: headC.y + 30 }, { x: C.x, y: shoulderY - 6 }, 28, 34);
-// torso
-el('path', { d: `M${shL.x - 6},${shoulderY + 4} C${shL.x - 10},${shoulderY + 60} ${C.x - 36},${C.y - 60} ${C.x - 34},${C.y - 12}
-  C${C.x - 40},${C.y + 18} ${C.x - 46},${C.y + 40} ${C.x - 46},${C.y + 58} L${C.x + 46},${C.y + 58}
-  C${C.x + 46},${C.y + 40} ${C.x + 40},${C.y + 18} ${C.x + 34},${C.y - 12}
-  C${C.x + 36},${C.y - 60} ${shR.x + 10},${shoulderY + 60} ${shR.x + 6},${shoulderY + 4}
-  C${C.x + 30},${shoulderY - 14} ${C.x - 30},${shoulderY - 14} ${shL.x - 6},${shoulderY + 4} Z` }, body);
-el('circle', { cx: shL.x, cy: shoulderY + 6, r: 18 }, body);
-el('circle', { cx: shR.x, cy: shoulderY + 6, r: 18 }, body);
-// pose 1: arms level, legs together
-limbArm(body, shL, { x: SQ.x, y: shoulderY + 4 }, 1);
-limbArm(body, shR, { x: SQ.x + SQ.s, y: shoulderY + 4 }, -1);
-limbLeg(body, hipL, { x: C.x - 14, y: FEET }, -1);
-limbLeg(body, hipR, { x: C.x + 14, y: FEET }, 1);
-// pose 2: arms raised, legs apart, hands and feet on the circle
-const handUpL = onCircle(shL, ARM, -75, -15), handUpR = onCircle(shR, ARM, 15, 75);
-limbArm(body, shL, handUpL, 1);
-limbArm(body, shR, handUpR, -1);
-const footL = onCircle(hipL, LEG, -165, -145), footR = onCircle(hipR, LEG, 145, 165);
-limbLeg(body, hipL, footL, -1);
-limbLeg(body, hipR, footR, 1);
+// pose 2 (arms up, legs apart) first and faded, then pose 1 on top, as in Leonardo's drawing
+const ghost = el('g', { opacity: 0.5 }, svg);
+arm(ghost, -1, ANGLE, 21);
+arm(ghost, 1, -ANGLE, 22);
+leg(ghost, -1, ANGLE, 23);
+leg(ghost, 1, -ANGLE, 24);
 
-// skin wash, then the contour of the whole silhouette
-const skin = body.cloneNode(true);
-skin.setAttribute('fill', '#e0c294');
-skin.setAttribute('opacity', '0.85');
-skin.setAttribute('filter', 'url(#wash)');
-svg.appendChild(skin);
-body.setAttribute('fill', '#000');
-body.setAttribute('filter', 'url(#contour)');
-svg.appendChild(body);
+const fig = el('g', {}, svg);
+arm(fig, -1, 0, 31);
+arm(fig, 1, 0, 32);
+leg(fig, -1, 0, 33);
+leg(fig, 1, 0, 34);
+// torso: 16 x 22 texels, breeches from row 18 down, navel at row 16
+box(group(fig, X(-8), Y(11), 0, 0, 0), 16, 22, 35, v => (v >= 18 ? CLOTH : SKIN), (u, v) => {
+  if (v === 16 && (u === 7 || u === 8)) return u === 7 ? '#8f7f47' : '#a08f52';    // navel
+  if (v === 6 && u > 1 && u < 14 && u !== 7 && u !== 8) return '#a99656';         // chest line
+  if (v === 18 && u < 15) return CLOTH.light;                                       // waistband
+  if (v === 21 && u === 7) return CLOTH.dark;                                       // seam
+  return null;
+});
+// head: 10 x 11 texels, with short hair and a pixel face
+const HAIR = ['#5b3b22', '#65432a', '#523420'];
+const FACE = {
+  '2,4': '#3b2a1e', '3,4': '#3b2a1e', '6,4': '#3b2a1e', '7,4': '#3b2a1e',          // brows
+  '2,5': '#f2efe6', '3,5': '#2f6f73', '6,5': '#2f6f73', '7,5': '#f2efe6',          // eyes
+  '4,7': '#a39152', '5,7': '#a39152',                                               // nose shadow
+  '3,8': '#3f7f80', '4,8': '#3f7f80', '5,8': '#3f7f80', '6,8': '#3f7f80',          // mouth
+};
+const hr = rng(41);
+box(group(fig, X(-5), Y(0), 0, 0, 0), 10, 11, 42, skin, (u, v) => {
+  if (v < 2 || (v === 2 && (u < 2 || u > 7)) || (v < 5 && (u === 0 || u === 9))) return HAIR[Math.floor(hr() * HAIR.length)];
+  return FACE[u + ',' + v] || null;
+});
 
-// interior ink details
-const d = el('g', { filter: 'url(#ink)', fill: 'none', stroke: INK, 'stroke-width': 2.2, 'stroke-linecap': 'round', opacity: 0.85 }, svg);
-const hx = headC.x, hy = headC.y;
-el('path', { d: `M${hx - 14},${hy - 4} q6,-4 10,0 M${hx + 4},${hy - 4} q6,-4 10,0` }, d);                  // eyes
-el('path', { d: `M${hx},${hy - 2} l-3,14 l5,1` }, d);                                                       // nose
-el('path', { d: `M${hx - 7},${hy + 21} l14,0` }, d);                                                   // mouth
-{                                                                                                          // hair: a curly cap framing the face
-  let outer = '';
-  const n = 14;
-  for (let i = 0; i <= n; i++) {
-    const a = Math.PI * (0.92 + 1.16 * i / n);                     // from left jaw, over the top, to right jaw
-    const rx = 41, ry = 47, x = hx + rx * Math.cos(a), y = hy + 2 + ry * Math.sin(a);
-    if (i === 0) { outer += `M${x},${y}`; continue; }
-    const am = Math.PI * (0.92 + 1.16 * (i - 0.5) / n);
-    const cx = hx + (rx + 9) * Math.cos(am), cy = hy + 2 + (ry + 9) * Math.sin(am);
-    outer += ` Q${cx},${cy} ${x},${y}`;
-  }
-  const inner = ` C${hx + 30},${hy - 2} ${hx + 22},${hy - 30} ${hx},${hy - 30} C${hx - 22},${hy - 30} ${hx - 30},${hy - 2} ${hx - 30},${hy + 18} Z`;
-  const hair = outer + ` L${hx + 30},${hy + 18}` + inner;
-  el('path', { d: hair, fill: '#8a6236', opacity: 0.55, stroke: 'none', filter: 'url(#wash)' }, svg);
-  el('path', { d: hair, 'stroke-width': 2.4 }, d);
-  for (const [x, y] of [[-26, -26], [0, -38], [26, -26], [-36, 2], [36, 2], [-14, -34], [14, -34]]) {
-    el('path', { d: `M${hx + x - 5},${hy + y + 3} q5,-8 10,0`, 'stroke-width': 1.8 }, d);
-  }
+// ---- health and satiety bars, then the hotbar with food in it ----
+const barY = IN.y + IN.h + 20, segW = 30, segs = 12;
+for (let i = 0; i < segs; i++) {
+  el('rect', { x: 92 + i * segW, y: barY, width: segW - 3, height: 16, fill: VS.health, stroke: '#4a0a0b', 'stroke-width': 2 }, svg);
+  el('rect', { x: W - 92 - segs * segW + i * segW + 3, y: barY, width: segW - 3, height: 16, fill: VS.satiety, stroke: '#38401a', 'stroke-width': 2 }, svg);
 }
-el('path', { d: `M${C.x - 40},${shoulderY + 8} q20,8 34,4 M${C.x + 40},${shoulderY + 8} q-20,8 -34,4` }, d); // collarbones
-el('path', { d: `M${C.x - 38},${shoulderY + 58} q18,14 34,4 M${C.x + 38},${shoulderY + 58} q-18,14 -34,4` }, d); // chest
-el('path', { d: `M${C.x},${shoulderY + 20} L${C.x},${C.y - 14}` , 'stroke-opacity': 0.6 }, d);
-for (const y of [C.y - 56, C.y - 34]) el('path', { d: `M${C.x - 18},${y} q18,5 36,0`, 'stroke-opacity': 0.6 }, d);
-el('circle', { cx: C.x, cy: C.y, r: 3, fill: INK }, d);                                                     // navel
-el('path', { d: `M${C.x - 30},${C.y + 52} q30,16 60,0` }, d);
-for (const s of [-1, 1]) {                                                                                  // knees
-  const kx = C.x + s * 22, ky = (hipL.y + FEET) / 2 + 4;
-  el('path', { d: `M${kx - 7},${ky} q7,6 14,0` }, d);
-}
+const FOODS = ['apple', 'bread', 'carrot', 'meat', 'fish', 'cheese', 'mushroom'];
+const S = 108, GAP = 14, x0 = (W - (FOODS.length * S + (FOODS.length - 1) * GAP)) / 2, sy = barY + 34;
+FOODS.forEach((f, i) => {
+  const x = x0 + i * (S + GAP);
+  slot(svg, x, sy, S, { number: i + 1, ring: i === 0 ? VS.selected : null });
+  sprite(svg, f, x + (S - 80) / 2, sy + (S - 80) / 2 + 2, 5);
+});
 
-// ---- food icons on the circle, in place of measuring marks ----
-const foods = [['bread', 0], ['mushroom', -27], ['fish', 27], ['berry', -92], ['cheese', 92], ['meat', -120], ['carrot', 120]];
-const ticks = el('g', { filter: 'url(#ink)', stroke: INK, 'stroke-width': 2 }, svg);
-const angOf = p => Math.atan2(p.x - C.x, C.y - p.y) * 180 / Math.PI;
-const busy = foods.map(f => f[1]).concat([angOf(handUpL), angOf(handUpR), angOf(footL), angOf(footR), 180]);
-console.log('hands', angOf(handUpL), angOf(handUpR), 'feet', angOf(footL), angOf(footR));
-for (let a = -180; a < 180; a += 6) {
-  if (busy.some(b => Math.abs(((a - b + 540) % 360) - 180) < 10)) continue;
-  const r = a * Math.PI / 180, l = a % 30 === 0 ? 16 : 9;
-  el('line', { x1: C.x + R * Math.sin(r), y1: C.y - R * Math.cos(r), x2: C.x + (R - l) * Math.sin(r), y2: C.y - (R - l) * Math.cos(r) }, ticks);
-}
-for (const [kind, a] of foods) {
-  const r = a * Math.PI / 180;
-  const x = C.x + R * Math.sin(r), y = C.y - R * Math.cos(r);
-  el('circle', { cx: x, cy: y, r: 40, fill: PAPER, stroke: INK, 'stroke-width': 2.5, filter: 'url(#ink)' }, svg);
-  icon(svg, kind, x, y, 62, 0);
-}
-
-// ---- lettering ----
-const mirror = el('g', { transform: `translate(${W},0) scale(-1,1)`, fill: INK_SOFT, 'fill-opacity': 0.55, 'font-family': 'Fell', 'font-style': 'italic', 'font-size': 21 }, svg);
-const notes = ['de proteinis et adipibus, de fibra et carne', 'vitamina A D E K, ferrum, calx, kalium', 'quod edis, hoc es'];
-notes.forEach((t, i) => { const e = el('text', { x: 118, y: 66 + i * 26 }, mirror); e.textContent = t; });
-
-const title = el('text', { x: W / 2, y: 930, 'text-anchor': 'middle', 'font-family': 'FellSC', 'font-size': 92, fill: INK, filter: 'url(#ink)' }, svg);
-title.textContent = 'Complex Nutrition';
-const sub = el('text', { x: W / 2, y: 976, 'text-anchor': 'middle', 'font-family': 'Fell', 'font-style': 'italic', 'font-size': 34, fill: INK_SOFT }, svg);
-sub.textContent = 'every food, every nutrient';
 document.body.dataset.ready = '1';
+})();
 </script>
 </body>
 </html>

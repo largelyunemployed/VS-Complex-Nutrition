@@ -2,7 +2,7 @@
 
 Draft for the VS Mod DB and Workshop listing when v0.1 goes up. It keeps Miles's wording from [../MODPAGE.md](../MODPAGE.md) for the disclaimer, pitch and credits, and adds sections for what v0.1 actually does. Rewrite freely; nothing here replaces MODPAGE.md until Miles says so.
 
-Images: thumbnail `art/out/thumbnail-512.png` (the Vitruvian one), roadmap banner `art/out/roadmap-1920.png`.
+Images: thumbnail `art/out/thumbnail-512.png` (blocky Vitruvian character), roadmap banner `art/out/roadmap-1920.png`.
 
 ---
 
@@ -49,6 +49,22 @@ A few honest caveats:
 - Food data lives in JSON (`assets/complexnutrition/config/foodprofiles/`) and can be patched like any other asset.
 - Foods from other mods get an estimated profile from their vanilla food category, and the server log lists every one, so you know which ones to fill in.
 - Server admins can run `/cnutrition coverage` to see that list in game, and `/cnutrition info <item code>` to see any food's numbers.
+
+## Installation
+
+1. Download the latest `complexnutrition_<version>.zip` from the VS Mod DB page or the [Releases page on GitHub](https://github.com/largelyunemployed/VS-Complex-Nutrition/releases).
+2. Don't unzip it. Drop the zip as it is into your Mods folder:
+   - **Windows:** `%appdata%\VintagestoryData\Mods`
+   - **Linux:** `~/.config/VintagestoryData/Mods`
+   - **macOS:** `~/Library/Application Support/VintagestoryData/Mods`
+3. Start the game. Complex Nutrition should show up, switched on, in the Mods list on the main menu.
+
+It has only been tested on Vintage Story 1.22.7 so far. Other versions might work, or might not.
+
+- **Multiplayer:** install it on the server. Players need it too; the game normally offers to download a server's missing mods when you join, or they can install it the same way.
+- **Settings:** the first launch creates `VintagestoryData/ModConfig/complexnutrition.json`. Each module has a `true`/`false` switch under `Modules`, and `ShowTooltip` turns the nutrition lines in item tooltips on or off. Restart the game (or server) after editing it.
+- **Removing it:** v0.1 doesn't save anything into your world, so you can take it out of the Mods folder at any time and carry on as if nothing happened. Later versions will store your body's nutrient reserves, and the mod page will say so when that changes.
+- **Building it yourself:** see [DEVELOPING.md](https://github.com/largelyunemployed/VS-Complex-Nutrition/blob/main/docs/DEVELOPING.md) in the GitHub repo.
 
 **Designed by:** [Largely Unemployed](https://www.youtube.com/@LargelyUnemployed)
 
