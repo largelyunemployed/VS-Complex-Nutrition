@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.0
+
+- New Tracking module (on by default, `tracking` in `ModConfig/complexnutrition.json`): every player has a reserve of each of the 14 nutrients, measured in days of supply (100% = one day's need).
+- Eating fills the reserves: single foods by portion, drinks by the litre, cooked dishes by the servings eaten, pie slices as a quarter of the pie. Spoiled food gives fewer nutrients, in step with its lower satiety. Satiety from other mods' eating code is counted from its food category.
+- Diminishing returns: within one sitting (an in-game hour), intake above one and a half days' worth of a nutrient is absorbed at a falling rate.
+- Reserves drain by one day's worth per in-game day. Calories burn with vanilla satiety instead, so moving, sprinting, cold and hunger-rate changes all count.
+- Storage caps and starting reserves per nutrient group: vitamins A, D, E and K up to 25 days (start with 14), calcium, iron and potassium up to 10 days (start with 7), calories up to 5 days (start with 2), everything else a day and a half (start with 1). All set in `config/nutrients.json`.
+- While tracking is on, the five vanilla food group bars on the Stats panel are replaced by 14 nutrient bars (hover for days left), and vanilla's +12.5 HP nutrition bonus is off. Switching tracking off restores both.
+- 28-day diet ledger of calories per food category, kept on the server for later versions.
+- `/nutrition` lists your reserves. Admin commands `/cnutrition reserves`, `/cnutrition setreserve` and `/cnutrition ledger`.
+- Handbook guide pages: Eating well, Nutrient reserves, How food is counted, and The fourteen nutrients.
+- Tracking rules in `config/tracking.json`. Events for other modules: `FoodEaten`, `FoodAbsorbed`, `DailyRollover` and `ReserveChanged`.
+
 ## v0.1.1 (2026-11-03)
 
 First release, on GitHub.

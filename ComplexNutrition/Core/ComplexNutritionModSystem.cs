@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ComplexNutrition.Modules.FoodData;
+using ComplexNutrition.Modules.Tracking;
 using Newtonsoft.Json;
 using Vintagestory.API.Common;
 using Vintagestory.API.Server;
@@ -13,7 +14,7 @@ namespace ComplexNutrition.Core
     /// The core: owns the config, the nutrient registry and the food database,
     /// and starts the enabled feature modules. It is the only part that touches vanilla code.
     /// </summary>
-    public class ComplexNutritionModSystem : ModSystem
+    public partial class ComplexNutritionModSystem : ModSystem
     {
         public const string ModId = "complexnutrition";
 
@@ -27,17 +28,93 @@ namespace ComplexNutrition.Core
 
         public IReadOnlyList<INutritionModule> Modules => modules;
 
+        /// <summary>
+        /// Server: a player ate or drank something. Published whenever a module has asked for the eating hooks
+        /// (<see cref="RequireEatingHooks"/>), whatever else is switched on.
+        /// </summary>
+        public event Action<FoodEatenInfo> FoodEaten;
+
+        private readonly Dictionary<string, System.Func<IServerPlayer, string, float>> absorptionModifiers = new();
+
+        /// <summary>True when the module with this id is loaded and running.</summary>
+        public bool IsModuleEnabled(string id) => modules.Any(m => m.Id == id && m.IsEnabled);
+
+        /// <summary>Server: start working out what players eat (see <see cref="EatingHooks"/>). Safe to call more than once.</summary>
+        public void RequireEatingHooks()
+        {
+            if (api?.Side == EnumAppSide.Server) EatingHooks.Apply(this);
+        }
+
+        public void PublishFoodEaten(FoodEatenInfo info)
+        {
+            try
+            {
+                FoodEaten?.Invoke(info);
+            }
+            catch (Exception e)
+            {
+                api.Logger.Error("[complexnutrition] Error while handling food eaten by {0}: {1}", info.Player?.PlayerName, e);
+            }
+        }
+
+        /// <summary>
+        /// Registers a source of absorption multipliers: given a player and a nutrient code it returns a
+        /// multiplier on how much of that nutrient is absorbed (1 = no change). Used from v1.01; none ship in v0.2.
+        /// </summary>
+        public void RegisterAbsorptionModifier(string id, System.Func<IServerPlayer, string, float> modifier) => absorptionModifiers[id] = modifier;
+
+        public void UnregisterAbsorptionModifier(string id) => absorptionModifiers.Remove(id);
+
+        /// <summary>Every registered absorption multiplier for this player and nutrient, by modifier id.</summary>
+        public Dictionary<string, float> AbsorptionMultipliers(IServerPlayer player, string nutrient)
+        {
+            var result = new Dictionary<string, float>();
+            foreach (var kv in absorptionModifiers)
+            {
+                float m = kv.Value(player, nutrient);
+                if (m != 1f) result[kv.Key] = m;
+            }
+            return result;
+        }
+
         public override void StartPre(ICoreAPI api)
         {
             this.api = api;
             modules.Clear();
             modules.Add(new FoodDataModule());
+            modules.Add(new TrackingModule());
             LoadConfig(api);
+        }
+
+        public override void StartClientSide(Vintagestory.API.Client.ICoreClientAPI capi)
+        {
+            // Guide pages load in asset order, which would put ours above the game's own Starter Guide; move them after.
+            var handbook = capi.ModLoader.GetModSystem<Vintagestory.GameContent.ModSystemSurvivalHandbook>();
+            if (handbook != null)
+            {
+                handbook.OnInitCustomPages += pages =>
+                {
+                    var ours = pages.Where(p => p.PageCode != null && p.PageCode.StartsWith(ModId + "-")).ToList();
+                    pages.RemoveAll(ours.Contains);
+                    pages.AddRange(ours);
+                };
+            }
         }
 
         public override void StartServerSide(ICoreServerAPI sapi)
         {
-            sapi.ChatCommands.Create("cnutrition")
+            // Tell each joining player's client whether tracking runs on this server, so it shows our bars or vanilla's.
+            sapi.Event.PlayerNowPlaying += player =>
+            {
+                var tree = player.Entity?.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
+                if (tree != null && !IsModuleEnabled(TrackingModule.ModuleId))
+                {
+                    tree.SetBool("tracking", false);
+                    player.Entity.WatchedAttributes.MarkPathDirty(NutritionState.TreeKey);
+                }
+            };
+
+            sapi.ChatCommands.GetOrCreate("cnutrition")
                 .WithDescription("Complex Nutrition tools")
                 .RequiresPrivilege(Privilege.controlserver)
                 .BeginSubCommand("coverage")
@@ -91,6 +168,7 @@ namespace ComplexNutrition.Core
         {
             if (api == null) return;
             foreach (var module in modules.Where(m => m.IsEnabled).Reverse()) module.Disable(api);
+            if (api.Side == EnumAppSide.Server) EatingHooks.Remove();
         }
 
         private void LoadConfig(ICoreAPI api)

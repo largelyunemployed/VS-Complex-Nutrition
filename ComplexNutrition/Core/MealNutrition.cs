@@ -1,16 +1,18 @@
 using System;
 using System.Collections.Generic;
-using ComplexNutrition.Core;
 using Vintagestory.API.Common;
 using Vintagestory.GameContent;
 
-namespace ComplexNutrition.Modules.FoodData
+namespace ComplexNutrition.Core
 {
     /// <summary>Nutrients of a meal container's contents, summed from its ingredients.</summary>
     public class MealNutritionResult
     {
         /// <summary>Nutrient code to amount, per serving (or for the whole pie stack, for pies).</summary>
         public Dictionary<string, float> Totals = new();
+
+        /// <summary>Calories by the vanilla food category of each ingredient, on the same basis as <see cref="Totals"/>.</summary>
+        public Dictionary<string, float> KcalByCategory = new();
 
         public bool IsPie;
         public int PieSlices;
@@ -80,7 +82,14 @@ namespace ComplexNutrition.Modules.FoodData
                     result.Totals.TryGetValue(n.Code, out var sum);
                     result.Totals[n.Code] = sum + resolved.PerPortion(n.Code) * portions;
                 }
+
+                string category = FoodDatabase.ReadVanilla(ingredient.Collectible).Category ?? "Unknown";
+                result.KcalByCategory.TryGetValue(category, out var kcal);
+                result.KcalByCategory[category] = kcal + resolved.PerPortion(NutrientCodes.Calories) * portions;
             }
+
+            float kcalMul = stateFactor * (result.Cooked ? core.Cooking.Cooked(NutrientCodes.Calories) : 1f);
+            foreach (var key in new List<string>(result.KcalByCategory.Keys)) result.KcalByCategory[key] *= kcalMul;
 
             foreach (var n in core.Nutrients.All)
             {

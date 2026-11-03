@@ -26,9 +26,28 @@ namespace ComplexNutrition.Core
         /// <summary>Where the daily target comes from.</summary>
         [JsonProperty("source")] public string Source;
 
+        /// <summary>Tracking: the most the body stores, in % of the daily target (100 = one day).</summary>
+        [JsonProperty("cap")] public float Cap = 150;
+
+        /// <summary>Tracking: reserve a new character starts with, in % of the daily target.</summary>
+        [JsonProperty("startReserve")] public float StartReserve = 100;
+
+        /// <summary>Tracking: how much is used per in-game day, in % of the daily target.
+        /// Calories ignore this and follow the game's own hunger rate instead.</summary>
+        [JsonProperty("drainPerDay")] public float DrainPerDay = 100;
+
+        /// <summary>Tracking: intake in one sitting, in % of the daily target, above which
+        /// the extra is absorbed at a falling rate.</summary>
+        [JsonProperty("sittingLimit")] public float SittingLimit = 150;
+
         public string LangKey => "complexnutrition:nutrient-" + Code;
 
         public bool IsMicronutrient => Unit == "%DV";
+
+        public bool IsCalories => Code == NutrientCodes.Calories;
+
+        /// <summary>Converts an amount in <see cref="Unit"/> to % of the daily target.</summary>
+        public float ToPercent(float amount) => DailyTarget > 0 ? amount / DailyTarget * 100f : 0f;
     }
 
     public class NutrientRegistryFile
