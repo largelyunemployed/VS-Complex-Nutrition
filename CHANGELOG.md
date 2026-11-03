@@ -1,6 +1,12 @@
 # Changelog
 
-## v0.1.0 (unreleased)
+## v0.1.1 (2026-11-03)
+
+First release, on GitHub.
+
+- Fixed: the game crashed when joining a world with the mod installed.
+
+## v0.1.0 (not released)
 
 - Nutrient data for all 341 vanilla Vintage Story 1.22.7 foods, from USDA FoodData Central (SR Legacy), with a source for every food in [docs/FOOD_DATA.md](docs/FOOD_DATA.md).
 - 14 nutrients defined in `config/nutrients.json`: calories, protein, carbohydrate, fat, fiber, vitamins A, D, E, K, C, the B vitamins, calcium, iron and potassium.

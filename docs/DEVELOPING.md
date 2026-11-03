@@ -32,7 +32,7 @@ The release build writes `release/complexnutrition_<version>.zip`; drop it into 
 
 ```sh
 # server: https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_1.22.7.tar.gz
-mkdir -p data/Mods && cp release/complexnutrition_0.1.0.zip data/Mods/
+mkdir -p data/Mods && cp release/complexnutrition_0.1.1.zip data/Mods/
 dotnet VintagestoryServer.dll --dataPath ./data
 ```
 
