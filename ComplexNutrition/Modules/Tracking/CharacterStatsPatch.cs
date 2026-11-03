@@ -134,10 +134,12 @@ namespace ComplexNutrition.Modules.Tracking
             ElementBounds rightColumnBounds = ElementBounds.Fixed(165.0, 0.0, 120.0, 20.0);
             EntityPlayer entity = capi.World.Player.Entity;
 
-            // Vanilla's five bars take five 20 px rows; ours take one shorter row per nutrient.
-            double extraHeight = nutrients.Count * RowHeight - 5 * 20.0;
+            // Vanilla sizes the panel to the character and environment dialogs next to it. Our 14 rows
+            // usually fit in that; grow the panel only if they don't (header, rows, Physical block of up to 10 lines).
             double envHeight = envBounds.InnerHeight / RuntimeEnv.GUIScale + 10.0;
-            ElementBounds bgBounds = ElementBounds.Fixed(0.0, 0.0, 235.0, bounds.InnerHeight / RuntimeEnv.GUIScale - GuiStyle.ElementToDialogPadding - 20.0 + envHeight + extraHeight)
+            double vanillaHeight = bounds.InnerHeight / RuntimeEnv.GUIScale - GuiStyle.ElementToDialogPadding - 20.0 + envHeight;
+            double neededHeight = 45.0 + nutrients.Count * RowHeight + 28.0 + 10 * 20.0 + 10.0;
+            ElementBounds bgBounds = ElementBounds.Fixed(0.0, 0.0, 235.0, Math.Max(vanillaHeight, neededHeight))
                 .WithFixedPadding(GuiStyle.ElementToDialogPadding);
             ElementBounds dialogBounds = bgBounds.ForkBoundingParent().WithAlignment(EnumDialogArea.LeftMiddle)
                 .WithFixedAlignmentOffset((bounds.renderX + bounds.OuterWidth + 10.0) / RuntimeEnv.GUIScale, envHeight / 2.0);
