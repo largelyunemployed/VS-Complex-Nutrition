@@ -57,14 +57,47 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 listening = true;
                 capi.Event.LevelFinalize += ListenForChanges;
+                hudListener = capi.Event.RegisterGameTickListener(_ => LabelFullnessBar(), 1000);
             }
+        }
+
+        private static long hudListener;
+        private static GuiElementStatbar labelledBar;
+
+        /// <summary>
+        /// Vanilla's satiety bar next to the hotbar only shows "1070 / 1500" on hover. Label it as fullness, so
+        /// it reads as how much the stomach holds, next to the calorie reserve. The HUD recomposes now and then
+        /// (resizing, GUI scale), which makes a new bar, so this checks once a second.
+        /// </summary>
+        private static void LabelFullnessBar()
+        {
+            if (capi == null) return;
+            var hud = capi.Gui.LoadedGuis.FirstOrDefault(g => g.GetType().Name == "HudStatbar");
+            var bar = hud?.Composers["statbar"]?.GetStatbar("saturationstatbar");
+            if (bar == null || bar == labelledBar) return;
+            labelledBar = bar;
+            bar.onGetStatbarValue = () =>
+            {
+                var hunger = capi?.World?.Player?.Entity?.WatchedAttributes.GetTreeAttribute("hunger");
+                if (hunger == null) return "";
+                return Lang.Get("complexnutrition:fullness-hover",
+                    (int)Math.Round(hunger.GetFloat("currentsaturation")), (int)Math.Round(hunger.GetFloat("maxsaturation")));
+            };
+            // The hover text is only redrawn when the bar's value is set, so set it once now.
+            var tree = capi.World?.Player?.Entity?.WatchedAttributes.GetTreeAttribute("hunger");
+            if (tree != null) bar.SetValues(tree.GetFloat("currentsaturation"), 0, tree.GetFloat("maxsaturation"));
         }
 
         public static void Remove()
         {
             harmony?.UnpatchAll(HarmonyId);
             harmony = null;
-            if (capi != null && listening) capi.Event.LevelFinalize -= ListenForChanges;
+            if (capi != null && listening)
+            {
+                capi.Event.LevelFinalize -= ListenForChanges;
+                capi.Event.UnregisterGameTickListener(hudListener);
+            }
+            labelledBar = null;
             listening = false;
             capi = null;
             core = null;
@@ -113,7 +146,7 @@ namespace ComplexNutrition.Modules.Tracking
                 if (bar == null) continue;
                 float reserve = state.GetReserve(n.Code);
                 float max = Math.Max(n.Cap, reserve);
-                bar.SetLineInterval(max <= 300 ? 100 : 700);   // a line per day for short stores, per week for long ones
+                bar.SetLineInterval(100);   // one block per day of storage
                 bar.SetValues(reserve, 0, max);
             }
         }
@@ -160,7 +193,7 @@ namespace ComplexNutrition.Modules.Tracking
                 .BeginChildElements(bgBounds);
 
             ElementBounds labelBounds = ElementBounds.Fixed(0.0, 25.0, 200.0, 20.0);
-            compo.AddStaticText(Lang.Get("playerinfo-nutrition"), CairoFont.WhiteSmallText().WithWeight(FontWeight.Bold), labelBounds);
+            compo.AddStaticText(Lang.Get("complexnutrition:stats-heading"), CairoFont.WhiteSmallText().WithWeight(FontWeight.Bold), labelBounds);
             labelBounds = labelBounds.BelowCopy().WithFixedWidth(118.0).WithFixedHeight(RowHeight);
             for (int i = 0; i < nutrients.Count; i++)
             {
@@ -171,10 +204,13 @@ namespace ComplexNutrition.Modules.Tracking
                 compo.AddStaticText(Lang.Get(n.LangKey), CairoFont.WhiteDetailText().WithFontSize(13), labelBounds)
                      .AddStatbar(barBounds, color, "cn-" + n.Code);
                 var code = n.Code;
+                var def = n;
                 compo.GetStatbar("cn-" + code).onGetStatbarValue = () =>
                 {
                     float r = NutritionState.Of(capi?.World?.Player?.Entity)?.GetReserve(code) ?? 0f;
-                    return Lang.Get("complexnutrition:reserve-hover", Math.Round(r), TrackingModule.DaysText(r));
+                    return Lang.Get("complexnutrition:reserve-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.DaysText(r))
+                        + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
+                        + "\n" + Lang.Get("complexnutrition:effect-placeholder");
                 };
             }
             leftColumnBoundsW = leftColumnBoundsW.FixedUnder(labelBounds, -5.0);

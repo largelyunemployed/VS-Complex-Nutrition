@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Newtonsoft.Json;
 using Vintagestory.API.Common;
@@ -40,6 +42,13 @@ namespace ComplexNutrition.Core
         /// the extra is absorbed at a falling rate.</summary>
         [JsonProperty("sittingLimit")] public float SittingLimit = 150;
 
+        /// <summary>Unit amounts are shown in: kcal, g, mg or mcg. Empty for nutrients only shown in %
+        /// (the B vitamins, which are a mix of six).</summary>
+        [JsonProperty("displayUnit")] public string DisplayUnit;
+
+        /// <summary>For %DV nutrients: the amount in <see cref="DisplayUnit"/> that makes 100% of the daily value.</summary>
+        [JsonProperty("dvAmount")] public float DvAmount;
+
         public string LangKey => "complexnutrition:nutrient-" + Code;
 
         public bool IsMicronutrient => Unit == "%DV";
@@ -48,6 +57,26 @@ namespace ComplexNutrition.Core
 
         /// <summary>Converts an amount in <see cref="Unit"/> to % of the daily target.</summary>
         public float ToPercent(float amount) => DailyTarget > 0 ? amount / DailyTarget * 100f : 0f;
+
+        /// <summary>A quantity given in % of the daily target, as text: "72 g", "1,920 kcal", "7.0 mg",
+        /// or "37%" when <paramref name="percent"/> is set ("37% DV" for a nutrient with no unit to show).</summary>
+        public string Format(float percentOfDaily, bool percent)
+        {
+            if (percent) return Number(percentOfDaily) + "%";
+            if (string.IsNullOrEmpty(DisplayUnit)) return Number(percentOfDaily) + "% DV";
+            float amount = IsMicronutrient ? percentOfDaily / 100f * DvAmount : percentOfDaily / 100f * DailyTarget;
+            return Number(amount) + " " + DisplayUnit;
+        }
+
+        /// <summary>An amount in <see cref="Unit"/> (as food profiles store it), as text like <see cref="Format"/>.</summary>
+        public string FormatAmount(float amountInUnit, bool percent) => Format(ToPercent(amountInUnit), percent);
+
+        private static string Number(float v)
+        {
+            if (v >= 1000f) return Math.Round(v).ToString("#,0", CultureInfo.InvariantCulture);
+            if (v >= 10f || v == 0f) return Math.Round(v).ToString("0", CultureInfo.InvariantCulture);
+            return v.ToString("0.#", CultureInfo.InvariantCulture);
+        }
     }
 
     public class NutrientRegistryFile
@@ -90,6 +119,9 @@ namespace ComplexNutrition.Core
             }
             All = byCode.Values.OrderBy(n => n.SortOrder).ToList();
         }
+
+        /// <summary>Show quantities in % of a day's need rather than grams and kcal (config "displayUnits").</summary>
+        public bool ShowPercent { get; set; }
 
         public NutrientDefinition Get(string code) => code != null && byCode.TryGetValue(code, out var d) ? d : null;
 

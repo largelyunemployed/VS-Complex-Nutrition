@@ -1,0 +1,623 @@
+[
+ {
+  "op": "remove",
+  "path": "/drops",
+  "file": "game:blocktypes/plant/mushroom.json",
+  "side": "Server"
+ },
+ {
+  "op": "add",
+  "path": "/dropsByType",
+  "value": {
+   "*-fieldmushroom-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-almondmushroom-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 3.5,
+      "var": 1.5
+     }
+    }
+   ],
+   "*-blacktrumpet-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 3.0,
+      "var": 1.0
+     }
+    }
+   ],
+   "*-chanterelle-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 3.0,
+      "var": 1.0
+     }
+    }
+   ],
+   "*-commonmorel-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 5.5,
+      "var": 1.5
+     }
+    }
+   ],
+   "*-deathcap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-devilstooth-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 3.0,
+      "var": 1.0
+     }
+    }
+   ],
+   "*-elfinsaddle-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-golddropmilkcap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 4.5,
+      "var": 1.5
+     }
+    }
+   ],
+   "*-greencrackedrussula-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.0,
+      "var": 0.0
+     }
+    }
+   ],
+   "*-indigomilkcap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 4.5,
+      "var": 1.5
+     }
+    }
+   ],
+   "*-jackolantern-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-lobster-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 3.0,
+      "var": 1.0
+     }
+    }
+   ],
+   "*-paddystraw-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-puffball-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-redwinecap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 3.5,
+      "var": 1.5
+     }
+    }
+   ],
+   "*-saffronmilkcap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 4.5,
+      "var": 1.5
+     }
+    }
+   ],
+   "*-violetwebcap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.0,
+      "var": 0.0
+     }
+    }
+   ],
+   "*-witchhat-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 4.5,
+      "var": 1.5
+     }
+    }
+   ],
+   "*-bluemeanie-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 6.0,
+      "var": 2.0
+     }
+    }
+   ],
+   "*-foolsconecap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 6.0,
+      "var": 2.0
+     }
+    }
+   ],
+   "*-goldcap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 4.0,
+      "var": 1.0
+     }
+    }
+   ],
+   "*-honeymushroom-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-laughingjim-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-libertycap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 6.0,
+      "var": 2.0
+     }
+    }
+   ],
+   "*-sickener-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 4.0,
+      "var": 1.0
+     }
+    }
+   ],
+   "*-wavycap-normal": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 4.0,
+      "var": 1.0
+     }
+    }
+   ],
+   "*": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal",
+     "quantity": {
+      "avg": 1,
+      "var": 0
+     }
+    }
+   ]
+  },
+  "file": "game:blocktypes/plant/mushroom.json",
+  "side": "Server"
+ },
+ {
+  "op": "replace",
+  "path": "/nutritionPropsByType",
+  "value": {
+   "*-flyagaric-*": {
+    "satiety": 80,
+    "health": -6.5,
+    "foodcategory": "Vegetable",
+    "psychedelic": 0.4
+   },
+   "*-fieldmushroom-*": {
+    "satiety": 32,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-almondmushroom-*": {
+    "satiety": 23,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-bitterbolete-*": {
+    "satiety": 80,
+    "health": -1,
+    "foodcategory": "Vegetable"
+   },
+   "*-blacktrumpet-*": {
+    "satiety": 27,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-chanterelle-*": {
+    "satiety": 27,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-commonmorel-*": {
+    "satiety": 15,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-deathcap-*": {
+    "satiety": 32,
+    "health": -50,
+    "foodcategory": "Vegetable"
+   },
+   "*-devilstooth-*": {
+    "satiety": 27,
+    "health": -2,
+    "foodcategory": "Vegetable"
+   },
+   "*-devilbolete-*": {
+    "satiety": 80,
+    "health": -10,
+    "foodcategory": "Vegetable"
+   },
+   "*-earthball-*": {
+    "satiety": 80,
+    "health": -8,
+    "foodcategory": "Vegetable"
+   },
+   "*-elfinsaddle-*": {
+    "satiety": 32,
+    "health": -7,
+    "foodcategory": "Vegetable"
+   },
+   "*-golddropmilkcap-*": {
+    "satiety": 18,
+    "health": -2.5,
+    "foodcategory": "Vegetable"
+   },
+   "*-greencrackedrussula-*": {
+    "satiety": 40,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-indigomilkcap-*": {
+    "satiety": 18,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-jackolantern-*": {
+    "satiety": 32,
+    "health": -6,
+    "foodcategory": "Vegetable"
+   },
+   "*-kingbolete-*": {
+    "satiety": 80,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-lobster-*": {
+    "satiety": 27,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-orangeoakbolete-*": {
+    "satiety": 80,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-paddystraw-*": {
+    "satiety": 32,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-puffball-*": {
+    "satiety": 32,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-redwinecap-*": {
+    "satiety": 23,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-saffronmilkcap-*": {
+    "satiety": 18,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-violetwebcap-*": {
+    "satiety": 40,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-witchhat-*": {
+    "satiety": 18,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-bluemeanie-*": {
+    "satiety": 13,
+    "foodcategory": "Vegetable",
+    "psychedelic": 2
+   },
+   "*-foolsconecap-*": {
+    "satiety": 13,
+    "health": -20,
+    "foodcategory": "Vegetable"
+   },
+   "*-goldcap-*": {
+    "satiety": 20,
+    "foodcategory": "Vegetable",
+    "psychedelic": 1
+   },
+   "*-honeymushroom-*": {
+    "satiety": 32,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-laughingjim-*": {
+    "satiety": 32,
+    "health": -10,
+    "foodcategory": "Vegetable",
+    "psychedelic": 0.6
+   },
+   "*-libertycap-*": {
+    "satiety": 13,
+    "foodcategory": "Vegetable",
+    "psychedelic": 1.4
+   },
+   "*-sickener-*": {
+    "satiety": 20,
+    "health": -7,
+    "foodcategory": "Vegetable"
+   },
+   "*-wavycap-*": {
+    "satiety": 20,
+    "foodcategory": "Vegetable",
+    "psychedelic": 0.8
+   }
+  },
+  "file": "game:blocktypes/plant/mushroom.json",
+  "side": "Server"
+ },
+ {
+  "op": "remove",
+  "path": "/drops",
+  "file": "game:blocktypes/plant/mushroom-side.json",
+  "side": "Server"
+ },
+ {
+  "op": "add",
+  "path": "/dropsByType",
+  "value": {
+   "*-dryadsaddle-normal-*": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal-north",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-funeralbell-normal-*": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal-north",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-deerear-normal-*": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal-north",
+     "quantity": {
+      "avg": 2.0,
+      "var": 0.0
+     }
+    }
+   ],
+   "*-livermushroom-normal-*": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal-north",
+     "quantity": {
+      "avg": 2.5,
+      "var": 0.5
+     }
+    }
+   ],
+   "*-pinkbonnet-normal-*": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal-north",
+     "quantity": {
+      "avg": 3.0,
+      "var": 1.0
+     }
+    }
+   ],
+   "*-shiitake-normal-*": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal-north",
+     "quantity": {
+      "avg": 3.0,
+      "var": 1.0
+     }
+    }
+   ],
+   "*": [
+    {
+     "type": "block",
+     "code": "mushroom-{mushroom}-normal-north",
+     "quantity": {
+      "avg": 1,
+      "var": 0
+     }
+    }
+   ]
+  },
+  "file": "game:blocktypes/plant/mushroom-side.json",
+  "side": "Server"
+ },
+ {
+  "op": "replace",
+  "path": "/nutritionPropsByType",
+  "value": {
+   "*-beardedtooth-*": {
+    "satiety": 80,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-chickenofthewoods-*": {
+    "satiety": 80,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-dryadsaddle-*": {
+    "satiety": 32,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-pinkoyster-*": {
+    "satiety": 80,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-tinderhoof-*": {
+    "satiety": 80,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-whiteoyster-*": {
+    "satiety": 80,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-reishi-*": {
+    "satiety": 80,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-funeralbell-*": {
+    "satiety": 32,
+    "health": -40,
+    "foodcategory": "Vegetable"
+   },
+   "*-deerear-*": {
+    "satiety": 40,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-livermushroom-*": {
+    "satiety": 32,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   },
+   "*-pinkbonnet-*": {
+    "satiety": 27,
+    "health": -10,
+    "foodcategory": "Vegetable"
+   },
+   "*-shiitake-*": {
+    "satiety": 27,
+    "health": 0,
+    "foodcategory": "Vegetable"
+   }
+  },
+  "file": "game:blocktypes/plant/mushroom-side.json",
+  "side": "Server"
+ }
+]

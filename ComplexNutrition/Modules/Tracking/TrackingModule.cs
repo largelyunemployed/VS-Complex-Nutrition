@@ -279,7 +279,7 @@ namespace ComplexNutrition.Modules.Tracking
             foreach (var n in Core.Nutrients.All)
             {
                 float r = state.GetReserve(n.Code);
-                string line = Lang.Get("complexnutrition:cmd-reserve-line", Lang.Get(n.LangKey), Math.Round(r), DaysText(r));
+                string line = Lang.Get("complexnutrition:cmd-reserve-line", Lang.Get(n.LangKey), n.Format(r, Core.Nutrients.ShowPercent), DaysText(r));
                 if (withToday) line += $" (today +{Math.Round(state.GetAbsorbedToday(n.Code))}%, cap {n.Cap}%)";
                 sb.AppendLine(line);
             }

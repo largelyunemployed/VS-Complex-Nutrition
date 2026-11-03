@@ -35,7 +35,7 @@ The release build writes `release/complexnutrition_<version>.zip`; drop it into 
 
 ```sh
 # server: https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_1.22.7.tar.gz
-mkdir -p data/Mods && cp release/complexnutrition_0.2.0.zip data/Mods/
+mkdir -p data/Mods && cp release/complexnutrition_0.2.1.zip data/Mods/
 dotnet VintagestoryServer.dll --dataPath ./data
 ```
 
@@ -60,6 +60,9 @@ Tracking needs a player in the world. With a client connected:
 - **Absorption.** The tracking module converts each nutrient to % of its daily target, applies any registered absorption multipliers (`RegisterAbsorptionModifier`, none in v0.2), and applies diminishing returns per sitting: within `sittingHours` of the last food, intake above the nutrient's `sittingLimit` adds `scale * ln(1 + extra / scale)`. Reserves are capped at `cap`.
 - **Draining.** Every `updateSeconds`, reserves drain by `drainPerDay` scaled to the in-game hours passed, so sleeping and game speed count. Calories instead burn with vanilla satiety (prefix on `EntityBehaviorHunger.ReduceSaturation`), at `kcalPerSatiety` from `foodfallbacks.json`. Nothing drains in creative or spectator mode, while dead, or while offline.
 - **Vanilla bars.** While tracking runs for a player, a prefix on `EntityBehaviorHunger.UpdateNutrientHealthBoost` keeps the `nutrientHealthMod` max-health bonus at 0, and on the client a prefix on `CharacterExtraDialogs.ComposeStatsGui` lays out the Stats panel with our 14 bars in place of the five category bars. Switching the module off removes both patches and vanilla recomputes its bonus.
+- **Display units.** `DisplayUnits` in `ModConfig/complexnutrition.json` is `amount` (default) or `percent`. Each nutrient's `displayUnit` and `dvAmount` in `nutrients.json` turn a reserve or food amount into kcal, g, mg or mcg (`NutrientDefinition.Format`); the B vitamins have no `displayUnit` and are always shown in %.
+- **Mushroom clusters.** `patches/mushroom-clusters.json` makes each mushroom patch drop as many mushrooms as its block model holds and shares vanilla's satiety across them. It is generated from the game's models by `tools/build_mushroom_clusters.py <VintageStory folder>`, which also prints each mushroom's weight (held model volume × 0.6 g) for the `grams` in `tools/data/food_sources.json`.
+- **Fullness.** Vanilla satiety is shown as Fullness. `assets/game/lang/en.json` overrides the vanilla lang keys for the Stats panel line, food and drink tooltips and the handbook's meal facts. The HUD bar next to the hotbar gets its hover text from `CharacterStatsPatch.LabelFullnessBar`, which finds vanilla's `HudStatbar` once a second and sets the bar's `onGetStatbarValue`, since the HUD makes a new bar whenever it recomposes.
 - **Events** (on `ComplexNutritionModSystem`, server side): `FoodEaten`, `FoodAbsorbed`, `DailyRollover` (with the ledger day that ended) and `ReserveChanged`.
 
 ## Changing food data

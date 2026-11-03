@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.2.1
+
+- Vanilla satiety is now called Fullness: how much your stomach holds. The Stats panel, food and drink tooltips and the handbook use the new name, and hovering over the bar next to the hotbar shows "Fullness: 1070 / 1500".
+- The nutrient bars on the Stats panel sit under a "Nutritional Reserves" heading, and every bar is split into one block per day of storage.
+- Hovering over a nutrient bar also says what the nutrient does, and that its effect in game is planned for v0.4. The handbook's nutrient page marks each one the same way.
+- Protein's daily need rises from 55 g to 128 g (1.6 g per kg of bodyweight for an 80 kg character), so one cooked bushmeat now fills about half a day instead of topping up the reserve.
+- Amounts are now shown in real units by default: reserves on the Stats panel and in /nutrition in kcal, grams, mg or mcg (the B vitamins, a mix of six, stay in % of a day), and food tooltips list vitamins and minerals in mg or mcg as well. Set `DisplayUnits` to `percent` in `ModConfig/complexnutrition.json` to see everything as % of a day's need instead.
+- Vitamin C and the B vitamins are listed above vitamins A, D, E and K, so the fastest-draining reserves sit at the top.
+- The handbook's reserves page lists the daily values and store sizes in real units.
+- Every mushroom species now has its own nutrient profile (45 in all). Chanterelle, morel, shiitake, oyster, field, almond and paddy straw mushrooms use real USDA data; the rest are estimates built on the nearest studied mushroom. The real-data species keep their real values, so some stand out: morels are rich in iron, and chanterelles and morels in vitamin D. The estimates stay low in protein, calcium and iron and modest in vitamins D and B, with some vitamin C in a few, such as Tapir's liver. Each mushroom weighs what its held model suggests, from a 3 g pink bonnet to an 86 g chicken of the woods. Mushroom patches drawn as clusters now drop several mushrooms (a morel patch drops 4 to 7 and a liberty cap patch 4 to 8, a chanterelle or shiitake patch 2 to 4), and the forage stat still multiplies that. Fullness is shared across a patch, so one patch fills you about as much as before. The handbook explains it.
+- Roadmap: new v0.7 body composition; exercise and fitness move to v0.8, nutrient uptake modifiers to v0.9, and "Who knows!" to after 1.0. v0.4 adds an effect for every nutrient, and larger macronutrient and calorie stores for a balanced diet.
+
 ## v0.2.0
 
 - New Tracking module (on by default, `tracking` in `ModConfig/complexnutrition.json`): every player has a reserve of each of the 14 nutrients, measured in days of supply (100% = one day's need).

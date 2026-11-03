@@ -43,10 +43,11 @@ It has only been tested on Vintage Story 1.22.7 so far. Other versions might wor
 - **v0.4:** diet tiers and effects
 - **v0.5:** health and effects UI
 - **v0.6:** hidden food allergies (optional, off by default)
+- **v0.7:** body composition
+- **v0.8:** exercise and fitness
+- **v0.9:** nutrient uptake modifiers
 - **v1.0:** settings menu
-- **v1.01:** nutrient uptake modifiers (stretch goal)
-- **v1.02:** exercise and fitness (stretch goal)
-- **v1.03:** Who knows! (Suggestions welcome)
+- **After 1.0:** Who knows! (Suggestions welcome)
 
 ## Modular by design
 
