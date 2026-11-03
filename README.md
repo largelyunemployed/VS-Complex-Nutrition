@@ -42,6 +42,7 @@ It has only been tested on Vintage Story 1.22.7 so far. Other versions might wor
 - **v0.3:** nutrition UI
 - **v0.4:** diet tiers and effects
 - **v0.5:** health and effects UI
+- **v0.6:** hidden food allergies (optional, off by default)
 - **v1.0:** settings menu
 - **v1.01:** nutrient uptake modifiers (stretch goal)
 - **v1.02:** exercise and fitness (stretch goal)
@@ -59,6 +60,7 @@ Turning one module off never breaks the others, and with all modules off the gam
 | Nutrition UI | v0.3 | Nutrition window, tooltips and optional HUD indicator |
 | Effects | v0.4 | Five diet tiers (Thriving to Malnourished) with buffs and debuffs |
 | Health UI | v0.5 | Shows your diet tier, active effects and what to eat next |
+| Allergies | v0.6 | Optional, off by default: 0 to 3 hidden food allergies per character, found by tasting; reactions hurt and slow you but never kill |
 | Settings menu | v1.0 | In-game sliders and toggles for every module |
 | Modifiers | v1.01 | Body temperature, injury and illness change nutrient uptake |
 | Exercise | v1.02 | Activity plus good diet gives slow, permanent fitness gains |

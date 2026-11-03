@@ -39,6 +39,7 @@ A few honest caveats:
 - **v0.3:** nutrition UI
 - **v0.4:** diet tiers and effects
 - **v0.5:** health and effects UI
+- **v0.6:** hidden food allergies (optional, off by default)
 - **v1.0:** settings menu
 - **v1.01:** nutrient uptake modifiers (stretch goal)
 - **v1.02:** exercise and fitness (stretch goal)

@@ -38,6 +38,12 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - A Health tab showing your tier, active effects and where they came from, and a hint about what to eat next.
 - Small status icons for active effects.
 
+## v0.6: Hidden allergies (optional, off by default)
+
+- Each character gets 0 to 3 hidden food allergies (a world setting, 0 to 10), seeded per world and player, kept through death.
+- Allergens follow real allergen families mapped to vanilla foods (dairy, egg, fish, wheat-type grains, nightshades, stone fruit, berries and so on). Flax is excluded unless a sub-setting allows it.
+- You find them by tasting. Reactions, including from meals and pies, hurt and slow you for a while but never kill.
+
 ## v1.0: Settings menu
 
 - Every module and number adjustable in game, with sliders and toggles, as well as in the config file and by server command.

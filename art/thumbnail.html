@@ -124,11 +124,37 @@ const FACE = {
   '4,7': '#a39152', '5,7': '#a39152',                                               // nose shadow
   '3,8': '#3f7f80', '4,8': '#3f7f80', '5,8': '#3f7f80', '6,8': '#3f7f80',          // mouth
 };
+const HAIR_LIGHT = '#7f5836', HAIR_EDGE = '#3a2414';
+// Draws hair texels in body texel coords for every (u,v) where inside(u,v); vertical strands, dark outline.
+function hair(parent, u0, u1, v0, v1, inside, seed) {
+  const g = el('g', { 'shape-rendering': 'crispEdges' }, parent);
+  const r = rng(seed);
+  for (let v = v0; v < v1; v++) {
+    for (let u = u0; u < u1; u++) {
+      if (!inside(u, v)) continue;
+      const edge = !inside(u - 1, v) || !inside(u + 1, v) || !inside(u, v + 1);
+      let c = HAIR[Math.floor(r() * HAIR.length)];
+      if ((u + 40) % 3 === 1 && r() > 0.25) c = HAIR_LIGHT;    // strands catching the light
+      if (edge) c = HAIR_EDGE;
+      el('rect', { x: X(u), y: Y(v), width: T + 0.5, height: T + 0.5, fill: c }, g);
+    }
+  }
+}
+// back of the hair, framing the head
+hair(fig, -7, 7, -1, 11, (u, v) => u >= -7 && u < 7 && v >= -1 && v < 11 && !(v === -1 && (u < -5 || u > 4)), 43);
 const hr = rng(41);
 box(group(fig, X(-5), Y(0), 0, 0, 0), 10, 11, 42, skin, (u, v) => {
-  if (v < 2 || (v === 2 && (u < 2 || u > 7)) || (v < 5 && (u === 0 || u === 9))) return HAIR[Math.floor(hr() * HAIR.length)];
+  if (v < 2 || (v === 2 && (u < 3 || u > 6)) || (v === 3 && (u === 0 || u === 9))) return HAIR[Math.floor(hr() * HAIR.length)];
   return FACE[u + ',' + v] || null;
 });
+// long locks falling forward over the shoulders, with uneven ends and a little flare at the bottom
+// left side as [column, first row, end row]; the right side mirrors it (u -> -1 - u)
+const LOCK = { '-10': [12, 16], '-9': [10, 21], '-8': [8, 25], '-7': [2, 28], '-6': [2, 30], '-5': [2, 27], '-4': [3, 22] };
+const inLock = (u, v) => {
+  const s = LOCK[u < 0 ? u : -1 - u];
+  return !!s && v >= s[0] && v < s[1];
+};
+hair(fig, -10, 10, 2, 30, inLock, 44);
 
 // ---- health and satiety bars, then the hotbar with food in it ----
 const barY = IN.y + IN.h + 20, segW = 30, segs = 12;
