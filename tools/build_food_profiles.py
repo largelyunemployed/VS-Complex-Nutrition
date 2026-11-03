@@ -190,21 +190,31 @@ def main():
                     sys.exit("%s: no grams given" % pattern)
                 return float(e["grams"])
 
+            def factor_for(code):
+                # Cooking or baking state multiplier on every nutrient, e.g. a part-baked loaf at 0.5.
+                parts = code.split(":")[-1].split("-")
+                hits = [f for state, f in e.get("stateFactors", {}).items() if state in parts]
+                return hits[0] if hits else 1.0
+
             portions = {c: portion_for(c) for c in matches}
+            factors = {c: factor_for(c) for c in matches}
             for c in matches:
                 slice_grams[c] = portions[c]
-            uniform = len({round(p, 3) for p in portions.values()}) == 1
+            uniform = len({(round(portions[c], 3), factors[c]) for c in matches}) == 1
             codes_out = [pattern] if ("*" in pattern and uniform) else sorted(matches)
             for code in codes_out:
                 grams = portions[code] if code in portions else next(iter(portions.values()))
+                factor = factors[code] if code in factors else next(iter(factors.values()))
                 prof = OrderedDict()
                 prof["code"] = code
                 prof["portionGrams"] = round(grams, 1)
                 if is_liquid:
                     prof["portionUnit"] = "litre"
-                prof["per100g"] = OrderedDict((k, rnd(k, per100[k])) for k in ALL)
+                prof["per100g"] = OrderedDict((k, rnd(k, per100[k] * factor)) for k in ALL)
                 prof["source"] = source
                 notes = e.get("notes", "")
+                if factor != 1.0:
+                    notes = (notes + " " if notes else "") + "This state keeps %d%% of the base values." % round(factor * 100)
                 if gaps:
                     notes = (notes + " " if notes else "") + "USDA reports no value for: %s (treated as 0)." % ", ".join(gaps)
                 if notes:
@@ -212,8 +222,10 @@ def main():
                 profiles.append(prof)
 
             for c in matches:
-                rows.append({"code": c, "v": by_code[c], "fallback": False, "grams": portions[c], "per100": per100,
-                             "source": source, "notes": e.get("notes", ""), "liquid": is_liquid, "group": group})
+                rows.append({"code": c, "v": by_code[c], "fallback": False, "grams": portions[c],
+                             "per100": {k: v * factors[c] for k, v in per100.items()},
+                             "source": source, "liquid": is_liquid, "group": group,
+                             "notes": (e.get("notes", "") + (" %d%% of base values (%s)." % (round(factors[c] * 100), "cooking state") if factors[c] != 1.0 else "")).strip()})
             if not is_liquid:
                 template_inputs[by_code[matches[0]]["category"]].append(per100)
         out_files[group] = profiles

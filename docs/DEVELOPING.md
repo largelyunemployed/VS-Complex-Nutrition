@@ -43,7 +43,7 @@ The log should show `Loaded 14 nutrients and 164 food profiles`, `Nutrient info 
 
 ## Changing food data
 
-1. Edit `tools/data/food_sources.json`. Each entry maps a vanilla item code (wildcards allowed) to one or more USDA FoodData Central ids, with optional `water` (rescale to that water content), `zero` (nutrients lost, for example in baking), `juice` (drop fiber), `grams` (weight of one item), `fillFrom` (ids to borrow missing values from) and `notes`.
+1. Edit `tools/data/food_sources.json`. Each entry maps a vanilla item code (wildcards allowed) to one or more USDA FoodData Central ids, with optional `water` (rescale to that water content), `zero` (nutrients lost, for example in baking), `juice` (drop fiber), `grams` (weight of one item), `stateFactors` (multiplier on every nutrient for a cooking or baking state, keyed by a word in the item code), `fillFrom` (ids to borrow missing values from) and `notes`.
 2. Download the SR Legacy CSV set from https://fdc.nal.usda.gov/download-datasets (FoodData_Central_sr_legacy_food_csv_2018-04).
 3. Run `python3 tools/build_food_profiles.py --usda /path/to/FoodData_Central_sr_legacy_food_csv_2018-04`.
 

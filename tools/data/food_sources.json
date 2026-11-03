@@ -1,5 +1,5 @@
 {
-  "_comment": "Maps every vanilla Vintage Story 1.22.7 food to USDA FoodData Central (SR Legacy, April 2018) entries. Read by tools/build_food_profiles.py. 'grams' is the real weight of one in-game item (grams per litre for liquids). 'fdc' is a list of FDC ids averaged with equal weight. 'water' rescales the profile to that water content (dry-matter scaling, used for breads, doughs and dried foods). 'zero' sets nutrients to 0 (for example vitamin C lost in baking). 'juice' removes fiber (pulp pressed out). 'slicesOf'/'slices' sizes a cheese wheel from its single slice. 'fallback' leaves the item on its vanilla category template because USDA has no suitable entry.",
+  "_comment": "Maps every vanilla Vintage Story 1.22.7 food to USDA FoodData Central (SR Legacy, April 2018) entries. Read by tools/build_food_profiles.py. 'grams' is the real weight of one in-game item (grams per litre for liquids). 'fdc' is a list of FDC ids averaged with equal weight. 'water' rescales the profile to that water content (dry-matter scaling, used for breads, doughs and dried foods). 'zero' sets nutrients to 0 (for example vitamin C lost in baking). 'juice' removes fiber (pulp pressed out). 'slicesOf'/'slices' sizes a cheese wheel from its single slice. 'stateFactors' scales every nutrient for items whose code contains that state (part-baked bread keeps 50%, charred 20%). 'fallback' leaves the item on its vanilla category template because USDA has no suitable entry.",
   "_fallbackComment": "Only foods with no profile (insects, other mods' foods) are sized from vanilla satiety, at fallbackKcalPerSatiety kcal per satiety point, because nothing else is known about them.",
   "fallbackKcalPerSatiety": 1.0,
   "groups": {
@@ -81,13 +81,13 @@
       { "code": "game:dough-rye", "fdc": [168884], "grams": 250, "water": 45, "notes": "Rye grain rescaled to 45% water." },
       { "code": "game:dough-spelt", "fdc": [169745], "grams": 250, "water": 45, "notes": "Spelt rescaled to 45% water." },
       { "code": "game:dough-sunflower", "fdc": [170562], "grams": 250, "water": 45, "notes": "Sunflower kernels rescaled to 45% water." },
-      { "code": "game:bread-rye-*", "fdc": [172684], "grams": 225 },
-      { "code": "game:bread-spelt-*", "fdc": [172690], "grams": 225, "notes": "Spelt is a wheat; whole-wheat bread used." },
-      { "code": "game:bread-amaranth-*", "fdc": [170682], "grams": 225, "water": 37, "zero": ["vitaminC"], "notes": "No USDA amaranth bread; grain rescaled to 37% water (typical bread), vitamin C lost in baking." },
-      { "code": "game:bread-cassava-*", "fdc": [169985], "grams": 225, "water": 37, "zero": ["vitaminC"], "notes": "No USDA cassava bread; cassava rescaled to 37% water, vitamin C lost in baking." },
-      { "code": "game:bread-flax-*", "fdc": [169414], "grams": 225, "water": 37, "zero": ["vitaminC"], "notes": "No USDA flax bread; flaxseed rescaled to 37% water, vitamin C lost in baking." },
-      { "code": "game:bread-rice-*", "fdc": [169714], "grams": 225, "water": 37, "zero": ["vitaminC"], "notes": "No USDA rice bread; white rice flour rescaled to 37% water." },
-      { "code": "game:bread-sunflower-*", "fdc": [170562], "grams": 225, "water": 37, "zero": ["vitaminC"], "notes": "No USDA sunflower bread; kernels rescaled to 37% water." }
+      { "code": "game:bread-rye-*", "fdc": [172684], "grams": 225, "stateFactors": { "partbaked": 0.5, "charred": 0.2 } },
+      { "code": "game:bread-spelt-*", "fdc": [172690], "grams": 225, "stateFactors": { "partbaked": 0.5, "charred": 0.2 }, "notes": "Spelt is a wheat; whole-wheat bread used." },
+      { "code": "game:bread-amaranth-*", "fdc": [170682], "grams": 225, "stateFactors": { "partbaked": 0.5, "charred": 0.2 }, "water": 37, "zero": ["vitaminC"], "notes": "No USDA amaranth bread; grain rescaled to 37% water (typical bread), vitamin C lost in baking." },
+      { "code": "game:bread-cassava-*", "fdc": [169985], "grams": 225, "stateFactors": { "partbaked": 0.5, "charred": 0.2 }, "water": 37, "zero": ["vitaminC"], "notes": "No USDA cassava bread; cassava rescaled to 37% water, vitamin C lost in baking." },
+      { "code": "game:bread-flax-*", "fdc": [169414], "grams": 225, "stateFactors": { "partbaked": 0.5, "charred": 0.2 }, "water": 37, "zero": ["vitaminC"], "notes": "No USDA flax bread; flaxseed rescaled to 37% water, vitamin C lost in baking." },
+      { "code": "game:bread-rice-*", "fdc": [169714], "grams": 225, "stateFactors": { "partbaked": 0.5, "charred": 0.2 }, "water": 37, "zero": ["vitaminC"], "notes": "No USDA rice bread; white rice flour rescaled to 37% water." },
+      { "code": "game:bread-sunflower-*", "fdc": [170562], "grams": 225, "stateFactors": { "partbaked": 0.5, "charred": 0.2 }, "water": 37, "zero": ["vitaminC"], "notes": "No USDA sunflower bread; kernels rescaled to 37% water." }
     ],
     "protein": [
       { "code": "game:redmeat-raw", "fdc": [173855, 175297], "grams": 300, "notes": "Mix of deer and wild boar, the commonest red-meat animals." },
