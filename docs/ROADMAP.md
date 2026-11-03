@@ -51,6 +51,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - A simple scale from lean and muscular to heavier and fatter, with different gameplay effects for different builds.
 - Driven by calorie surplus or deficit and how active you are: a surplus with activity builds muscle and loses fat, a surplus without activity adds fat, a deficit with activity loses muscle and fat, and a deficit without it loses a little of both.
 - Possible effects: more fat insulates against the cold and softens blows a little; more muscle hits harder and works faster but burns far more calories.
+- A bodyweight for each character. Needs that depend on size follow it, starting with protein (1.6 g per kg; until then, every character counts as 80 kg).
 
 ## v0.8: Exercise and fitness
 
