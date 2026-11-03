@@ -43,7 +43,7 @@ The log should show `Loaded 14 nutrients and 164 food profiles`, `Nutrient info 
 
 ## Changing food data
 
-1. Edit `tools/data/food_sources.json`. Each entry maps a vanilla item code (wildcards allowed) to one or more USDA FoodData Central ids, with optional `water` (rescale to that water content), `zero` (nutrients lost, for example in baking), `juice` (drop fiber), `fillFrom` (ids to borrow missing values from) and `notes`.
+1. Edit `tools/data/food_sources.json`. Each entry maps a vanilla item code (wildcards allowed) to one or more USDA FoodData Central ids, with optional `water` (rescale to that water content), `zero` (nutrients lost, for example in baking), `juice` (drop fiber), `grams` (weight of one item), `fillFrom` (ids to borrow missing values from) and `notes`.
 2. Download the SR Legacy CSV set from https://fdc.nal.usda.gov/download-datasets (FoodData_Central_sr_legacy_food_csv_2018-04).
 3. Run `python3 tools/build_food_profiles.py --usda /path/to/FoodData_Central_sr_legacy_food_csv_2018-04`.
 
@@ -52,7 +52,8 @@ The script refuses to run if any vanilla food is left without an entry. After a 
 ## Rules the data follows
 
 - Values are per 100 g. Macros in grams, calories in kcal, micronutrients in % of the US FDA Daily Value. The B-vitamin tracker is the mean %DV of thiamin, riboflavin, niacin, B6, folate and B12, each capped at 300%.
-- A portion's weight is set so its calories equal its vanilla satiety (`kcalPerSatiety`, currently 1.0). Vanilla burns about 700 to 2,800 satiety per in-game day (0.96 per second active, a quarter of that idle, at default speed), which is close to a real adult's daily kcal, so 1:1 keeps vanilla's balance. Liquids use the same rule per litre.
+- Each entry gives a real-world weight for one in-game item (`grams`, or grams per litre for liquids; `gramsPerUnit` for fish chunks, `slicesOf` for cheese wheels). Calories follow from the weight and are not tied to vanilla satiety; `docs/FOOD_DATA.md` shows both side by side.
+- Only foods with no profile (the insects, other mods' foods) are sized from satiety, at `fallbackKcalPerSatiety` (1.0) kcal per point. Vanilla burns about 700 to 2,800 satiety per in-game day (0.96 per second active, a quarter of that idle, at default speed), close to a real adult's daily kcal, so 1:1 is a sensible guess when nothing else is known.
 - Only things vanilla treats as food get data. Meals, pies and similar containers are skipped and will be summed from ingredients in v0.2.
 
 ## For other mods

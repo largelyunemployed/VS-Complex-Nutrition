@@ -28,7 +28,7 @@ Not a lot yet, on purpose. v0.1 is the foundation everything else gets built on:
 
 A few honest caveats:
 
-- Portions are sized so a food's calories equal its vanilla satiety. That keeps vanilla's balance intact, but it does mean a cabbage is about 1.2 kg (it is a whole head, to be fair).
+- Every food has a real-world weight (an apple is 180 g, a loaf of bread 225 g, a cabbage head 900 g), so its calories are what that much real food would give you. That means they don't always line up with how full vanilla says it makes you: a mushroom is filling but has almost no calories, and flax bread is the opposite.
 - USDA has never analysed a beautyberry, a saguaro fruit or a cattail root, so those borrow from their closest real relative (elderberry, prickly pear, arrowhead). Insects aren't in USDA at all and use an average "protein food" profile for now. All of these are flagged in the data table.
 - Meals, stews and pies don't show nutrition yet. From v0.2 they will add up their ingredients.
 
