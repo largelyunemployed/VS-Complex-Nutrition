@@ -23,8 +23,9 @@ namespace ComplexNutrition.Modules.FoodData
         {
             IsEnabled = true;
 
-            // Attached on both sides so server and client agree on each item's behaviours;
-            // the tooltip itself only renders on the client.
+            // Client only: tooltips are drawn on the client, and the server sends each item's
+            // behaviours to clients by registered class name, which this one doesn't have.
+            if (api.Side == EnumAppSide.Client)
             {
                 foreach (var coll in api.World.Collectibles)
                 {
