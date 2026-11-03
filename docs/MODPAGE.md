@@ -10,8 +10,6 @@ Text for the Vintage Story mod database and Workshop listing. Keep the disclaime
 > Please keep this in mind when using, auditing or building on this mod, and report anything that looks or plays wrong.
 > The issues tab on the github repo will be monitored, but there are also alternative contact points listed below.
 
-Complex Nutrition expands Vintage Story's nutrition system. Every food gets real-world calories, macronutrients (protein, carbohydrate, fat, fiber), vitamins and minerals. Your body tracks reserves of each, and a balanced diet over in-game weeks earns buffs while a narrow one slowly costs you.
-
 **Complex Nutrition** makes what you eat matter a lot more. Every food ingredient in vanilla Vintage Story gets real-world calories, protein, carbohydrate, fat, fiber, vitamins and minerals inspired by the Metabolism system from the game SCUM. Your body keeps reserves of each tracked macro- and micro-nutrient, and the balance of your diet will determine your overall health. Some effects show up and can be addressed quickly, while others take weeks to appear and resolve. 
 
 - **Everything in the mod is modular and optional:** each component of the mod has its own switch, so you can keep the elements you like and turn off the rest. With all components switched off, the game will play exactly like vanilla.
