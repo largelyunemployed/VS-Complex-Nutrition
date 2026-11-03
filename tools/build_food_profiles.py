@@ -125,7 +125,21 @@ def build_entry_profile(entry, usda):
     if entry.get("juice"):
         prof["fiber"] = 0.0
         gaps = [g for g in gaps if g != "fiber"]
+    # 'set': values per 100 g chosen by design, replacing the USDA ones (for species with no lab data,
+    # or to keep a nutrient in a range the game wants). A set value is not a gap.
+    unknown = set(entry.get("set", {})) - set(ALL)
+    if unknown:
+        sys.exit("%s: unknown nutrient in set: %s" % (entry["code"], sorted(unknown)))
+    for k, v in entry.get("set", {}).items():
+        prof[k] = float(v)
+    gaps = [g for g in gaps if g not in entry.get("set", {})]
     return prof, gaps
+
+
+def describe_set(entry):
+    if not entry.get("set"):
+        return ""
+    return "Set by design (per 100 g): " + ", ".join("%s %g" % (k, entry["set"][k]) for k in ALL if k in entry["set"])
 
 
 def as_factor(f):
@@ -194,6 +208,9 @@ def main():
             source = {"fdcId": e["fdc"][0], "description": usda[e["fdc"][0]]["description"], "dataset": "SR Legacy"}
             if len(e["fdc"]) > 1:
                 source["description"] = " + ".join(usda[i]["description"] for i in e["fdc"]) + " (equal mix)"
+            if e.get("estimated"):
+                # A species with no lab data of its own: say which real food it was built on.
+                source["description"] = "estimate built on " + source["description"]
             is_liquid = all(by_code[c]["kind"] == LIQUID_KIND for c in matches)
 
             def portion_for(code):
@@ -238,6 +255,8 @@ def main():
                 prof["per100g"] = OrderedDict((k, rnd(k, per100[k] * factor[k])) for k in ALL)
                 prof["source"] = source
                 notes = e.get("notes", "")
+                if describe_set(e):
+                    notes = (notes + " " if notes else "") + describe_set(e) + "."
                 if describe_factor(factor):
                     notes = (notes + " " if notes else "") + describe_factor(factor) + "."
                 if gaps:
@@ -251,7 +270,9 @@ def main():
                              "per100": {k: per100[k] * factors[c][k] for k in ALL},
                              "source": source, "liquid": is_liquid, "group": group,
                              "notes": (e.get("notes", "") + (" " + describe_factor(factors[c]) + "." if describe_factor(factors[c]) else "")).strip()})
-            if not is_liquid:
+            # 'noTemplate': leave this entry out of the category templates, so a family with many
+            # entries (the mushrooms) does not outweigh the rest of its category.
+            if not is_liquid and not e.get("noTemplate"):
                 template_inputs[by_code[matches[0]]["category"]].append(per100)
         out_files[group] = profiles
 
