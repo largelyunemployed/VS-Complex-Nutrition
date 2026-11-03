@@ -204,10 +204,11 @@ namespace ComplexNutrition.Modules.Tracking
                 compo.AddStaticText(Lang.Get(n.LangKey), CairoFont.WhiteDetailText().WithFontSize(13), labelBounds)
                      .AddStatbar(barBounds, color, "cn-" + n.Code);
                 var code = n.Code;
+                var def = n;
                 compo.GetStatbar("cn-" + code).onGetStatbarValue = () =>
                 {
                     float r = NutritionState.Of(capi?.World?.Player?.Entity)?.GetReserve(code) ?? 0f;
-                    return Lang.Get("complexnutrition:reserve-hover", Math.Round(r), TrackingModule.DaysText(r))
+                    return Lang.Get("complexnutrition:reserve-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.DaysText(r))
                         + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
                         + "\n" + Lang.Get("complexnutrition:effect-placeholder");
                 };

@@ -145,6 +145,7 @@ namespace ComplexNutrition.Core
         public override void AssetsFinalize(ICoreAPI api)
         {
             Nutrients.Load(api);
+            Nutrients.ShowPercent = Config.ShowPercent;
             Foods.Load(api, Nutrients);
             Cooking = CookingRules.Load(api);
             api.Logger.Notification("[complexnutrition] Loaded {0} nutrients and {1} food profiles.", Nutrients.All.Count, Foods.ProfileCount);
@@ -183,17 +184,13 @@ namespace ComplexNutrition.Core
                 Config = null;
             }
 
-            bool write = Config == null;
             Config ??= new ComplexNutritionConfig();
             foreach (var m in modules)
             {
-                if (!Config.Modules.ContainsKey(m.Id))
-                {
-                    Config.Modules[m.Id] = m.EnabledByDefault;
-                    write = true;
-                }
+                if (!Config.Modules.ContainsKey(m.Id)) Config.Modules[m.Id] = m.EnabledByDefault;
             }
-            if (write) api.StoreModConfig(Config, ComplexNutritionConfig.FileName);
+            // Written back every start, so settings added in a new version show up in the file.
+            api.StoreModConfig(Config, ComplexNutritionConfig.FileName);
         }
 
         private static IEnumerable<INutritionModule> OrderByDependencies(List<INutritionModule> all)

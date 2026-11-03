@@ -74,29 +74,30 @@ namespace ComplexNutrition.Modules.FoodData
             var sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine(header);
-            sb.AppendLine(Lang.Get("complexnutrition:tooltip-macros",
-                Math.Round(amount(NutrientCodes.Calories)),
-                Fmt(amount(NutrientCodes.Protein)),
-                Fmt(amount(NutrientCodes.Carbohydrate)),
-                Fmt(amount(NutrientCodes.Fat)),
-                Fmt(amount(NutrientCodes.Fiber))));
+            bool percent = nutrients.ShowPercent;
+            string Macro(string code) => nutrients.Get(code)?.FormatAmount(amount(code), percent) ?? "0";
+            sb.AppendLine(Lang.Get(percent ? "complexnutrition:tooltip-macros-percent" : "complexnutrition:tooltip-macros",
+                Macro(NutrientCodes.Calories),
+                Macro(NutrientCodes.Protein),
+                Macro(NutrientCodes.Carbohydrate),
+                Macro(NutrientCodes.Fat),
+                Macro(NutrientCodes.Fiber)));
 
+            // The micronutrients that cover the most of a day's need, shown in the same units as the reserves.
             var top = nutrients.All
                 .Where(n => n.IsMicronutrient)
                 .Select(n => (def: n, dv: amount(n.Code)))
                 .Where(t => t.dv >= 1f)
                 .OrderByDescending(t => t.dv)
                 .Take(withDebugInfo ? int.MaxValue : TopMicronutrients)
-                .Select(t => Lang.Get("complexnutrition:tooltip-dv", Lang.Get(t.def.LangKey), Math.Round(t.dv)))
+                .Select(t => Lang.Get("complexnutrition:tooltip-dv", Lang.Get(t.def.LangKey), t.def.FormatAmount(t.dv, percent)))
                 .ToList();
             if (top.Count > 0)
             {
-                sb.AppendLine(Lang.Get("complexnutrition:tooltip-richin", string.Join(", ", top)));
+                sb.AppendLine(Lang.Get(percent ? "complexnutrition:tooltip-richin" : "complexnutrition:tooltip-richin-amount", string.Join(", ", top)));
             }
             if (footer != null) sb.AppendLine(footer);
             return sb.ToString();
         }
-
-        private static string Fmt(float grams) => grams >= 10 ? Math.Round(grams).ToString("0") : grams.ToString("0.#");
     }
 }

@@ -6,6 +6,9 @@
 - The nutrient bars on the Stats panel sit under a "Nutritional Reserves" heading, and every bar is split into one block per day of storage.
 - Hovering over a nutrient bar also says what the nutrient does, and that its effect in game is planned for v0.4. The handbook's nutrient page marks each one the same way.
 - Protein's daily need rises from 55 g to 128 g (1.6 g per kg of bodyweight for an 80 kg character), so one cooked bushmeat now fills about half a day instead of topping up the reserve.
+- Amounts are now shown in real units by default: reserves on the Stats panel and in /nutrition in kcal, grams, mg or mcg (the B vitamins, a mix of six, stay in % of a day), and food tooltips list vitamins and minerals in mg or mcg as well. Set `DisplayUnits` to `percent` in `ModConfig/complexnutrition.json` to see everything as % of a day's need instead.
+- Vitamin C and the B vitamins are listed above vitamins A, D, E and K, so the fastest-draining reserves sit at the top.
+- The handbook's reserves page lists the daily values and store sizes in real units.
 - Roadmap: new v0.7 body composition; exercise and fitness move to v0.8, nutrient uptake modifiers to v0.9, and "Who knows!" to after 1.0. v0.4 adds an effect for every nutrient, and larger macronutrient and calorie stores for a balanced diet.
 
 ## v0.2.0

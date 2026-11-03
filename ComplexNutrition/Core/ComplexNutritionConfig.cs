@@ -16,6 +16,15 @@ namespace ComplexNutrition.Core
         /// <summary>Food data module: show the nutrient block in item tooltips.</summary>
         public bool ShowTooltip = true;
 
+        /// <summary>
+        /// How amounts are shown in tooltips, the Stats panel and /nutrition: "amount" (grams, kcal, mg or mcg)
+        /// or "percent" (% of a day's need). Display only; each player's own file decides what they see.
+        /// </summary>
+        public string DisplayUnits = "amount";
+
+        [Newtonsoft.Json.JsonIgnore]
+        public bool ShowPercent => string.Equals(DisplayUnits, "percent", System.StringComparison.OrdinalIgnoreCase);
+
         /// <summary>Food data module: log every food that has no profile and uses a category template.</summary>
         public bool LogFallbacks = true;
 
