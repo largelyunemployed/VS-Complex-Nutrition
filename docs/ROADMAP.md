@@ -4,7 +4,7 @@ A longer version of the roadmap in the README, for anyone who wants to know what
 
 Every module has its own switch. With all of them off, the game plays exactly like vanilla.
 
-## v0.1: Food data (this release)
+## v0.1: Food data (released)
 
 - Real-world nutrients for every vanilla food (341 items), from USDA FoodData Central, per 100 g.
 - 14 tracked nutrients: calories; protein, carbohydrate, fat, fiber; vitamins A, D, E, K; vitamin C and the B vitamins; calcium, iron and potassium.
@@ -12,7 +12,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - Mod feasibility testing: the mod loads cleanly on a 1.22.7 server and a data table of every food is in [FOOD_DATA.md](FOOD_DATA.md).
 - VS Mod DB thumbnail, description and roadmap drafts.
 
-## v0.2: Nutrient tracking and the handbook guide
+## v0.2: Nutrient tracking and the handbook guide (this release)
 
 - Your body gets a reserve for each nutrient. Eating fills it, time drains it toward a daily target.
 - Meals, stews and pies count their ingredients, split by servings.

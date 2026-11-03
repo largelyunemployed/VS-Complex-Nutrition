@@ -5,10 +5,13 @@
 | Path | What it is |
 | --- | --- |
 | `ComplexNutrition/` | The mod: C# project, `modinfo.json`, `modicon.png` and `assets/` |
-| `ComplexNutrition/Core/` | Config, nutrient registry, food database, module loader (`ComplexNutritionModSystem`) |
-| `ComplexNutrition/Modules/FoodData/` | v0.1 module: tooltip behaviour, cooked-dish sums, pie tooltip patch, fallback logging |
+| `ComplexNutrition/Core/` | Config, nutrient registry, food database, cooked-dish sums, eating hooks, player nutrition state and diet ledger, module loader and events (`ComplexNutritionModSystem`) |
+| `ComplexNutrition/Modules/FoodData/` | v0.1 module: tooltip behaviour, pie tooltip patch, fallback logging |
+| `ComplexNutrition/Modules/Tracking/` | v0.2 module: reserves, draining, absorption, hunger patches, Stats panel bars, `/nutrition` and admin commands |
 | `ComplexNutrition/assets/complexnutrition/config/cooking.json` | Multipliers for cooked dishes and pie bake states |
-| `ComplexNutrition/assets/complexnutrition/config/nutrients.json` | The 14 nutrients, their units and daily targets |
+| `ComplexNutrition/assets/complexnutrition/config/nutrients.json` | The 14 nutrients: units, daily targets, and tracking caps, start reserves, drain and sitting limits |
+| `ComplexNutrition/assets/complexnutrition/config/tracking.json` | Tracking rules: sitting window, diminishing returns, ledger length, update rate |
+| `ComplexNutrition/assets/complexnutrition/config/handbook/*.json` | Handbook guide pages (text in `lang/en.json`, keys `guide-*`) |
 | `ComplexNutrition/assets/complexnutrition/config/foodprofiles/*.json` | Per-100 g food profiles (generated) |
 | `ComplexNutrition/assets/complexnutrition/config/foodfallbacks.json` | Category templates for foods with no profile (generated) |
 | `tools/build_food_profiles.py` | Builds the profiles from USDA data |
@@ -32,16 +35,32 @@ The release build writes `release/complexnutrition_<version>.zip`; drop it into 
 
 ```sh
 # server: https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_1.22.7.tar.gz
-mkdir -p data/Mods && cp release/complexnutrition_0.1.1.zip data/Mods/
+mkdir -p data/Mods && cp release/complexnutrition_0.2.0.zip data/Mods/
 dotnet VintagestoryServer.dll --dataPath ./data
 ```
 
-The log should show `Loaded 14 nutrients and 164 food profiles`, `Nutrient info added to 341 foods`, and a coverage line listing the three insect foods on the fallback. Then, in the server console:
+The log should show `Loaded 14 nutrients and 164 food profiles`, a coverage line listing the three insect foods on the fallback, and `Module fooddata enabled` and `Module tracking enabled`. (`Nutrient info added to ... foods` is logged by clients, which draw the tooltips.) Then, in the server console:
 
 - `/cnutrition coverage` lists foods without their own profile.
 - `/cnutrition info game:fruit-blueberry` prints the nutrient block that item's tooltip shows.
 - `/cnutrition template [domain]` writes a ready-to-edit profile file for every food still on the category estimate (one mod's, or all) to `ModData/complexnutrition/template-<domain>.json`.
 - `/cnutrition dump` writes every food with its vanilla values to `ModData/complexnutrition/foods.json` (this is how `tools/data/vanilla_foods_1.22.7.json` was made).
+
+Tracking needs a player in the world. With a client connected:
+
+- `/nutrition` (any player) lists your reserves.
+- `/cnutrition reserves <player>` adds today's intake and each cap.
+- `/cnutrition setreserve <player> <nutrient|all> <percent>` sets reserves, for testing.
+- `/cnutrition ledger <player>` shows the diet ledger (calories per food category per day).
+
+## How tracking works
+
+- **State.** Each player's reserves live in `WatchedAttributes["complexnutrition"]` (`NutritionState`): a reserve per nutrient in % of its daily target, today's absorbed amounts, the current sitting, and the game time of the last drain. It saves with the player and syncs to clients. The `tracking` flag in that tree tells the client whether the server is tracking this player; the Stats panel only swaps in our bars when it is set. The 28-day diet ledger (`DietLedger`, calories per vanilla food category per day) is kept in the server-only entity `Attributes`.
+- **Eating.** `EatingHooks` (core) patches the three vanilla eating paths: `CollectibleObject.tryEatStop` (single foods), `BlockLiquidContainerBase.tryEatStop` (drinks) and `BlockMeal.Consume` (bowls, pots and pie slices). A prefix on `EntityBehaviorHunger.OnEntityReceiveSaturation` turns the satiety vanilla hands out into a share of the food's profile, so spoilage scales nutrients the same way it scales satiety. Meals count the servings the dish actually lost. Satiety from any other code path is counted from its category template. The core publishes `FoodEaten` for each.
+- **Absorption.** The tracking module converts each nutrient to % of its daily target, applies any registered absorption multipliers (`RegisterAbsorptionModifier`, none in v0.2), and applies diminishing returns per sitting: within `sittingHours` of the last food, intake above the nutrient's `sittingLimit` adds `scale * ln(1 + extra / scale)`. Reserves are capped at `cap`.
+- **Draining.** Every `updateSeconds`, reserves drain by `drainPerDay` scaled to the in-game hours passed, so sleeping and game speed count. Calories instead burn with vanilla satiety (prefix on `EntityBehaviorHunger.ReduceSaturation`), at `kcalPerSatiety` from `foodfallbacks.json`. Nothing drains in creative or spectator mode, while dead, or while offline.
+- **Vanilla bars.** While tracking runs for a player, a prefix on `EntityBehaviorHunger.UpdateNutrientHealthBoost` keeps the `nutrientHealthMod` max-health bonus at 0, and on the client a prefix on `CharacterExtraDialogs.ComposeStatsGui` lays out the Stats panel with our 14 bars in place of the five category bars. Switching the module off removes both patches and vanilla recomputes its bonus.
+- **Events** (on `ComplexNutritionModSystem`, server side): `FoodEaten`, `FoodAbsorbed`, `DailyRollover` (with the ledger day that ended) and `ReserveChanged`.
 
 ## Changing food data
 

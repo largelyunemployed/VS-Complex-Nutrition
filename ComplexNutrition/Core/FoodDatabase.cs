@@ -203,30 +203,34 @@ namespace ComplexNutrition.Core
                 var own = FindOwnProfile(coll.Code);
                 result = own != null
                     ? new ResolvedFoodProfile { Profile = own, PortionGrams = own.PortionGrams }
-                    : MakeFallback(vanilla);
+                    : FallbackFor(vanilla.Category, vanilla.Satiety, vanilla.Kind == "perlitre");
             }
 
             cache[coll.Id] = result;
             return result;
         }
 
-        private ResolvedFoodProfile MakeFallback(VanillaNutrition vanilla)
+        /// <summary>
+        /// The category template sized so that one portion gives <paramref name="satiety"/> worth of calories.
+        /// Used for foods without a profile, and for satiety another mod hands out directly.
+        /// </summary>
+        public ResolvedFoodProfile FallbackFor(string category, float satiety, bool liquid)
         {
-            if (!Fallbacks.ByCategory.TryGetValue(vanilla.Category ?? "Unknown", out var template)
+            if (!Fallbacks.ByCategory.TryGetValue(category ?? "Unknown", out var template)
                 && !Fallbacks.ByCategory.TryGetValue("Unknown", out template))
             {
                 return null;
             }
 
             float kcalPer100 = template.Per100(NutrientCodes.Calories);
-            if (kcalPer100 <= 0 || vanilla.Satiety <= 0) return null;
+            if (kcalPer100 <= 0 || satiety <= 0) return null;
 
-            float grams = vanilla.Satiety * Fallbacks.KcalPerSatiety / kcalPer100 * 100f;
+            float grams = satiety * Fallbacks.KcalPerSatiety / kcalPer100 * 100f;
             var profile = new FoodProfile
             {
                 Code = template.Code,
                 PortionGrams = grams,
-                PortionUnit = vanilla.Kind == "perlitre" ? "litre" : "item",
+                PortionUnit = liquid ? "litre" : "item",
                 Per100g = template.Per100g,
                 Source = template.Source,
                 Notes = template.Notes
