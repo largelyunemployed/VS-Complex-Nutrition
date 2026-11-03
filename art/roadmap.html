@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Complex Nutrition roadmap</title>
+<style>
+  @font-face { font-family: 'Lato'; font-weight: 400; src: url(fonts/Lato-400.ttf); }
+  @font-face { font-family: 'Lato'; font-weight: 700; src: url(fonts/Lato-700.ttf); }
+  @font-face { font-family: 'Lato'; font-weight: 900; src: url(fonts/Lato-900.ttf); }
+  html, body { margin: 0; background: #222; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<svg id="art" width="1920" height="720" viewBox="0 0 1920 720"></svg>
+<script src="vs.js"></script>
+<script>
+// ===== Edit this list and re-run `node art/render.js` as versions ship. status: done | next | planned =====
+// A '|' in a title splits it over two lines.
+const MILESTONES = [
+  { v: 'v0.1',  title: 'Food data',               note: 'every vanilla food',   icon: 'wheat',    status: 'done' },
+  { v: 'v0.2',  title: 'Nutrient|tracking',       note: '+ handbook guide',     icon: 'scales',   status: 'next' },
+  { v: 'v0.3',  title: 'Nutrition UI',            note: '',                     icon: 'book',     status: 'planned' },
+  { v: 'v0.4',  title: 'Diet tiers|& effects',    note: '',                     icon: 'heart',    status: 'planned' },
+  { v: 'v0.5',  title: 'Health &|effects UI',     note: '',                     icon: 'flask',    status: 'planned' },
+  { v: 'v0.6',  title: 'Hidden|allergies',        note: 'off by default',       icon: 'peanut',   status: 'planned' },
+  { v: 'v1.0',  title: 'Settings|menu',           note: '',                     icon: 'cog',      status: 'planned' },
+  { v: 'v1.01', title: 'Uptake|modifiers',        note: 'stretch goal',         icon: 'thermo',   status: 'planned' },
+  { v: 'v1.02', title: 'Exercise|& fitness',      note: 'stretch goal',         icon: 'boot',     status: 'planned' },
+  { v: 'v1.03', title: 'Who knows!',              note: 'suggestions welcome',  icon: 'question', status: 'planned' },
+];
+// ==========================================================================================================
+
+// Line icons, drawn like the game's empty-slot icons (about +-45 px).
+const GLYPH = {
+  wheat(g) {
+    el('path', { d: 'M0,40 C0,10 2,-20 6,-42' }, g);
+    for (let i = 0; i < 4; i++) {
+      const y = -32 + i * 14;
+      el('path', { d: `M${3 - i * 0.6},${y} q-14,-4 -16,-16 q12,2 16,16 Z M${4 - i * 0.6},${y} q14,-4 16,-16 q-12,2 -16,16 Z` }, g);
+    }
+  },
+  scales(g) {
+    el('path', { d: 'M0,-40 L0,36 M-22,36 L22,36 M-34,-26 L34,-26 M-34,-26 L-46,6 M-34,-26 L-22,6 M34,-26 L22,6 M34,-26 L46,6' }, g);
+    el('path', { d: 'M-48,6 Q-34,22 -20,6 Z M20,6 Q34,22 48,6 Z' }, g);
+    el('circle', { cx: 0, cy: -42, r: 4 }, g);
+  },
+  book(g) {
+    el('path', { d: 'M0,-26 C-14,-34 -34,-34 -44,-28 L-44,30 C-34,24 -14,24 0,32 C14,24 34,24 44,30 L44,-28 C34,-34 14,-34 0,-26 Z M0,-26 L0,32' }, g);
+    for (const y of [-14, -2, 10]) el('path', { d: `M-34,${y} q14,-4 26,0 M8,${y} q14,-4 26,0`, 'stroke-width': 2.5 }, g);
+  },
+  heart(g) {
+    el('path', { d: 'M0,34 C-30,10 -44,-6 -40,-22 C-36,-38 -12,-40 0,-20 C12,-40 36,-38 40,-22 C44,-6 30,10 0,34 Z' }, g);
+    el('path', { d: 'M-26,-22 q4,-8 12,-8', 'stroke-width': 2.5 }, g);
+  },
+  flask(g) {
+    el('path', { d: 'M-10,-40 L10,-40 M-7,-40 L-7,-14 C-30,-4 -34,30 -14,38 L14,38 C34,30 30,-4 7,-14 L7,-40' }, g);
+    el('path', { d: 'M-24,14 C-10,8 10,20 24,12', 'stroke-width': 2.5 }, g);
+    el('path', { d: 'M-4,22 L4,22 M0,18 L0,26', 'stroke-width': 3 }, g);
+  },
+  cog(g) {
+    let d = '';
+    for (let i = 0; i < 8; i++) {
+      const a0 = (i / 8) * Math.PI * 2, a1 = a0 + Math.PI / 8, a2 = a0 + Math.PI / 4;
+      const p = (a, r) => `${r * Math.cos(a)},${r * Math.sin(a)}`;
+      d += (i === 0 ? 'M' : 'L') + p(a0 + 0.08, 38) + ' L' + p(a1 - 0.08, 38) + ' L' + p(a1 + 0.05, 28) + ' L' + p(a2 - 0.05, 28) + ' ';
+    }
+    el('path', { d: d + 'Z' }, g);
+    el('circle', { cx: 0, cy: 0, r: 11 }, g);
+  },
+  thermo(g) {
+    el('path', { d: 'M-7,18 L-7,-34 C-7,-44 7,-44 7,-34 L7,18' }, g);
+    el('circle', { cx: 0, cy: 28, r: 13 }, g);
+    el('path', { d: 'M0,28 L0,-20', 'stroke-width': 6, stroke: '#b0171b' }, g);
+    for (const y of [-24, -12, 0]) el('path', { d: `M10,${y} L18,${y}`, 'stroke-width': 2.5 }, g);
+    el('path', { d: 'M-30,-30 l0,16 M-38,-22 l16,0 M-35,-27 l10,10 M-35,-17 l10,-10', 'stroke-width': 2.5 }, g);
+  },
+  boot(g) {
+    el('path', { d: 'M-14,-40 L14,-40 L16,8 C30,10 42,16 42,30 L42,36 L-20,36 L-20,8 Z' }, g);
+    el('path', { d: 'M-20,26 L42,26 M-12,-28 L10,-28 M-12,-16 L10,-16', 'stroke-width': 2.5 }, g);
+    el('path', { d: 'M-40,-6 l12,0 M-44,6 l14,0 M-38,18 l10,0', 'stroke-width': 2.5 }, g);
+  },
+  peanut(g) {
+    el('path', { d: 'M-6,-40 C-26,-40 -30,-18 -18,-6 C-10,2 -30,14 -22,30 C-14,44 10,44 18,32 C26,20 10,6 18,-6 C28,-20 16,-40 -6,-40 Z' }, g);
+    for (const [x, y] of [[-10, -26], [4, -30], [-2, -16], [8, -14], [-8, 20], [6, 26], [0, 12], [-12, 30]]) el('circle', { cx: x, cy: y, r: 1.6, fill: 'currentColor', stroke: 'none' }, g);
+  },
+  question(g) {
+    el('path', { d: 'M-16,-18 C-16,-40 18,-42 18,-20 C18,-6 0,-4 0,10 L0,16', 'stroke-width': 6 }, g);
+    el('circle', { cx: 0, cy: 32, r: 4, fill: 'currentColor' }, g);
+  }
+};
+
+(async () => {
+await Promise.all(['900 72px Lato', '700 26px Lato', '400 22px Lato'].map(f => document.fonts.load(f)));
+const W = 1920, H = 720;
+const svg = document.getElementById('art');
+panel(svg, 0, 0, W, H, 9, 12);
+
+// title, with a few foods beside it
+const t = text(svg, 90, 116, 'Complex Nutrition', { 'font-weight': 900, 'font-size': 76 });
+text(svg, 94, 162, 'the road ahead', { 'font-weight': 700, 'font-size': 32, fill: VS.textSoft });
+const tEnd = t.getBBox().x + t.getBBox().width;
+['bread', 'carrot', 'apple'].forEach((f, i) => sprite(svg, f, tEnd + 36 + i * 76, 52, 4));
+
+// legend: the slot highlights the game uses
+const lg = [['done', VS.done], ['up next', VS.selected], ['planned', null]];
+lg.forEach(([label, ring], i) => {
+  const x = W - 560 + i * 180, y = 84;
+  slot(svg, x, y, 40, { ring });
+  text(svg, x + 56, y + 29, label, { 'font-weight': 700, 'font-size': 26 });
+});
+
+// the milestone row sits in a sunken area, like an inventory grid
+const n = MILESTONES.length, S = 136, GAP = 36;
+const x0 = (W - (n * S + (n - 1) * GAP)) / 2;
+inset(svg, x0 - 40, 214, n * S + (n - 1) * GAP + 80, 430, 10, 12);
+
+// progress bar above the slots, segmented like the satiety bar
+MILESTONES.forEach((m, i) => {
+  const x = x0 + i * (S + GAP) - (i === 0 ? 0 : GAP / 2) + 2, w = S + (i === 0 || i === n - 1 ? GAP / 2 : GAP) - 4;
+  const fill = m.status === 'done' ? VS.satiety : m.status === 'next' ? '#3f7f8f' : '#2a221a';
+  el('rect', { x, y: 244, width: w, height: 18, fill, stroke: '#1d1610', 'stroke-width': 2 }, svg);
+  if (m.status === 'next') el('rect', { x, y: 244, width: w * 0.35, height: 18, fill: VS.selected }, svg);
+});
+
+MILESTONES.forEach((m, i) => {
+  const x = x0 + i * (S + GAP), y = 290;
+  const ring = m.status === 'done' ? VS.done : m.status === 'next' ? VS.selected : null;
+  slot(svg, x, y, S, { ring });
+  const ink = m.status === 'planned' ? VS.slotIcon : '#7d5a3a';
+  const g = el('g', { transform: `translate(${x + S / 2},${y + S / 2}) scale(1.05)`, fill: 'none', stroke: ink, color: ink, 'stroke-width': 4, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, svg);
+  GLYPH[m.icon](g);
+  if (m.status === 'done') {          // check-mark badge in the corner
+    const b = el('g', { transform: `translate(${x + S - 8},${y + 8})` }, svg);
+    el('circle', { r: 20, fill: VS.satiety, stroke: VS.slotBorder, 'stroke-width': 3 }, b);
+    el('path', { d: 'M-9,0 L-3,7 L9,-7', fill: 'none', stroke: VS.text, 'stroke-width': 4.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, b);
+  }
+
+  const cx = x + S / 2;
+  const vcol = m.status === 'done' ? '#c2d06a' : m.status === 'next' ? VS.selected : VS.text;
+  text(svg, cx, y + S + 48, m.v, { 'text-anchor': 'middle', 'font-weight': 900, 'font-size': 36, fill: vcol });
+  const lines = m.title.split('|');
+  lines.forEach((l, j) => text(svg, cx, y + S + 88 + j * 30, l, { 'text-anchor': 'middle', 'font-weight': 700, 'font-size': 24 }));
+  if (m.note) text(svg, cx, y + S + 88 + lines.length * 30 + 4, m.note, { 'text-anchor': 'middle', 'font-weight': 400, 'font-size': 20, fill: VS.textSoft });
+});
+
+text(svg, W / 2, H - 34, 'Every module is optional: with all of them switched off, the game plays exactly like vanilla.', { 'text-anchor': 'middle', 'font-weight': 400, 'font-size': 25, fill: VS.textSoft });
+document.body.dataset.ready = '1';
+})();
+</script>
+</body>
+</html>

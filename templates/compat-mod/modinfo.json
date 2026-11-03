@@ -1,0 +1,14 @@
+{
+	"type": "content",
+	"modid": "yourfoodmodcncompat",
+	"name": "Complex Nutrition compatibility: Your Food Mod",
+	"version": "1.0.0",
+	"authors": ["Your name"],
+	"description": "Real-world nutrient data for the foods in Your Food Mod, for the Complex Nutrition mod.",
+	"side": "Universal",
+	"dependencies": {
+		"game": "1.22.7",
+		"complexnutrition": "0.1.0",
+		"yourfoodmod": "*"
+	}
+}

@@ -1,0 +1,41 @@
+{
+	"_comment": "Complex Nutrition food profiles. Every config/foodprofiles/*.json in any mod is read. Values are per 100 g (per 100 g of liquid for portionUnit litre); macros in g, calories in kcal, vitamins and minerals in % of the US FDA Daily Value. Replace the example codes below with your mod's item codes; codes that match nothing are ignored. Full guide: https://github.com/largelyunemployed/VS-Complex-Nutrition/blob/main/docs/COMPATIBILITY.md",
+	"profiles": [
+		{
+			"code": "yourfoodmod:fruit-gooseberry",
+			"portionGrams": 50,
+			"per100g": {
+				"calories": 44.0, "protein": 0.88, "carbohydrate": 10.18, "fat": 0.58, "fiber": 4.3,
+				"vitaminA": 1.67, "vitaminD": 0.0, "vitaminE": 2.47, "vitaminK": 0.0, "vitaminC": 30.78, "vitaminB": 2.29,
+				"calcium": 1.92, "iron": 1.72, "potassium": 4.21
+			},
+			"source": { "fdcId": 173030, "description": "Gooseberries, raw", "dataset": "SR Legacy" },
+			"notes": "Example 1: a full profile from USDA FoodData Central. One gooseberry item = a 50 g handful."
+		},
+		{
+			"code": "yourfoodmod:fruit-whitecurrant",
+			"like": "game:fruit-redcurrant",
+			"notes": "Example 2: close enough to a vanilla food. Copies its per-100 g values and its 50 g portion."
+		},
+		{
+			"code": "yourfoodmod:driedfruit-*",
+			"like": "game:fruit-cranberry",
+			"portionGrams": 15,
+			"scale": { "all": 6.0, "vitaminC": 0.1 },
+			"notes": "Example 3: a wildcard covering every dried fruit variant. Drying concentrates everything about 6 times and destroys most vitamin C. Lighter portion."
+		},
+		{
+			"code": "yourfoodmod:juiceportion-gooseberry",
+			"like": "game:juiceportion-apple",
+			"per100g": { "vitaminC": 15.0 },
+			"notes": "Example 4: a liquid. Copies apple juice (and its per-litre portion), then replaces one value."
+		},
+		{
+			"code": "yourfoodmod:pemmican",
+			"like": "game:redmeat-cured",
+			"portionGrams": 100,
+			"per100g": { "fat": 30.0, "calories": 520.0 },
+			"notes": "Example 5: a food with no close match, built from the nearest one and corrected."
+		}
+	]
+}
