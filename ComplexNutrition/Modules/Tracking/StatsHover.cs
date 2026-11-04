@@ -4,6 +4,7 @@ using System.Text;
 using Cairo;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 
 namespace ComplexNutrition.Modules.Tracking
 {
@@ -22,6 +23,12 @@ namespace ComplexNutrition.Modules.Tracking
         public const string HeadingColor = "#d8c48c";
         /// <summary>Colour for notes about features that do nothing yet.</summary>
         public const string NoteColor = "#9a9a9a";
+        /// <summary>Grams digesting, in green.</summary>
+        public const string GramsColor = "#8fd46a";
+        /// <summary>Calorie amounts, in an orange that contrasts with the green.</summary>
+        public const string KcalColor = "#f5a142";
+        /// <summary>The absorption rate segment ("at 6.4g (26kcal) an hour"), in red.</summary>
+        public const string RateColor = "#ec6b5e";
         /// <summary>A line break with a small invisible line after it: a gap of about half a line between sections.</summary>
         private const string Gap = "<font size=\"8\" opacity=\"0\"><br>.<br></font>";
 
@@ -115,6 +122,14 @@ namespace ComplexNutrition.Modules.Tracking
         public static string Esc(string text) =>
             string.IsNullOrEmpty(text) ? "" : text.Replace("<", "&lt;").Replace(">", "&gt;");
 
+        /// <summary>Plain text in a colour, as VTML.</summary>
+        public static string Paint(string text, string color) =>
+            "<font color=\"" + color + "\">" + Esc(text) + "</font>";
+
+        /// <summary>A lang entry as VTML: its own text escaped, with the (already VTML) arguments put in.</summary>
+        public static string Vtml(string key, params object[] vtmlArgs) =>
+            string.Format(CultureInfo.InvariantCulture, Esc(Lang.GetUnformatted(key)), vtmlArgs);
+
         /// <summary>A bar colour as #rrggbb, lightened so it reads as text on the dark box.</summary>
         public static string Hex(double[] rgba, double lighten = 0.35)
         {
@@ -134,7 +149,8 @@ namespace ComplexNutrition.Modules.Tracking
                 sb.Append("<font color=\"").Append(color).Append("\" weight=\"bold\" scale=\"125%\">").Append(Esc(title)).Append("</font>");
             }
 
-            /// <summary>A section: its heading on its own line, then each non-empty line below it.</summary>
+            /// <summary>A section: its heading on its own line, then each non-empty line below it. Lines are VTML
+            /// (use <see cref="Esc"/> for plain text).</summary>
             public Builder Section(string heading, params string[] lines)
             {
                 bool any = false;
@@ -144,7 +160,7 @@ namespace ComplexNutrition.Modules.Tracking
                 foreach (var line in lines)
                 {
                     if (string.IsNullOrEmpty(line)) continue;
-                    foreach (var part in line.Split('\n')) sb.Append("<br>").Append(Esc(part));
+                    foreach (var part in line.Split('\n')) sb.Append("<br>").Append(part);
                 }
                 return this;
             }

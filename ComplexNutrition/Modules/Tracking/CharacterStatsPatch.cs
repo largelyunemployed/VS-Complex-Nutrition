@@ -149,8 +149,8 @@ namespace ComplexNutrition.Modules.Tracking
             float pct = def.ToPercent(kcal);
             return new StatsHover.Builder(Lang.Get(def.LangKey), StatsHover.Hex(GroupColors["Energy"]))
                 .Section(Lang.Get("complexnutrition:hover-status"),
-                    Lang.Get("complexnutrition:hud-calories", def.Format(pct, core.Nutrients.ShowPercent), TrackingModule.DaysText(pct)),
-                    Lang.Get("complexnutrition:fullness-hover", (int)Math.Round(fullness), (int)Math.Round(maxFullness)))
+                    StatsHover.Vtml("complexnutrition:hud-calories", Amount(def, pct), StatsHover.Esc(TrackingModule.DaysText(pct))),
+                    StatsHover.Esc(Lang.Get("complexnutrition:fullness-hover", (int)Math.Round(fullness), (int)Math.Round(maxFullness))))
                 .ToString();
         }
 
@@ -261,10 +261,10 @@ namespace ComplexNutrition.Modules.Tracking
         {
             var b = new StatsHover.Builder(title, StatsHover.Hex(color))
                 .Section(Lang.Get("complexnutrition:hover-status"), status)
-                .Section(Lang.Get("complexnutrition:hover-about"), Lang.Get("complexnutrition:nutrient-" + code + "-role"));
+                .Section(Lang.Get("complexnutrition:hover-about"), StatsHover.Esc(Lang.Get("complexnutrition:nutrient-" + code + "-role")));
             string key = "complexnutrition:nutrient-" + code + "-effect";
             if (!Lang.HasTranslation(key)) b.Note(Lang.Get("complexnutrition:effect-placeholder"));
-            else b.Section(Lang.Get("complexnutrition:hover-ingame"), Lang.Get(key));
+            else b.Section(Lang.Get("complexnutrition:hover-ingame"), StatsHover.Esc(Lang.Get(key)));
             return b.ToString();
         }
 
@@ -337,8 +337,17 @@ namespace ComplexNutrition.Modules.Tracking
             if (hoverBar != null && hoverFunc != null) hoverBox?.Show(hoverFunc());
         }
 
+        /// <summary>An amount as hover VTML: calories in orange, grams in green, other units plain.</summary>
+        private static string Amount(NutrientDefinition def, float percentOfDaily)
+        {
+            string text = def.Format(percentOfDaily, core.Nutrients.ShowPercent);
+            if (text.EndsWith("kcal")) return StatsHover.Paint(text, StatsHover.KcalColor);
+            if (text.EndsWith("g") && !text.EndsWith("mg") && !text.EndsWith("mcg")) return StatsHover.Paint(text, StatsHover.GramsColor);
+            return StatsHover.Esc(text);
+        }
+
         /// <summary>
-        /// A gut pool's first hover line. With the advanced nutrition display: grams, the calories they will give
+        /// A gut pool's first hover line (VTML). With the advanced nutrition display: grams, the calories they will give
         /// (after diminishing returns), time to absorb and the current absorption rate; otherwise grams and time.
         /// </summary>
         private static string GutLine(NutritionState st, NutrientDefinition def, float reserve)
@@ -349,14 +358,18 @@ namespace ComplexNutrition.Modules.Tracking
             var pool = s?.Pool(code);
             if (st == null || pool == null || !Digestion.AdvancedDisplay(capi?.World, st) || reserve <= 0.01f)
             {
-                return Lang.Get("complexnutrition:gut-hover", def.Format(reserve, core.Nutrients.ShowPercent), hours);
+                return StatsHover.Vtml("complexnutrition:gut-hover", Amount(def, reserve), StatsHover.Esc(hours));
             }
             float grams = reserve / 100f * def.DailyTarget;
             float window = Digestion.WindowGrams(st, code, pool);
             float kcal = pool.Effective(window, grams) * pool.KcalPerGram;
             float rate = pool.Rate(grams, Digestion.FiberSpeed(s, st, pool));
             float kcalRate = pool.Effective(window, rate) * pool.KcalPerGram;
-            return Lang.Get("complexnutrition:gut-hover-advanced", Num(grams), Num(kcal), hours, Num(rate), Num(kcalRate));
+            return StatsHover.Vtml("complexnutrition:gut-hover-advanced",
+                StatsHover.Paint(Num(grams) + "g", StatsHover.GramsColor),
+                StatsHover.Paint(Num(kcal) + "kcal", StatsHover.KcalColor),
+                StatsHover.Esc(hours),
+                StatsHover.Paint(Lang.Get("complexnutrition:gut-rate", Num(rate), Num(kcalRate)), StatsHover.RateColor));
         }
 
         private static string Num(float v) => v >= 10f ? Math.Round(v).ToString("#,0", System.Globalization.CultureInfo.InvariantCulture) : v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
@@ -439,8 +452,8 @@ namespace ComplexNutrition.Modules.Tracking
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
                         float r = st?.GetReserve(code) ?? 0f;
                         return NutrientHover(title, color, code, GutLine(st, def, r),
-                            Lang.Get("complexnutrition:protein24-hover", Math.Round(st?.Protein24 ?? 0f),
-                                Math.Round(Digestion.Settings?.ProteinNeedGrams ?? 64f), Math.Round(Digestion.Settings?.ProteinMaxGrams ?? 128f)));
+                            StatsHover.Esc(Lang.Get("complexnutrition:protein24-hover", Math.Round(st?.Protein24 ?? 0f),
+                                Math.Round(Digestion.Settings?.ProteinNeedGrams ?? 64f), Math.Round(Digestion.Settings?.ProteinMaxGrams ?? 128f))));
                     });
                 }
                 else if (IsGutPool(code))
@@ -459,7 +472,7 @@ namespace ComplexNutrition.Modules.Tracking
                     {
                         float r = NutritionState.Of(capi?.World?.Player?.Entity)?.GetReserve(code) ?? 0f;
                         return NutrientHover(title, color, code,
-                            Lang.Get("complexnutrition:reserve-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.DaysText(r)));
+                            StatsHover.Vtml("complexnutrition:reserve-hover", Amount(def, r), StatsHover.Esc(TrackingModule.DaysText(r))));
                     });
                 }
             }
