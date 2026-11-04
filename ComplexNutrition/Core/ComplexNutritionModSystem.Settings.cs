@@ -85,6 +85,24 @@ namespace ComplexNutrition.Core
                     })
                 .EndSubCommand();
 
+            // Poultry and bushmeat in pots for any world, including ones made before v0.3.0 (same as the settings menu).
+            api.ChatCommands.GetOrCreate("cnutrition")
+                .BeginSubCommand("meatinpots")
+                    .WithDescription("Let poultry and bushmeat go into stews and soups: /cnutrition meatinpots <on|off>. Takes effect after a restart")
+                    .RequiresPrivilege(Privilege.controlserver)
+                    .WithArgs(api.ChatCommands.Parsers.OptionalWordRange("state", "on", "off"))
+                    .HandleWith(args =>
+                    {
+                        if (!args.Parsers[0].IsMissing)
+                        {
+                            sapi.World.Config.SetString(MeatInPotsKey, (string)args[0] == "on" ? "true" : "false");
+                            SendSettingsToAll();
+                        }
+                        bool now = WorldBool(sapi.World, MeatInPotsKey);
+                        return TextCommandResult.Success(Lang.Get(now ? "complexnutrition:cmd-meatinpots-on" : "complexnutrition:cmd-meatinpots-off"));
+                    })
+                .EndSubCommand();
+
             // The same switch from the server console, for dedicated servers.
             api.ChatCommands.GetOrCreate("cnutrition")
                 .BeginSubCommand("module")

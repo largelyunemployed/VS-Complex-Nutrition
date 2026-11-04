@@ -12,7 +12,7 @@
 - Amounts or percent is now each player's own choice, saved on their computer in `ModConfig/complexnutrition-client.json`, with the server's setting as the default.
 - Nutrient tracking can be switched off and on while the game runs, after a confirmation. Switching off saves everyone's reserves and sets their vanilla food groups from them; switching on puts everyone back exactly where they were. Admins can also use `/cnutrition module <fooddata|tracking> <on|off>`.
 - Cooking pots hold up to 10 of an ingredient per slot (vanilla 6).
-- New world setting, Poultry and bushmeat in pots (off by default): raw, cooked and cured poultry and bushmeat count as meat in meat stews and soups. It takes effect the next time the world loads.
+- New world setting, Poultry and bushmeat in pots (off by default): raw, cooked and cured poultry and bushmeat count as meat in meat stews and soups. It takes effect the next time the world loads. Admins can also switch it on for any world, including ones made before v0.3.0, with `/cnutrition meatinpots on` (or `off`).
 - Protein no longer stops giving calories at 128g. Up to 64g digested in 24 hours, each gram gives its full 4kcal; from 64g to 128g each gram gives a little less, down to 80%; past 128g each gram gives 50%.
 - New handbook page, The Nutrition Window. The other pages mention the window, the settings, the bigger pots and the new protein curve.
 
