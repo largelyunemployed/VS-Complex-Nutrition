@@ -114,13 +114,39 @@ namespace ComplexNutrition.Modules.Tracking
         private void InitPlayer(IServerPlayer player)
         {
             if (player?.Entity == null) return;
-            var state = NutritionState.GetOrCreate(player.Entity, Core.Nutrients, NowHours, out _);
+            var state = NutritionState.GetOrCreate(player.Entity, Core.Nutrients, NowHours, out bool created);
+            if (created) ApplyStartCondition(player, state);
             state.TrackingOn = true;
             state.LastUpdateHours = NowHours;
             Digestion.UseOurScale(player.Entity, Digest);
             EnsureDay(player, state);
             state.MarkDirty();
             RefreshVanillaHealthBonus(player);
+        }
+
+        /// <summary>World setting (see worldconfig.json): the calorie tank of a new character, in % of a day.</summary>
+        public const string StartConditionKey = "complexnutritionStart";
+
+        /// <summary>
+        /// A character new to Complex Nutrition starts with the calorie tank the world's start condition picks:
+        /// Easy 7 days (full), Normal 5, Hard 3, Brutal 1, Rock Bottom 1% of a day. Only on first join, never on respawn.
+        /// </summary>
+        private void ApplyStartCondition(IServerPlayer player, NutritionState state)
+        {
+            var def = Core.Nutrients.Get(NutrientCodes.Calories);
+            if (def == null) return;
+            float? start = StartCalories(sapi);
+            if (start == null) return;
+            state.SetReserve(def.Code, Math.Max(0f, Math.Min(def.Cap, start.Value)));
+        }
+
+        /// <summary>The world's start condition in % of a day, or null when the world has none (the nutrient's startReserve applies).</summary>
+        public static float? StartCalories(ICoreServerAPI api)
+        {
+            // Set at world creation it is a string; set with /worldconfig it may be stored as a number.
+            object raw = api.World.Config?[StartConditionKey]?.GetValue();
+            string value = Convert.ToString(raw, System.Globalization.CultureInfo.InvariantCulture);
+            return float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float start) ? start : null;
         }
 
         /// <summary>Vanilla gives half a stomach on revive; the calorie tank gets at least a day's worth, so a starved player can recover.</summary>

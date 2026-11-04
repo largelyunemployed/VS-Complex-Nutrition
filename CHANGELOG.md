@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.4
+
+- New world setting, Starting calories, on a new Complex Nutrition tab when you create a world. It sets how much is in a character's calorie tank the first time they join: Easy (a full tank, 7 days), Normal (5 days, the default and the amount before this version), Hard (3 days), Brutal (1 day) or Rock Bottom (1% of a day). Respawning is not affected. Server owners can change it later with `/worldconfig complexnutritionStart <700|500|300|100|1>`.
+- The handbook's Nutrient Reserves page mentions the setting.
+
 ## v0.2.3
 
 - Protein has one bar on the Stats panel. It shows protein taken in over the last 24 hours against the 64 g a day you need, and its hover text adds what is still being digested. The daily need falls from 128 g to 64 g (0.8 g per kg of bodyweight, enough to keep muscle), and 128 g is now the most the body uses in 24 hours.

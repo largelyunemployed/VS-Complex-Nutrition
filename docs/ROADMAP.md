@@ -28,7 +28,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 
 ### v0.2.4: Start conditions
 
-- A world setting for how full the calorie tank is at spawn: Easy (full), Normal (5 days), Hard (3 days), Brutal (1 day) or Rock Bottom (1%).
+- A world setting, on the Complex Nutrition tab when you create a world, for how full the calorie tank is when a character first joins: Easy (full, 7 days), Normal (5 days), Hard (3 days), Brutal (1 day) or Rock Bottom (1% of a day).
 
 ## v0.3: Nutrition UI
 
