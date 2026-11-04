@@ -16,10 +16,13 @@ namespace ComplexNutrition.Core
         /// <summary>Energy, Macro, FatSolubleVitamin, WaterSolubleVitamin or Mineral.</summary>
         [JsonProperty("group")] public string Group;
 
-        /// <summary>Unit the food profiles store this nutrient in: kcal, g or %DV.</summary>
+        /// <summary>
+        /// Unit the food profiles store this nutrient in, and the one it is shown in: kcal, g, mg or mcg (since v0.3.2),
+        /// or %DV for a nutrient with no single unit (the B vitamins, a mix of six).
+        /// </summary>
         [JsonProperty("unit")] public string Unit;
 
-        /// <summary>Daily target in <see cref="Unit"/>. For %DV nutrients this is 100.</summary>
+        /// <summary>Daily target in <see cref="Unit"/> (for vitamins and minerals, the FDA Daily Value). For %DV nutrients this is 100.</summary>
         [JsonProperty("dailyTarget")] public float DailyTarget;
 
         /// <summary>Order in tooltips and (later) UI lists.</summary>
@@ -42,16 +45,12 @@ namespace ComplexNutrition.Core
         /// the extra is absorbed at a falling rate.</summary>
         [JsonProperty("sittingLimit")] public float SittingLimit = 150;
 
-        /// <summary>Unit amounts are shown in: kcal, g, mg or mcg. Empty for nutrients only shown in %
-        /// (the B vitamins, which are a mix of six).</summary>
-        [JsonProperty("displayUnit")] public string DisplayUnit;
-
-        /// <summary>For %DV nutrients: the amount in <see cref="DisplayUnit"/> that makes 100% of the daily value.</summary>
-        [JsonProperty("dvAmount")] public float DvAmount;
+        public const string PercentDvUnit = "%DV";
 
         public string LangKey => "complexnutrition:nutrient-" + Code;
 
-        public bool IsMicronutrient => Unit == "%DV";
+        /// <summary>A vitamin or mineral (by its group).</summary>
+        public bool IsMicronutrient => Group == "FatSolubleVitamin" || Group == "WaterSolubleVitamin" || Group == "Mineral";
 
         public bool IsCalories => Code == NutrientCodes.Calories;
 
@@ -66,10 +65,10 @@ namespace ComplexNutrition.Core
         public string Format(float percentOfDaily, bool percent)
         {
             if (percent) return Fmt.Number(percentOfDaily) + "%";
-            if (string.IsNullOrEmpty(DisplayUnit)) return Fmt.Number(percentOfDaily) + "% DV";
-            float amount = IsMicronutrient ? percentOfDaily / 100f * DvAmount : percentOfDaily / 100f * DailyTarget;
+            if (string.IsNullOrEmpty(Unit) || Unit == PercentDvUnit) return Fmt.Number(percentOfDaily) + "% DV";
+            float amount = FromPercent(percentOfDaily);
             // Units sit right against the number: "94g", "80kcal", "7.0mg".
-            return Fmt.Number(amount) + DisplayUnit;
+            return Fmt.Number(amount) + Unit;
         }
 
         /// <summary>An amount in <see cref="Unit"/> (as food profiles store it), as text like <see cref="Format"/>.</summary>

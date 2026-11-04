@@ -301,14 +301,44 @@ namespace ComplexNutrition.Tests
         [Test]
         public static void NutrientAmountsFormat()
         {
-            var g = new NutrientDefinition { Code = "protein", Unit = "g", DailyTarget = 64, DisplayUnit = "g" };
-            var mg = new NutrientDefinition { Code = "vitaminC", Unit = "%DV", DailyTarget = 100, DisplayUnit = "mg", DvAmount = 90 };
+            var g = new NutrientDefinition { Code = "protein", Unit = "g", DailyTarget = 64 };
+            var mg = new NutrientDefinition { Code = "vitaminC", Unit = "mg", DailyTarget = 90, Group = "WaterSolubleVitamin" };
             var b = new NutrientDefinition { Code = "vitaminB", Unit = "%DV", DailyTarget = 100 };
             Assert.Equal("32g", g.Format(50f, false), "grams");
             Assert.Equal("50%", g.Format(50f, true), "percent");
-            Assert.Equal("45mg", mg.Format(50f, false), "mg from %DV");
+            Assert.Equal("45mg", mg.Format(50f, false), "mg");
             Assert.Equal("50% DV", b.Format(50f, false), "no unit to show");
             Assert.Near(32f, g.FromPercent(50f), 1e-4, "FromPercent");
+        }
+
+        [Test]
+        public static void DailyValuesTurnIntoAmounts()
+        {
+            var reg = new NutrientRegistry();
+            reg.Set(Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")));
+            var p = new FoodProfile { Code = "x:food", PortionGrams = 100, Per100g = new() { ["iron"] = 2f }, Per100gDV = new() { ["vitaminC"] = 50f, ["iron"] = 100f, ["vitaminB"] = 30f } };
+            FoodDatabase.ApplyDailyValues(null, reg, p, "test");
+            Assert.Near(45f, p.Per100("vitaminC"), 1e-4, "50% DV of vitamin C is 45mg");
+            Assert.Equal(2f, p.Per100("iron"), "per100g wins over per100gDV");
+            Assert.Near(30f, p.Per100("vitaminB"), 1e-4, "the B vitamins stay in %DV");
+            Assert.True(p.Per100gDV == null, "per100gDV is used up");
+        }
+
+        [Test]
+        public static void VitaminsAndMineralsUseRealUnits()
+        {
+            var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients;
+            foreach (var n in nutrients.Where(n => n.IsMicronutrient))
+            {
+                if (n.Code == NutrientCodes.VitaminB) Assert.Equal("%DV", n.Unit, "vitamin B unit");
+                else Assert.True(n.Unit == "mg" || n.Unit == "mcg", n.Code + " is in mg or mcg, not " + n.Unit);
+            }
+            // Our profiles store real units: no shipped profile uses per100gDV, and a sample matches USDA.
+            foreach (var file in Directory.EnumerateFiles(Repo.Mod("assets", "complexnutrition", "config", "foodprofiles"), "*.json"))
+                Assert.True(!File.ReadAllText(file).Contains("per100gDV"), Path.GetFileName(file) + " uses real units");
+            var dairy = Repo.Load<FoodProfileFile>(Repo.Config("foodprofiles/dairy.json"));
+            var butter = dairy.Profiles.First(p => p.Code == "game:butter-salted");
+            Assert.Near(684f, butter.Per100("vitaminA"), 0.5, "salted butter has 684mcg vitamin A per 100g (USDA 173410)");
         }
 
         [Test]

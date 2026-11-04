@@ -35,7 +35,8 @@ Each profile has:
 | `code` | yes | Item or block code, with its domain (`yourfoodmod:fruit-gooseberry`). `*` wildcards work: `yourfoodmod:driedfruit-*`. Codes that match nothing are ignored. |
 | `portionGrams` | yes, unless `like` gives it | Real-world weight of one item in grams. For liquids, grams per litre (water about 1000, milk 1030, honey 1420). |
 | `portionUnit` | no | `"item"` (default) or `"litre"` for liquids kept in containers. |
-| `per100g` | yes, unless `like` gives it | Nutrients per 100 g; see the table below. Leaving a nutrient out means 0. |
+| `per100g` | yes, unless `like` gives it | Nutrients per 100 g, in the units below. Leaving a nutrient out means 0. |
+| `per100gDV` | no | Nutrients per 100 g in % of the daily value, for sources that list %DV (food labels). Turned into the units below when loading; a nutrient in both uses `per100g`. |
 | `like` | no | Code of a food that already has a profile (usually a vanilla one). Copies its values, weight and unit; anything you set yourself wins. |
 | `scale` | no | Multipliers applied last, per nutrient, or `"all"` for every nutrient: `{ "all": 6.0, "vitaminC": 0.1 }`. |
 | `priority` | no | Default 0. When two files give the same `code`, the higher number wins. Complex Nutrition's own files use 0, so use 10 to override one of them. |
@@ -52,11 +53,14 @@ Only things the game already treats as food get a profile. Meals, pies and pots 
 | --- | --- | --- |
 | `calories` | kcal | |
 | `protein`, `carbohydrate`, `fat`, `fiber` | g | `fat` is shown in game as Fats |
-| `vitaminA`, `vitaminD`, `vitaminE`, `vitaminK`, `vitaminC` | % of US FDA Daily Value | A 900 mcg RAE, D 20 mcg, E 15 mg, K 120 mcg, C 90 mg |
+| `vitaminA`, `vitaminD`, `vitaminK` | mcg | A as RAE. Daily values: A 900 mcg, D 20 mcg, K 120 mcg |
+| `vitaminC`, `vitaminE` | mg | E as alpha-tocopherol. Daily values: C 90 mg, E 15 mg |
 | `vitaminB` | % DV | Average %DV of thiamin, riboflavin, niacin, B6, folate and B12, each capped at 300% |
-| `calcium`, `iron`, `potassium` | % DV | Calcium 1,300 mg, iron 18 mg, potassium 4,700 mg |
+| `calcium`, `iron`, `potassium` | mg | Daily values: calcium 1,300 mg, iron 18 mg, potassium 4,700 mg |
 
-The easiest real source is [USDA FoodData Central](https://fdc.nal.usda.gov/) (SR Legacy foods): look the food up, take the per-100 g values, and divide micronutrients by the DV above. If you're comfortable with Python, `tools/build_food_profiles.py` in this repo does that conversion from USDA ids. When nothing real fits, `like` the closest vanilla food and adjust it with `per100g` or `scale`; [FOOD_DATA.md](FOOD_DATA.md) lists every vanilla profile.
+Since v0.3.2 vitamins and minerals are in mg and mcg, the units USDA lists and the game shows. (Before that they were in % of the daily value; use `per100gDV` for numbers in that form.)
+
+The easiest real source is [USDA FoodData Central](https://fdc.nal.usda.gov/) (SR Legacy foods): look the food up and copy the per-100 g values straight in. If you're comfortable with Python, `tools/build_food_profiles.py` in this repo builds profiles from USDA ids, including the B-vitamin average. When nothing real fits, `like` the closest vanilla food and adjust it with `per100g` or `scale`; [FOOD_DATA.md](FOOD_DATA.md) lists every vanilla profile.
 
 ## Examples
 
@@ -67,6 +71,7 @@ All of these are in [`templates/compat-mod/`](../templates/compat-mod/assets/you
 - A wildcard for every variant of an item, with `scale` for drying and a lighter portion.
 - A liquid, `like` vanilla apple juice, with one value replaced.
 - A food with no close match, built from the nearest one and corrected.
+- Values from a food label in % of the daily value, with `per100gDV`.
 
 ## Changing Complex Nutrition's own values
 

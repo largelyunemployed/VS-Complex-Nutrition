@@ -93,11 +93,11 @@ namespace ComplexNutrition.Modules.FoodData
             // The micronutrients that cover the most of a day's need, shown in the same units as the reserves.
             var top = nutrients.All
                 .Where(n => n.IsMicronutrient)
-                .Select(n => (def: n, dv: amount(n.Code)))
+                .Select(n => (def: n, amount: amount(n.Code), dv: n.ToPercent(amount(n.Code))))
                 .Where(t => t.dv >= 1f)
                 .OrderByDescending(t => t.dv)
                 .Take(withDebugInfo ? int.MaxValue : TopMicronutrients)
-                .Select(t => Lang.Get("complexnutrition:tooltip-dv", Lang.Get(t.def.LangKey), t.def.FormatAmount(t.dv, percent)))
+                .Select(t => Lang.Get("complexnutrition:tooltip-dv", Lang.Get(t.def.LangKey), t.def.FormatAmount(t.amount, percent)))
                 .ToList();
             if (top.Count > 0)
             {
