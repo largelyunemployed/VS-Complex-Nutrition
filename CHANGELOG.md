@@ -7,6 +7,7 @@
 - The stomach holds 600 fullness (up from 300, about 2 kg of food) and still empties in 6 hours, draining an even 100 an hour. A new character starts with an empty stomach, whatever the start condition.
 - The gut absorbs each macro faster the more of it there is, up to a limit, instead of absorbing each meal at its own steady rate. Carbs absorb at up to 90 g an hour (half speed at 30 g), protein at up to 15 g an hour (half speed at 10 g) and fats at up to 6 g an hour (half speed at 15 g). So 100 g of carbs takes about 3 hours and 300 g about 5 and a half, 40 g of protein about 5 and a half hours, and 70 g of fats about a day. Fiber still raises the top speeds.
 - New world setting, Advanced nutrition display (off by default). When it is on, hovering over the Carbs, Fats and Protein bars shows the grams being digested, the calories they will give after diminishing returns, how long they will take, and how fast they are being absorbed, in grams and kcal an hour. Each player can override it for themselves with `/nutritiondisplay advanced`, `/nutritiondisplay simple` or `/nutritiondisplay world`.
+- Grams and kcal now sit right against their numbers everywhere in game ("94g", "80kcal"), other units keep their space ("7.0 mg"), and "h" is written as "hours". Hover boxes wrap at 550px.
 - The handbook's Nutrient Reserves page mentions the setting.
 
 ## v0.2.3

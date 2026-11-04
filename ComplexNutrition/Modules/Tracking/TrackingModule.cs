@@ -574,7 +574,7 @@ namespace ComplexNutrition.Modules.Tracking
             var sb = new StringBuilder(target.PlayerName + " ate (kcal by food category):");
             foreach (var d in days)
             {
-                sb.Append($"\nDay {d.Day}: {Math.Round(d.TotalKcal)} kcal");
+                sb.Append($"\nDay {d.Day}: {Math.Round(d.TotalKcal)}kcal");
                 foreach (var kv in d.KcalByCategory.OrderByDescending(kv => kv.Value)) sb.Append($", {kv.Key} {Math.Round(kv.Value)}");
             }
             return TextCommandResult.Success(sb.ToString());

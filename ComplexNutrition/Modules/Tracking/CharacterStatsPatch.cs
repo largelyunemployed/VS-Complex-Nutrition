@@ -311,7 +311,7 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>Widest a hover box may be, in GUI units (scaled with the GUI scale setting).</summary>
-        private const double HoverWidth = 450.0;
+        private const double HoverWidth = 550.0;
         private static CairoFont hoverFont;
 
         /// <summary>
