@@ -17,7 +17,7 @@ namespace ComplexNutrition.Modules.Tracking
     /// switching it off brings both back.
     ///
     /// Since v0.2.2 it also runs digestion (see <see cref="DigestionSettings"/>): vanilla satiety becomes
-    /// fullness (max 500, filled by each food's weight, draining at a fixed rate), eaten fats, protein and net
+    /// fullness (max 600, filled by each food's weight, draining at a fixed rate), eaten fats, protein and net
     /// carbohydrate go into gut pools that are absorbed over hours, and only absorption fills the calorie
     /// tank. Activity burns the tank as it burned satiety, and an empty tank starves.
     /// </summary>

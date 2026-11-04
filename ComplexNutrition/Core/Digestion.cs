@@ -105,7 +105,7 @@ namespace ComplexNutrition.Core
         public const string AssetPath = "config/digestion.json";
 
         /// <summary>The fullness (vanilla satiety) maximum while tracking runs.</summary>
-        [JsonProperty("fullnessMax")] public float FullnessMax = 500;
+        [JsonProperty("fullnessMax")] public float FullnessMax = 600;
 
         /// <summary>Vanilla's own maximum, restored when tracking is switched off.</summary>
         [JsonProperty("vanillaFullnessMax")] public float VanillaFullnessMax = 1500;
@@ -294,7 +294,7 @@ namespace ComplexNutrition.Core
         private const string SavedFullnessKey = "savedFullness";
 
         /// <summary>
-        /// Puts a player on our fullness scale (max 500). A player coming back from vanilla gets back the fullness
+        /// Puts a player on our fullness scale (max 600). A player coming back from vanilla gets back the fullness
         /// they had when tracking was switched off, whatever they ate since; anyone else has their stomach scaled
         /// to match. Safe to call again.
         /// </summary>

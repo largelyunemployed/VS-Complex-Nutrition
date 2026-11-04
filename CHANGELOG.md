@@ -4,7 +4,7 @@
 
 - New world setting, Starting calories, on a new Complex Nutrition tab when you create a world. It sets how much is in a character's calorie tank the first time they join: Full (10 days), Easy (7 days), Normal (5 days, the default and the amount before this version), Hard (3 days), Brutal (1 day) or Rock Bottom (0.01 days, good luck!). Respawning is not affected. Server owners can change it later with `/worldconfig complexnutritionStart <1000|700|500|300|100|1>`.
 - The calorie tank holds 10 active days (28,000 kcal), up from 7 (19,600 kcal). The HUD bar still flashes below 10% of a full tank, which is now 1 day.
-- The stomach holds 500 fullness (up from 300, about 1.7 kg of food) and still empties in 6 hours, draining about 83 an hour. A new character starts with an empty stomach, whatever the start condition.
+- The stomach holds 600 fullness (up from 300, about 2 kg of food) and still empties in 6 hours, draining an even 100 an hour. A new character starts with an empty stomach, whatever the start condition.
 - The gut absorbs each macro faster the more of it there is, up to a limit, instead of absorbing each meal at its own steady rate. Carbs absorb at up to 90 g an hour (half speed at 30 g), protein at up to 15 g an hour (half speed at 10 g) and fats at up to 6 g an hour (half speed at 15 g). So 100 g of carbs takes about 3 hours and 300 g about 5 and a half, 40 g of protein about 5 and a half hours, and 70 g of fats about a day. Fiber still raises the top speeds.
 - The handbook's Nutrient Reserves page mentions the setting.
 

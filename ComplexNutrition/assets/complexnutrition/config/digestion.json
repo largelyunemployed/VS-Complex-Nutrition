@@ -1,9 +1,9 @@
 {
 	"_comment": "Complex Nutrition digestion rules (since v0.2.2), used while tracking runs. Fullness: the stomach holds fullnessMax (a new character starts empty) (vanilla satiety's maximum while tracking runs; vanilla's own is vanillaFullnessMax). Each food fills fullnessPerGram per gram of its weight; meals, pies and anything whose code contains one of cookedWords fill cookedFullness times that; liquids fill liquidFullness times that. Fullness drains fullnessDrainPerHour per in-game hour. Satiety from other mods' code for food without data fills unknownFullnessPerSatiety per point. Gut pools: eating adds grams of net carbohydrate (carbohydrate minus fibre), protein and fats; a pool holds at most maxGrams and the rest passes through unused. Since v0.2.4 a pool absorbs maxRateGrams * g / (halfRateGrams + g) grams per in-game hour while it holds g grams: little when nearly empty, levelling off at maxRateGrams when full. Absorbed grams give kcalPerGram calories; above diminishingAboveGrams absorbed within windowHours, an extra x grams count as diminishingScaleGrams * ln(1 + x / diminishingScaleGrams); with zeroAtGrams set, the yield per gram instead falls in a straight line to nothing at zeroAtGrams, and grams past it give nothing. Protein absorbed over 24 hours is measured against proteinNeedGrams (the least the body needs) and counts up to proteinMaxGrams. With a fibre reserve at fiberBonusFullAt % of a day's need or more, a pool's rate is fiberSpeedBonus faster (less in step with a lower reserve). An empty calorie tank deals starvationDamage every starvationSeconds. After death the tank holds at least reviveCalories (% of a day). The HUD calorie bar flashes below flashBelow of a full tank.",
-	"fullnessMax": 500,
+	"fullnessMax": 600,
 	"vanillaFullnessMax": 1500,
 	"fullnessPerGram": 0.3,
-	"fullnessDrainPerHour": 83.33,
+	"fullnessDrainPerHour": 100,
 	"cookedFullness": 0.8,
 	"liquidFullness": 0.5,
 	"cookedWords": [ "cooked", "smoked", "cured", "bread", "baked", "roasted", "charred" ],
