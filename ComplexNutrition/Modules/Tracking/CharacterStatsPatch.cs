@@ -119,7 +119,6 @@ namespace ComplexNutrition.Modules.Tracking
                 if (hudOurs && bar != null)
                 {
                     // Tracking stopped: hand the bar back to vanilla and make it redraw.
-                    bar.onGetStatbarValue = null;
                     bar.ShowValueOnHover = true;
                     hudLastField?.SetValue(__instance, -1f);
                     hudOurs = false;
@@ -197,7 +196,6 @@ namespace ComplexNutrition.Modules.Tracking
             hoverFunc = null;
             if (hudBar != null)
             {
-                hudBar.onGetStatbarValue = null;
                 hudBar.ShowValueOnHover = true;
             }
             hudBar = null;
