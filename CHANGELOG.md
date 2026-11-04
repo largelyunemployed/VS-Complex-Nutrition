@@ -1,5 +1,25 @@
 # Changelog
 
+## v0.3.1
+
+A clean-up release: nothing changes in play. The code is tidier and safer to build on before the next features.
+
+- Each module keeps to itself. The Nutrient tracking module now does its own switching off (putting everyone back on vanilla values, at once or when they next join), and `/cnutrition info` and `/cnutrition meal` belong to the Complex Nutrition Tooltips module. Both still work as before.
+- Every config file loads safely: a missing or broken file is logged and the built-in values are used, and those built-in values now match the shipped files (the stomach drained 50 an hour, not 100, if `digestion.json` was missing).
+- Numbers live in one place:
+  - The protein numbers (64g needed, 128g where the bar tops out) come from the protein gut pool in `digestion.json`. `proteinNeedGrams` and `proteinMaxGrams` are gone from it, and the server log warns if protein's `dailyTarget` in `nutrients.json` doesn't match.
+  - The carbs, fats and protein caps are gone from `nutrients.json`; their size is `maxGrams` in `digestion.json`, as it already was in play.
+  - The gut's contents are kept once, as each pool's reserve. The old batch lists in player saves are moved over and removed the first time each player joins.
+  - Calories burned per point of vanilla satiety is now `kcalPerSatiety` in `digestion.json`, separate from the one in `foodfallbacks.json` that sizes foods without data. Both are 1.
+  - The start options are listed once in the code, and a test checks `worldconfig.json` against them.
+  - The version is set only in `modinfo.json`.
+- `zeroAtGrams` (a pool option not used since v0.3.0) is removed.
+- The pie tooltip patch runs on the client only, like the rest of the tooltips.
+- Fixed: with Percent of a day's need chosen, the Stats panel's gut hovers (the advanced display, and protein's 24-hour line) and the nutrition window's carbs, fats and protein (Overview and Digestion tabs) stayed in grams and kcal. They now switch to percent like everything else. The handbook stays in grams.
+- The settings menu's Amounts choice reads Amounts (Recommended).
+- Switching nutrient tracking back on now says, in red at the bottom of the confirmation box, to close and reopen the character window to see the nutrition bars again.
+- For developers: tests (`tests/ComplexNutrition.Tests`, 24 checks of the digestion maths and the config files), a GitHub check that builds and tests every push, the window preview tool (`tools/preview`) and a release script (`tools/release.sh`). See `docs/DEVELOPING.md`.
+
 ## v0.3.0
 
 - New nutrition window. Press Left Alt + N (rebindable in the controls menu) or the new Details button on the Stats panel. It is the size of the handbook, scales the same way and refreshes every second. Four tabs:

@@ -7,7 +7,7 @@ using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using ComplexNutrition.Core;
 
-namespace ComplexNutrition.Modules.Tracking
+namespace ComplexNutrition.UI
 {
     /// <summary>
     /// Client: the hover box for our Stats panel and HUD bars. Vanilla's bar hover draws plain text in one font and

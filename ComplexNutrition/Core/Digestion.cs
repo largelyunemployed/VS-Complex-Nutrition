@@ -66,13 +66,6 @@ namespace ComplexNutrition.Core
         [JsonProperty("diminishingScaleGrams")] public float DiminishingScaleGrams = 50;
 
         /// <summary>
-        /// Optional hard limit, in grams within <see cref="WindowHours"/>. When set above <see cref="DiminishingAboveGrams"/>,
-        /// the yield per gram falls in a straight line from full at the diminishing line to nothing here, and grams
-        /// past it give nothing (the log curve and its scale are not used). 0 = no limit.
-        /// </summary>
-        [JsonProperty("zeroAtGrams")] public float ZeroAtGrams;
-
-        /// <summary>
         /// Optional two-tier taper (v0.3.0, protein). When set above <see cref="DiminishingAboveGrams"/>, the yield per gram falls
         /// in a straight line from full at the diminishing line to <see cref="TaperEndValue"/> here, and every gram past it
         /// yields <see cref="BeyondValue"/>. The log curve is not used. 0 = off.
@@ -106,12 +99,6 @@ namespace ComplexNutrition.Core
                 if (total > TaperEndGrams) v += (total - TaperEndGrams) * BeyondValue;
                 return v;
             }
-            if (ZeroAtGrams > DiminishingAboveGrams)
-            {
-                float span = ZeroAtGrams - DiminishingAboveGrams;
-                float over = Math.Min(total, ZeroAtGrams) - DiminishingAboveGrams;
-                return DiminishingAboveGrams + over - over * over / (2f * span);
-            }
             float scale = Math.Max(1f, DiminishingScaleGrams);
             return DiminishingAboveGrams + scale * (float)Math.Log(1.0 + (total - DiminishingAboveGrams) / scale);
         }
@@ -135,7 +122,7 @@ namespace ComplexNutrition.Core
         [JsonProperty("fullnessPerGram")] public float FullnessPerGram = 0.3f;
 
         /// <summary>Fullness lost per in-game hour, whatever the player does.</summary>
-        [JsonProperty("fullnessDrainPerHour")] public float FullnessDrainPerHour = 50;
+        [JsonProperty("fullnessDrainPerHour")] public float FullnessDrainPerHour = 100;
 
         /// <summary>Fullness multiplier for meals, pies and anything cooked, baked, smoked or cured.</summary>
         [JsonProperty("cookedFullness")] public float CookedFullness = 0.8f;
@@ -156,11 +143,25 @@ namespace ComplexNutrition.Core
         [JsonProperty("pools")] public Dictionary<string, DigestionPool> Pools = new();
 
 
-        /// <summary>Protein the body needs over any 24 hours, at least. The protein bar's line marks it.</summary>
-        [JsonProperty("proteinNeedGrams")] public float ProteinNeedGrams = 64;
+        /// <summary>
+        /// Protein the body needs over any 24 hours, at least: the protein pool's diminishing line, so the number lives
+        /// in one place. The protein bar's line marks it.
+        /// </summary>
+        [JsonIgnore] public float ProteinNeedGrams => Pool(NutrientCodes.Protein)?.DiminishingAboveGrams ?? 64f;
 
-        /// <summary>The most protein that counts over 24 hours; past it protein gives no calories and no benefit.</summary>
-        [JsonProperty("proteinMaxGrams")] public float ProteinMaxGrams = 128;
+        /// <summary>The end of the protein pool's taper, past which each gram yields only its beyond value. The protein bar's top.</summary>
+        [JsonIgnore] public float ProteinMaxGrams
+        {
+            get
+            {
+                var p = Pool(NutrientCodes.Protein);
+                if (p == null) return 128f;
+                return p.TaperEndGrams > p.DiminishingAboveGrams ? p.TaperEndGrams : p.DiminishingAboveGrams * 2f;
+            }
+        }
+
+        /// <summary>Calories per point of vanilla satiety: vanilla's satiety burn costs this many kcal, and switching tracking off turns the tank back into satiety at this rate.</summary>
+        [JsonProperty("kcalPerSatiety")] public float KcalPerSatiety = 1f;
 
         /// <summary>Damage dealt every <see cref="StarvationSeconds"/> while the calorie tank is empty (vanilla: 0.125 HP every 6 s).</summary>
         [JsonProperty("starvationDamage")] public float StarvationDamage = 0.125f;
@@ -175,28 +176,18 @@ namespace ComplexNutrition.Core
 
         public static DigestionSettings Load(ICoreAPI api)
         {
-            var asset = api.Assets.TryGet(new AssetLocation(ComplexNutritionModSystem.ModId, AssetPath));
-            DigestionSettings s = null;
-            try
-            {
-                s = asset?.ToObject<DigestionSettings>();
-            }
-            catch (Exception e)
-            {
-                api.Logger.Error("[complexnutrition] Could not read {0}, using defaults: {1}", AssetPath, e.Message);
-            }
-            s ??= new DigestionSettings();
-            if (s.Pools == null || s.Pools.Count == 0)
-            {
-                s.Pools = new Dictionary<string, DigestionPool>
-                {
-                    [NutrientCodes.Carbohydrate] = new() { MaxGrams = 500, MaxRateGrams = 90, HalfRateGrams = 30, KcalPerGram = 4, DiminishingAboveGrams = 300, WindowHours = 12, DiminishingScaleGrams = 150, FiberSpeedBonus = 0.1f },
-                    [NutrientCodes.Protein] = new() { MaxGrams = 200, MaxRateGrams = 15, HalfRateGrams = 10, KcalPerGram = 4, DiminishingAboveGrams = 64, TaperEndGrams = 128, TaperEndValue = 0.8f, BeyondValue = 0.5f, WindowHours = 24, FiberSpeedBonus = 0.2f },
-                    [NutrientCodes.Fat] = new() { MaxGrams = 240, MaxRateGrams = 6, HalfRateGrams = 15, KcalPerGram = 9, DiminishingAboveGrams = 70, WindowHours = 24, DiminishingScaleGrams = 35, FiberSpeedBonus = 0.3f },
-                };
-            }
+            var s = ConfigAsset.Load<DigestionSettings>(api, AssetPath);
+            if (s.Pools == null || s.Pools.Count == 0) s.Pools = DefaultPools();
             return s;
         }
+
+        /// <summary>The built-in gut pools, used when digestion.json has none. They match the shipped file (a test checks).</summary>
+        public static Dictionary<string, DigestionPool> DefaultPools() => new()
+        {
+            [NutrientCodes.Carbohydrate] = new() { MaxGrams = 500, MaxRateGrams = 90, HalfRateGrams = 30, KcalPerGram = 4, DiminishingAboveGrams = 300, WindowHours = 12, DiminishingScaleGrams = 150, FiberSpeedBonus = 0.1f },
+            [NutrientCodes.Protein] = new() { MaxGrams = 200, MaxRateGrams = 15, HalfRateGrams = 10, KcalPerGram = 4, DiminishingAboveGrams = 64, TaperEndGrams = 128, TaperEndValue = 0.8f, BeyondValue = 0.5f, WindowHours = 24, FiberSpeedBonus = 0.2f },
+            [NutrientCodes.Fat] = new() { MaxGrams = 240, MaxRateGrams = 6, HalfRateGrams = 15, KcalPerGram = 9, DiminishingAboveGrams = 70, WindowHours = 24, DiminishingScaleGrams = 35, FiberSpeedBonus = 0.3f },
+        };
 
         public DigestionPool Pool(string code) => code != null && Pools.TryGetValue(code, out var p) ? p : null;
 
@@ -237,8 +228,7 @@ namespace ComplexNutrition.Core
         public static bool IsActiveFor(Entity entity)
         {
             if (Settings == null || entity is not EntityPlayer) return false;
-            var tree = entity.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
-            return tree != null && tree.GetBool("tracking");
+            return NutritionState.Of(entity)?.TrackingOn == true;
         }
 
         /// <summary>Fullness of one portion of a single food (one item, or one litre of a liquid).</summary>
@@ -312,9 +302,6 @@ namespace ComplexNutrition.Core
             return total;
         }
 
-        /// <summary>World setting (see worldconfig.json): show the advanced nutrition display by default.</summary>
-        public const string AdvancedDisplayKey = "complexnutritionAdvancedDisplay";
-
         /// <summary>
         /// Whether this player sees the advanced nutrition display: their own choice (/cnutrition display) if they made
         /// one, otherwise the world setting.
@@ -327,11 +314,7 @@ namespace ComplexNutrition.Core
         }
 
         /// <summary>The world's Advanced nutrition display setting (set at world creation, or in the settings menu).</summary>
-        public static bool WorldAdvancedDefault(IWorldAccessor world)
-        {
-            string v = Convert.ToString(world?.Config?[AdvancedDisplayKey]?.GetValue(), System.Globalization.CultureInfo.InvariantCulture);
-            return string.Equals(v, "true", StringComparison.OrdinalIgnoreCase);
-        }
+        public static bool WorldAdvancedDefault(IWorldAccessor world) => WorldSettings.Bool(world, WorldSettings.AdvancedDisplayKey);
 
         /// <summary>Digestion speed from the fibre reserve: 1 when empty, 1 + the pool's bonus at the full-bonus line or above.</summary>
         public static float FiberSpeed(DigestionSettings s, NutritionState state, DigestionPool pool)
@@ -388,11 +371,11 @@ namespace ComplexNutrition.Core
         /// <summary>
         /// Tracking was switched off: puts a player back on vanilla's scale with vanilla values worked out from ours,
         /// so switching off cannot be used to dodge starvation. Satiety comes from the calorie reserve (at the
-        /// fallback kcal per satiety, so an empty reserve means an empty stomach), and the five food group bars
+        /// digestion settings' kcal per satiety, so an empty reserve means an empty stomach), and the five food group bars
         /// from the reserves closest to them. Our own state is left as it is, and our fullness is kept, so
         /// switching tracking back on restores the player exactly as they were. Does nothing if we never changed the player.
         /// </summary>
-        public static void ConvertToVanilla(Entity entity, NutrientRegistry nutrients, float kcalPerSatiety, DigestionSettings s)
+        public static void ConvertToVanilla(Entity entity, NutrientRegistry nutrients, DigestionSettings s)
         {
             var hunger = entity?.GetBehavior<EntityBehaviorHunger>();
             var tree = entity?.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
@@ -404,18 +387,18 @@ namespace ComplexNutrition.Core
             hunger.MaxSaturation = vmax;
             var cal = nutrients.Get(NutrientCodes.Calories);
             float kcal = cal == null ? 0f : state.GetReserve(cal.Code) / 100f * cal.DailyTarget;
-            hunger.Saturation = Math.Clamp(kcal / Math.Max(0.01f, kcalPerSatiety), 0f, vmax);
+            hunger.Saturation = Math.Clamp(kcal / Math.Max(0.01f, s.KcalPerSatiety), 0f, vmax);
 
             float Bar(float percentOfDay) => Math.Clamp(percentOfDay / 100f, 0f, 1f) * vmax;
             float need = Math.Max(1f, s.ProteinNeedGrams);
-            hunger.FruitLevel = Bar(state.GetReserve("vitaminC"));
-            hunger.VegetableLevel = Bar(state.GetReserve("vitaminK"));
-            hunger.GrainLevel = Bar(state.GetReserve("vitaminB"));
+            hunger.FruitLevel = Bar(state.GetReserve(NutrientCodes.VitaminC));
+            hunger.VegetableLevel = Bar(state.GetReserve(NutrientCodes.VitaminK));
+            hunger.GrainLevel = Bar(state.GetReserve(NutrientCodes.VitaminB));
             hunger.ProteinLevel = Bar(state.Protein24 / need * 100f);
-            hunger.DairyLevel = Bar(state.GetReserve("calcium"));
+            hunger.DairyLevel = Bar(state.GetReserve(NutrientCodes.Calcium));
 
             tree.SetBool(ScaledKey, false);
-            tree.SetBool("tracking", false);
+            state.TrackingOn = false;
             entity.WatchedAttributes.MarkPathDirty(NutritionState.TreeKey);
             hunger.UpdateNutrientHealthBoost();
         }

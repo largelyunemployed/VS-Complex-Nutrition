@@ -8,5 +8,9 @@ namespace ComplexNutrition.Core
         public const string Carbohydrate = "carbohydrate";
         public const string Fat = "fat";
         public const string Fiber = "fiber";
+        public const string VitaminB = "vitaminB";
+        public const string VitaminC = "vitaminC";
+        public const string VitaminK = "vitaminK";
+        public const string Calcium = "calcium";
     }
 }

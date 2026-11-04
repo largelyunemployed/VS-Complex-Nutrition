@@ -116,19 +116,6 @@ namespace ComplexNutrition.Core
         {
             StartServerSettings(sapi);
 
-            // Tell each joining player's client whether tracking runs on this server, so it shows our bars or vanilla's.
-            sapi.Event.PlayerNowPlaying += player =>
-            {
-                var tree = player.Entity?.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
-                if (tree != null && !IsModuleEnabled(TrackingModule.ModuleId))
-                {
-                    tree.SetBool("tracking", false);
-                    // Tracking was switched off since this player last played: vanilla values from ours, ours kept for later.
-                    Digestion.ConvertToVanilla(player.Entity, Nutrients, Foods.Fallbacks.KcalPerSatiety, DigestionSettings.Load(sapi));
-                    player.Entity.WatchedAttributes.MarkPathDirty(NutritionState.TreeKey);
-                }
-            };
-
             sapi.ChatCommands.GetOrCreate("cnutrition")
                 .WithDescription("Complex Nutrition: /cnutrition stats, settings and display for every player; the rest for admins")
                 .RequiresPrivilege(Privilege.chat)
@@ -136,18 +123,6 @@ namespace ComplexNutrition.Core
                     .WithDescription("List vanilla foods that have no profile of their own")
                     .RequiresPrivilege(Privilege.controlserver)
                     .HandleWith(_ => TextCommandResult.Success(CoverageReport(sapi, verbose: true)))
-                .EndSubCommand()
-                .BeginSubCommand("info")
-                    .WithDescription("Show the nutrient block for an item or block code, as the tooltip shows it")
-                    .RequiresPrivilege(Privilege.controlserver)
-                    .WithArgs(sapi.ChatCommands.Parsers.Word("code"))
-                    .HandleWith(args => InfoCommand(sapi, (string)args[0]))
-                .EndSubCommand()
-                .BeginSubCommand("meal")
-                    .WithDescription("Work out a dish: /cnutrition meal <container code> <servings> <ingredient code>... (use code*N for N of one ingredient)")
-                    .RequiresPrivilege(Privilege.controlserver)
-                    .WithArgs(sapi.ChatCommands.Parsers.Word("container"), sapi.ChatCommands.Parsers.Float("servings"), sapi.ChatCommands.Parsers.All("ingredients"))
-                    .HandleWith(args => MealCommand(sapi, (string)args[0], (float)args[1], (string)args[2]))
                 .EndSubCommand()
                 .BeginSubCommand("template")
                     .WithDescription("Write a ready-to-edit profile file for every food on the category estimate, optionally only one mod's (by domain), to ModData/complexnutrition/")
@@ -165,11 +140,11 @@ namespace ComplexNutrition.Core
         public override void AssetsFinalize(ICoreAPI api)
         {
             Nutrients.Load(api);
-            Nutrients.ShowPercent = Config.ShowPercent;
             Foods.Load(api, Nutrients);
             Cooking = CookingRules.Load(api);
             api.Logger.Notification("[complexnutrition] Loaded {0} nutrients and {1} food profiles.", Nutrients.All.Count, Foods.ProfileCount);
 
+            foreach (var module in modules) module.Start(api, this);
             foreach (var module in OrderByDependencies(modules))
             {
                 bool wanted = Config.IsModuleEnabled(module.Id, module.EnabledByDefault);
@@ -242,57 +217,6 @@ namespace ComplexNutrition.Core
             }
             string head = $"Food coverage: {own} with own profile, {fallback} on category fallback, {none} without data, {composite} composite (computed from ingredients).";
             return verbose && lines.Count > 0 ? head + "\n" + string.Join("\n", lines) : head;
-        }
-
-        private TextCommandResult InfoCommand(ICoreServerAPI sapi, string code)
-        {
-            var loc = new AssetLocation(code);
-            CollectibleObject coll = (CollectibleObject)sapi.World.GetItem(loc) ?? sapi.World.GetBlock(loc);
-            if (coll == null || coll.Id == 0) return TextCommandResult.Error("No item or block called " + loc);
-            var resolved = Foods.Resolve(coll);
-            if (resolved == null) return TextCommandResult.Success(loc + " has no nutrient data (not a food, or a meal made from ingredients).");
-            // The tooltip behaviour lives on the client only, so build the same block directly.
-            return TextCommandResult.Success($"{loc}:" + CollectibleBehaviorNutrientInfo.BuildTooltip(Nutrients, resolved, true, coll));
-        }
-
-        /// <summary>
-        /// Builds a dish the way the cooking pot stores it (one serving's ingredients plus a serving count)
-        /// and shows its nutrient block. For pies, the ingredients are the whole pie's and servings is the slice count.
-        /// </summary>
-        private TextCommandResult MealCommand(ICoreServerAPI sapi, string containerCode, float servings, string ingredientList)
-        {
-            var block = sapi.World.GetBlock(new AssetLocation(containerCode));
-            if (block == null || block.Id == 0 || !MealNutrition.IsMealContainer(block))
-                return TextCommandResult.Error(containerCode + " is not a meal container (try game:bowl-blue-meal, game:claypot-blue-cooked or game:pie-perfect).");
-
-            var stacks = new List<ItemStack>();
-            foreach (var token in (ingredientList ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var parts = token.Split('*');
-                int count = parts.Length > 1 && int.TryParse(parts[1], out var c) ? c : 1;
-                var loc = new AssetLocation(parts[0]);
-                CollectibleObject coll = (CollectibleObject)sapi.World.GetItem(loc) ?? sapi.World.GetBlock(loc);
-                if (coll == null || coll.Id == 0) return TextCommandResult.Error("Unknown ingredient " + loc);
-                stacks.Add(new ItemStack(coll, count));
-            }
-            if (stacks.Count == 0) return TextCommandResult.Error("Give at least one ingredient.");
-
-            var dish = new ItemStack(block);
-            var container = (Vintagestory.GameContent.IBlockMealContainer)block;
-            if (block is Vintagestory.GameContent.BlockPie)
-            {
-                container.SetContents(null, dish, stacks.ToArray());
-                dish.Attributes.SetInt("pieSize", (int)Math.Clamp(servings, 1, 4));
-            }
-            else
-            {
-                // Any recipe code marks the dish as cooked; the stew recipe is used for its name only.
-                container.SetContents("meatystew", dish, stacks.ToArray(), servings);
-            }
-
-            var meal = MealNutrition.Compute(this, sapi.World, dish);
-            if (meal == null) return TextCommandResult.Error("Could not work out that dish.");
-            return TextCommandResult.Success($"{containerCode} with {ingredientList}:" + CollectibleBehaviorNutrientInfo.BuildMealTooltip(Nutrients, meal, false));
         }
 
         /// <summary>

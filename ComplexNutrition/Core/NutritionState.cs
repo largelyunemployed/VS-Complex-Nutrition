@@ -12,6 +12,12 @@ namespace ComplexNutrition.Core
     {
         public const string TreeKey = "complexnutrition";
 
+        /// <summary>
+        /// Every food the player has held, as item codes, in WatchedAttributes under this key (outside our tree, so it is
+        /// only sent when something new is added). The nutrition window suggests only foods from it.
+        /// </summary>
+        public const string HeldKey = "complexnutritionHeld";
+
         private readonly Entity entity;
         private readonly ITreeAttribute tree;
 
@@ -97,22 +103,22 @@ namespace ComplexNutrition.Core
         private ITreeAttribute Gut => Sub("gut");
         private ITreeAttribute AbsorbedLog => Sub("absorbed");
 
-        /// <summary>A gut pool's batches: grams left in each, and each one's absorption rate in g per in-game hour.</summary>
-        public void GetBatches(string pool, out float[] grams, out float[] rates)
-        {
-            grams = (Gut[pool + "-g"] as FloatArrayAttribute)?.value ?? new float[0];
-            rates = (Gut[pool + "-r"] as FloatArrayAttribute)?.value ?? new float[0];
-            if (rates.Length != grams.Length)
-            {
-                grams = new float[0];
-                rates = new float[0];
-            }
-        }
+        // Since v0.3.1 a gut pool's contents are its reserve (grams in % of the daily target), like every other nutrient.
 
-        public void SetBatches(string pool, float[] grams, float[] rates)
+        /// <summary>
+        /// Saves from v0.2.2 to v0.3.0 also kept each gut pool as a list of batches (grams and rates). Returns the grams
+        /// they held and removes them, or null when there are none (already moved, or a new player).
+        /// </summary>
+        public float? TakeOldGutBatches(string pool)
         {
-            Gut[pool + "-g"] = new FloatArrayAttribute(grams);
-            Gut[pool + "-r"] = new FloatArrayAttribute(rates);
+            var grams = (Gut[pool + "-g"] as FloatArrayAttribute)?.value;
+            bool had = Gut.HasAttribute(pool + "-g") || Gut.HasAttribute(pool + "-r");
+            if (!had) return null;
+            Gut.RemoveAttribute(pool + "-g");
+            Gut.RemoveAttribute(pool + "-r");
+            float sum = 0f;
+            foreach (var g in grams ?? new float[0]) sum += g;
+            return sum;
         }
 
         /// <summary>In-game hours until a gut pool is empty, as of the last digestion step.</summary>

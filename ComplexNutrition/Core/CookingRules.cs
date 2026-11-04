@@ -17,15 +17,6 @@ namespace ComplexNutrition.Core
 
         public float Cooked(string nutrient) => CookedMultipliers != null && CookedMultipliers.TryGetValue(nutrient, out var m) ? m : 1f;
 
-        public static CookingRules Load(ICoreAPI api)
-        {
-            var asset = api.Assets.TryGet(new AssetLocation(ComplexNutritionModSystem.ModId, AssetPath));
-            if (asset == null)
-            {
-                api.Logger.Warning("[complexnutrition] Missing {0}; cooked dishes get no cooking multipliers.", AssetPath);
-                return new CookingRules();
-            }
-            return asset.ToObject<CookingRules>() ?? new CookingRules();
-        }
+        public static CookingRules Load(ICoreAPI api) => ConfigAsset.Load<CookingRules>(api, AssetPath);
     }
 }

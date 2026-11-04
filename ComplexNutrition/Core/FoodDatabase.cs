@@ -115,8 +115,8 @@ namespace ComplexNutrition.Core
             }
             wildcards.RemoveAll(w => !IsUsable(w.profile));
 
-            var fallbackAsset = api.Assets.TryGet(new AssetLocation(ComplexNutritionModSystem.ModId, FallbackPath));
-            Fallbacks = fallbackAsset?.ToObject<FoodFallbackFile>() ?? new FoodFallbackFile();
+            Fallbacks = ConfigAsset.Load<FoodFallbackFile>(api, FallbackPath);
+            Fallbacks.ByCategory ??= new Dictionary<string, FoodProfile>();
             foreach (var kv in Fallbacks.ByCategory) WarnUnknownNutrients(api, registry, kv.Value, FallbackPath);
         }
 

@@ -30,19 +30,21 @@ Every module has its own switch. With all of them off, the game plays exactly li
 
 - A world setting, on the Complex Nutrition tab when you create a world, for how full the calorie tank is when a character first joins: Full (10 days), Easy (7 days), Normal (5 days), Hard (3 days), Brutal (1 day) or Rock Bottom (0.01 days).
 - The calorie tank holds 10 active days, the stomach holds 600 fullness (100 an hour drained), and the gut absorbs faster the more it holds, up to a limit.
-- An Advanced nutrition display setting (world default, per-player override with /nutritiondisplay) that shows calories, time and absorption rate for the food being digested.
+- An Advanced nutrition display setting (world default, per-player override with /cnutrition display) that shows calories, time and absorption rate for the food being digested.
 
 ## v0.3: Nutrition UI
 
-- v0.3.0: a nutrition window (Left Alt + N), the size of the handbook, with Overview, Digestion, Vitamins and Minerals tabs, and a settings menu holding every toggle so far.
-- v0.3.1: a 28-day history tab and trend arrows.
-- v0.3.2: a shorter tooltip block that expands while you hold Ctrl, and an optional little HUD icon right of the hotbar that turns amber or red when something is running low.
-- v0.3.3: Discover Nutrition, a setting that hides a food's values ("???") until you have eaten it.
+- v0.3.0: a nutrition window (Left Alt + N), the size of the handbook, with Overview, Digestion, Vitamins and Minerals tabs, and a settings menu holding every toggle so far. Healing runs at full speed while the calorie tank has anything in it.
+- v0.3.1: a clean-up release with no new features: the code tidied so each module keeps to itself, settings read from one place, safer config loading, and automatic tests and build checks.
+- v0.3.2: a respawn calories world setting (same choices as the start setting, default Brutal; respawning clears the 24-hour log); vitamin and mineral reserves that follow the start and respawn choice; fiber's speed-up shown as calories per hour in its tooltip and the window; food data in real units (mg and mcg); a 28-day history tab and trend arrows.
+- v0.3.3: healing costs extra calories at a realistic rate (33 to 44 kcal per kg of bodyweight a day while recovering, for an 80 kg character); a shorter tooltip block that expands while you hold Ctrl, and an optional little HUD icon right of the hotbar that turns amber or red when something is running low.
+- v0.3.4: Discover Nutrition, a setting that hides a food's values ("???") until you have eaten it.
 
 ## v0.4: Diet tiers and effects
 
 - A diet score sets one of five tiers, from Thriving to Malnourished, with buffs and debuffs to healing, max health, walk speed and hunger rate.
 - Effects build over in-game weeks; one bad meal does nothing.
+- Healing scales with, and uses up, a good share of your vitamin K, calcium and iron reserves. With an empty calorie tank you don't heal and you suffer malnutrition damage.
 - Different nutrients fail on different clocks: vitamin C and B in days, minerals in a week or two, vitamins A, D, E and K over weeks.
 - Specific deficiencies have their own effects (scurvy slows healing, low iron costs max health, and so on), each with its own switch.
 - Every nutrient gets a gameplay effect of its own, even if a small one.

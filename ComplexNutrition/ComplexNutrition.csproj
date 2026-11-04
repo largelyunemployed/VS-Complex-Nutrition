@@ -11,7 +11,13 @@
     <!-- Point this at your Vintage Story install (the folder holding VintagestoryAPI.dll),
          or set the VINTAGE_STORY environment variable. -->
     <VintageStoryPath Condition="'$(VintageStoryPath)' == ''">$(VINTAGE_STORY)</VintageStoryPath>
-    <ModVersion>0.3.0</ModVersion>
+  </PropertyGroup>
+
+  <!-- The version comes from modinfo.json, so it is set in one place. -->
+  <PropertyGroup>
+    <ModInfoText>$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/modinfo.json'))</ModInfoText>
+    <ModVersionField>$([System.Text.RegularExpressions.Regex]::Match($(ModInfoText), '"version"\s*:\s*"[^"]+"').Value)</ModVersionField>
+    <ModVersion>$([System.Text.RegularExpressions.Regex]::Replace($(ModVersionField), '^.*"([^"]+)"$', '$1'))</ModVersion>
   </PropertyGroup>
 
   <ItemGroup>

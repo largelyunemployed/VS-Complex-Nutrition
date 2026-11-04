@@ -58,26 +58,22 @@ namespace ComplexNutrition.Core
         /// <summary>Converts an amount in <see cref="Unit"/> to % of the daily target.</summary>
         public float ToPercent(float amount) => DailyTarget > 0 ? amount / DailyTarget * 100f : 0f;
 
+        /// <summary>Converts % of the daily target back to an amount in <see cref="Unit"/>.</summary>
+        public float FromPercent(float percent) => percent / 100f * DailyTarget;
+
         /// <summary>A quantity given in % of the daily target, as text: "72g", "1,920kcal", "7.0mg",
         /// or "37%" when <paramref name="percent"/> is set ("37% DV" for a nutrient with no unit to show).</summary>
         public string Format(float percentOfDaily, bool percent)
         {
-            if (percent) return Number(percentOfDaily) + "%";
-            if (string.IsNullOrEmpty(DisplayUnit)) return Number(percentOfDaily) + "% DV";
+            if (percent) return Fmt.Number(percentOfDaily) + "%";
+            if (string.IsNullOrEmpty(DisplayUnit)) return Fmt.Number(percentOfDaily) + "% DV";
             float amount = IsMicronutrient ? percentOfDaily / 100f * DvAmount : percentOfDaily / 100f * DailyTarget;
             // Units sit right against the number: "94g", "80kcal", "7.0mg".
-            return Number(amount) + DisplayUnit;
+            return Fmt.Number(amount) + DisplayUnit;
         }
 
         /// <summary>An amount in <see cref="Unit"/> (as food profiles store it), as text like <see cref="Format"/>.</summary>
         public string FormatAmount(float amountInUnit, bool percent) => Format(ToPercent(amountInUnit), percent);
-
-        private static string Number(float v)
-        {
-            if (v >= 1000f) return Math.Round(v).ToString("#,0", CultureInfo.InvariantCulture);
-            if (v >= 10f || v == 0f) return Math.Round(v).ToString("0", CultureInfo.InvariantCulture);
-            return v.ToString("0.#", CultureInfo.InvariantCulture);
-        }
     }
 
     public class NutrientRegistryFile
@@ -98,23 +94,15 @@ namespace ComplexNutrition.Core
 
         public void Load(ICoreAPI api)
         {
-            byCode.Clear();
-            var asset = api.Assets.TryGet(new AssetLocation(ComplexNutritionModSystem.ModId, AssetPath));
-            if (asset == null)
-            {
-                api.Logger.Error("[complexnutrition] Missing asset {0}; no nutrients registered.", AssetPath);
-                All = new List<NutrientDefinition>();
-                return;
-            }
-
-            Set(asset.ToObject<NutrientRegistryFile>(), api.Logger);
+            Set(ConfigAsset.Load<NutrientRegistryFile>(api, AssetPath), api.Logger);
+            if (All.Count == 0) api.Logger.Error("[complexnutrition] No nutrients registered: check {0}.", AssetPath);
         }
 
         /// <summary>Replaces the list with the nutrients in this file (also used by UI previews outside the game).</summary>
         public void Set(NutrientRegistryFile file, ILogger logger = null)
         {
             byCode.Clear();
-            foreach (var def in file.Nutrients)
+            foreach (var def in file?.Nutrients ?? new List<NutrientDefinition>())
             {
                 if (string.IsNullOrWhiteSpace(def.Code)) continue;
                 if (byCode.ContainsKey(def.Code))
@@ -126,9 +114,6 @@ namespace ComplexNutrition.Core
             }
             All = byCode.Values.OrderBy(n => n.SortOrder).ToList();
         }
-
-        /// <summary>Show quantities in % of a day's need rather than grams and kcal (config "displayUnits").</summary>
-        public bool ShowPercent { get; set; }
 
         public NutrientDefinition Get(string code) => code != null && byCode.TryGetValue(code, out var d) ? d : null;
 

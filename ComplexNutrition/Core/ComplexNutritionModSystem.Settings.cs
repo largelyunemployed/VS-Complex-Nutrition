@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ComplexNutrition.Modules.Tracking;
 using ComplexNutrition.UI;
 using Newtonsoft.Json;
 using Vintagestory.API.Client;
@@ -41,6 +40,12 @@ namespace ComplexNutrition.Core
 
         /// <summary>Whether food tooltips show the nutrient block. The admin decides; clients follow the server.</summary>
         public bool ShowTooltip => api?.Side == EnumAppSide.Client && ServerSettings != null ? ServerSettings.ShowTooltip : Config.ShowTooltip;
+
+        /// <summary>
+        /// Show quantities in % of a day's need rather than grams and kcal? On the client the player's own choice, or the
+        /// server's default; on the server the config's "displayUnits" (for command output).
+        /// </summary>
+        public bool ShowPercent => api?.Side == EnumAppSide.Client ? ClientShowPercent : Config.ShowPercent;
 
         /// <summary>Client: amounts in % of a day's need? The player's own choice, or the server's default.</summary>
         private bool ClientShowPercent
@@ -93,10 +98,10 @@ namespace ComplexNutrition.Core
                     {
                         if (!args.Parsers[0].IsMissing)
                         {
-                            sapi.World.Config.SetString(MeatInPotsKey, (string)args[0] == "on" ? "true" : "false");
+                            sapi.World.Config.SetString(WorldSettings.MeatInPotsKey, (string)args[0] == "on" ? "true" : "false");
                             SendSettingsToAll();
                         }
-                        bool now = WorldBool(sapi.World, MeatInPotsKey);
+                        bool now = WorldSettings.Bool(sapi.World, WorldSettings.MeatInPotsKey);
                         return TextCommandResult.Success(Lang.Get(now ? "complexnutrition:cmd-meatinpots-on" : "complexnutrition:cmd-meatinpots-off"));
                     })
                 .EndSubCommand();
@@ -130,16 +135,10 @@ namespace ComplexNutrition.Core
             LogFallbacks = Config.LogFallbacks,
             DisplayUnits = Config.ShowPercent ? "percent" : "amount",
             Modules = modules.ToDictionary(m => m.Id, m => m.IsEnabled),
-            StartCalories = TrackingModule.StartCalories(sapi)?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            StartCalories = WorldSettings.StartCalories(sapi.World)?.ToString(System.Globalization.CultureInfo.InvariantCulture),
             AdvancedDefault = Digestion.WorldAdvancedDefault(sapi.World),
-            MeatInPots = WorldBool(sapi.World, MeatInPotsKey),
+            MeatInPots = WorldSettings.Bool(sapi.World, WorldSettings.MeatInPotsKey),
         };
-
-        /// <summary>World setting (worldconfig.json): poultry and bushmeat in pots. Read by the recipe patches in patches/meat-in-pots.json when the world loads.</summary>
-        public const string MeatInPotsKey = "complexnutritionMeatInPots";
-
-        private static bool WorldBool(IWorldAccessor world, string key) =>
-            string.Equals(Convert.ToString(world?.Config?[key]?.GetValue(), System.Globalization.CultureInfo.InvariantCulture), "true", StringComparison.OrdinalIgnoreCase);
 
         private void SendSettings(IServerPlayer player)
         {
@@ -188,20 +187,19 @@ namespace ComplexNutrition.Core
                 case SettingKeys.DisplayUnits:
                     if (value != "amount" && value != "percent") return;
                     Config.DisplayUnits = value;
-                    Nutrients.ShowPercent = Config.ShowPercent;
                     break;
                 case SettingKeys.StartCalories:
-                    if (!new[] { "1000", "700", "500", "300", "100", "1" }.Contains(value)) return;
-                    sapi.World.Config.SetString(TrackingModule.StartConditionKey, value);
+                    if (!WorldSettings.IsStartOption(value)) return;
+                    sapi.World.Config.SetString(WorldSettings.StartConditionKey, value);
                     saveConfig = false;
                     break;
                 case SettingKeys.MeatInPots:
                     // Recipes are patched when the world loads, so this takes effect after a restart.
-                    sapi.World.Config.SetString(MeatInPotsKey, on ? "true" : "false");
+                    sapi.World.Config.SetString(WorldSettings.MeatInPotsKey, on ? "true" : "false");
                     saveConfig = false;
                     break;
                 case SettingKeys.AdvancedDefault:
-                    sapi.World.Config.SetBool(Digestion.AdvancedDisplayKey, on);
+                    sapi.World.Config.SetBool(WorldSettings.AdvancedDisplayKey, on);
                     saveConfig = false;
                     break;
                 default:
@@ -218,9 +216,8 @@ namespace ComplexNutrition.Core
         }
 
         /// <summary>
-        /// Starts or stops a module while the game runs, on this side. On the server, stopping tracking also converts every
-        /// online player to vanilla values (their own are saved), as joining a world with tracking off does; starting it
-        /// again puts them back exactly where they were.
+        /// Starts or stops a module while the game runs, on this side. A module switched off is told so after it stops
+        /// (stopping tracking puts every online player back on vanilla values; see <see cref="INutritionModule.OnSwitchedOff"/>).
         /// </summary>
         internal void SetModuleRunning(INutritionModule module, bool on)
         {
@@ -241,21 +238,7 @@ namespace ComplexNutrition.Core
             foreach (var dependent in modules.Where(m => m.IsEnabled && m.Requires.Contains(module.Id)).ToList()) SetModuleRunning(dependent, false);
             module.Disable(api);
             api.Logger.Notification("[complexnutrition] Module {0} switched off.", module.Id);
-            if (sapi != null && module.Id == TrackingModule.ModuleId)
-            {
-                var digest = DigestionSettings.Load(sapi);
-                foreach (IServerPlayer p in sapi.World.AllOnlinePlayers) ConvertToVanilla(p, digest);
-            }
-        }
-
-        /// <summary>Server: puts a player on vanilla values worked out from ours, keeping ours for later.</summary>
-        private void ConvertToVanilla(IServerPlayer player, DigestionSettings digest)
-        {
-            var tree = player?.Entity?.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
-            if (tree == null) return;
-            tree.SetBool("tracking", false);
-            Digestion.ConvertToVanilla(player.Entity, Nutrients, Foods.Fallbacks.KcalPerSatiety, digest);
-            player.Entity.WatchedAttributes.MarkPathDirty(NutritionState.TreeKey);
+            module.OnSwitchedOff(api);
         }
 
         // ---- Client ----
@@ -277,7 +260,6 @@ namespace ComplexNutrition.Core
                 Client = new ClientSettings { DisplayUnits = Config.ShowPercent ? "percent" : "server" };
             }
             api.StoreModConfig(Client, ClientSettings.FileName);
-            Nutrients.ShowPercent = ClientShowPercent;
 
             clientChannel = api.Network.GetChannel(ChannelName);
             clientChannel.SetMessageHandler<SettingsSnapshotPacket>(OnSettingsSnapshot);
@@ -301,7 +283,6 @@ namespace ComplexNutrition.Core
             }
             if (snap == null) return;
             ServerSettings = snap;
-            Nutrients.ShowPercent = ClientShowPercent;
 
             // The client follows the server's module switches, so a module switched on or off in the menu takes effect here too.
             foreach (var module in OrderByDependencies(modules).ToList())
@@ -313,8 +294,8 @@ namespace ComplexNutrition.Core
             var cfg = capi.World?.Config;
             if (cfg != null)
             {
-                cfg.SetBool(Digestion.AdvancedDisplayKey, snap.AdvancedDefault);
-                if (snap.StartCalories != null) cfg.SetString(TrackingModule.StartConditionKey, snap.StartCalories);
+                cfg.SetBool(WorldSettings.AdvancedDisplayKey, snap.AdvancedDefault);
+                if (snap.StartCalories != null) cfg.SetString(WorldSettings.StartConditionKey, snap.StartCalories);
             }
 
             settingsDialog?.Refresh();
@@ -333,7 +314,6 @@ namespace ComplexNutrition.Core
             if (value != "server" && value != "amount" && value != "percent") return;
             Client.DisplayUnits = value;
             capi.StoreModConfig(Client, ClientSettings.FileName);
-            Nutrients.ShowPercent = ClientShowPercent;
             if (window?.IsOpened() == true) window.Refresh(true);
         }
 
@@ -355,8 +335,6 @@ namespace ComplexNutrition.Core
 
         // ---- Nutrition window data ----
 
-        public const string HeldKey = "complexnutritionHeld";
-
         private string[] knownCodes;
         private List<KnownFood> known = new();
 
@@ -370,7 +348,7 @@ namespace ComplexNutrition.Core
             clientDigest ??= DigestionSettings.Load(capi);
             var hunger = entity?.WatchedAttributes.GetTreeAttribute("hunger");
 
-            var codes = (entity?.WatchedAttributes[HeldKey] as StringArrayAttribute)?.value;
+            var codes = (entity?.WatchedAttributes[NutritionState.HeldKey] as StringArrayAttribute)?.value;
             if (codes != knownCodes)
             {
                 knownCodes = codes;
@@ -394,7 +372,7 @@ namespace ComplexNutrition.Core
                 State = state,
                 Fullness = hunger?.GetFloat("currentsaturation") ?? 0f,
                 MaxFullness = hunger?.GetFloat("maxsaturation") ?? 0f,
-                ShowPercent = Nutrients.ShowPercent,
+                ShowPercent = ShowPercent,
                 Known = known,
             };
         }
