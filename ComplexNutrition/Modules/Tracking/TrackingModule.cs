@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ComplexNutrition.Core;
+using ComplexNutrition.UI;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
@@ -23,7 +24,7 @@ namespace ComplexNutrition.Modules.Tracking
     /// </summary>
     public class TrackingModule : INutritionModule
     {
-        public const string ModuleId = "tracking";
+        public const string ModuleId = ModuleIds.Tracking;
 
         public string Id => ModuleId;
         public string[] Requires => new string[0];
@@ -37,11 +38,22 @@ namespace ComplexNutrition.Modules.Tracking
         /// <summary>Fullness kept in an "empty" stomach, so vanilla's own starvation check never fires.</summary>
         public const float EmptyStomach = 0.001f;
 
+        /// <summary>Server: set while the module runs.</summary>
         private ICoreServerAPI sapi;
+        /// <summary>Server: set from <see cref="Start"/>, whether the module runs or not (commands, the join-while-off conversion).</summary>
+        private ICoreServerAPI serverApi;
         private long tickListener;
         private float starveTimer;
         private float heldTimer;
-        private bool commandsRegistered;
+
+        public void Start(ICoreAPI api, ComplexNutritionModSystem core)
+        {
+            Core = core;
+            if (api is not ICoreServerAPI server) return;
+            serverApi = server;
+            RegisterCommands();
+            server.Event.PlayerNowPlaying += OnJoinWhileOff;
+        }
 
         public void Enable(ICoreAPI api, ComplexNutritionModSystem core)
         {
@@ -51,11 +63,18 @@ namespace ComplexNutrition.Modules.Tracking
             Digestion.Settings = Digest;
             IsEnabled = true;
 
-            // The fats, protein and carbohydrate bars show the gut pools, so their cap is the pool size.
+            // The fats, protein and carbohydrate bars show the gut pools, so their cap is the pool size (digestion.json is the one source).
             foreach (var kv in Digest.Pools)
             {
                 var def = core.Nutrients.Get(kv.Key);
-                if (def != null && def.DailyTarget > 0) def.Cap = kv.Value.MaxGrams / def.DailyTarget * 100f;
+                if (def == null) api.Logger.Warning("[complexnutrition] Gut pool {0} has no nutrient in nutrients.json; it will hold nothing.", kv.Key);
+                else if (def.DailyTarget > 0) def.Cap = kv.Value.MaxGrams / def.DailyTarget * 100f;
+            }
+            var protein = core.Nutrients.Get(NutrientCodes.Protein);
+            if (protein != null && Digest.Pool(NutrientCodes.Protein) != null && Math.Abs(protein.DailyTarget - Digest.ProteinNeedGrams) > 0.01f)
+            {
+                api.Logger.Warning("[complexnutrition] Protein's dailyTarget in nutrients.json ({0}g) differs from the protein pool's diminishingAboveGrams in digestion.json ({1}g). Bars and tooltips measure against the first, calories against the second.",
+                    protein.DailyTarget, Digest.ProteinNeedGrams);
             }
 
             if (api is ICoreServerAPI serverApi)
@@ -69,8 +88,6 @@ namespace ComplexNutrition.Modules.Tracking
                 sapi.Event.PlayerRespawn += OnRespawn;
                 tickListener = sapi.Event.RegisterGameTickListener(OnTick, (int)(Math.Max(0.5f, Settings.UpdateSeconds) * 1000));
                 foreach (IServerPlayer player in sapi.World.AllOnlinePlayers) InitPlayer(player);
-                if (!commandsRegistered) RegisterCommands();
-                commandsRegistered = true;
             }
             else if (api is ICoreClientAPI capi)
             {
@@ -110,6 +127,34 @@ namespace ComplexNutrition.Modules.Tracking
             Digestion.Settings = null;
         }
 
+        /// <summary>
+        /// Switched off while the game runs: every online player goes back to vanilla values worked out from ours (ours are
+        /// kept), as joining a world with tracking off does, so switching off cannot be used to dodge starvation.
+        /// Switching tracking back on puts them back exactly where they were.
+        /// </summary>
+        public void OnSwitchedOff(ICoreAPI api)
+        {
+            if (serverApi == null) return;
+            var digest = DigestionSettings.Load(serverApi);
+            foreach (IServerPlayer p in serverApi.World.AllOnlinePlayers) ConvertToVanilla(p, digest);
+        }
+
+        /// <summary>A player joins while tracking is off: if they were tracked before, they get vanilla values from ours.</summary>
+        private void OnJoinWhileOff(IServerPlayer player)
+        {
+            if (IsEnabled || NutritionState.Of(player?.Entity) == null) return;
+            ConvertToVanilla(player, DigestionSettings.Load(serverApi));
+        }
+
+        private void ConvertToVanilla(IServerPlayer player, DigestionSettings digest)
+        {
+            var state = NutritionState.Of(player?.Entity);
+            if (state == null) return;
+            state.TrackingOn = false;   // tells the client to show vanilla's bars
+            Digestion.ConvertToVanilla(player.Entity, Core.Nutrients, digest);
+            state.MarkDirty();
+        }
+
         private double NowHours => sapi.World.Calendar.TotalHours;
         private int Today => (int)Math.Floor(sapi.World.Calendar.TotalDays);
 
@@ -119,6 +164,7 @@ namespace ComplexNutrition.Modules.Tracking
             if (player?.Entity == null) return;
             var state = NutritionState.GetOrCreate(player.Entity, Core.Nutrients, NowHours, out bool created);
             if (created) ApplyStartCondition(player, state);
+            MigrateGut(state);
             state.TrackingOn = true;
             state.LastUpdateHours = NowHours;
             Digestion.UseOurScale(player.Entity, Digest);
@@ -133,9 +179,6 @@ namespace ComplexNutrition.Modules.Tracking
             RefreshVanillaHealthBonus(player);
         }
 
-        /// <summary>World setting (see worldconfig.json): the calorie tank of a new character, in % of a day.</summary>
-        public const string StartConditionKey = "complexnutritionStart";
-
         /// <summary>
         /// A character new to Complex Nutrition starts with the calorie tank the world's start condition picks:
         /// Easy 7 days (full), Normal 5, Hard 3, Brutal 1, Rock Bottom 1% of a day. Only on first join, never on respawn.
@@ -144,18 +187,21 @@ namespace ComplexNutrition.Modules.Tracking
         {
             var def = Core.Nutrients.Get(NutrientCodes.Calories);
             if (def == null) return;
-            float? start = StartCalories(sapi);
+            float? start = WorldSettings.StartCalories(sapi.World);
             if (start == null) return;
             state.SetReserve(def.Code, Math.Max(0f, Math.Min(def.Cap, start.Value)));
         }
 
-        /// <summary>The world's start condition in % of a day, or null when the world has none (the nutrient's startReserve applies).</summary>
-        public static float? StartCalories(ICoreServerAPI api)
+        /// <summary>Saves from v0.2.2 to v0.3.0 kept the gut as batches as well as in the reserves; since v0.3.1 the reserve is the one record.</summary>
+        private void MigrateGut(NutritionState state)
         {
-            // Set at world creation it is a string; set with /worldconfig it may be stored as a number.
-            object raw = api.World.Config?[StartConditionKey]?.GetValue();
-            string value = Convert.ToString(raw, System.Globalization.CultureInfo.InvariantCulture);
-            return float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float start) ? start : null;
+            foreach (var kv in Digest.Pools)
+            {
+                float? grams = state.TakeOldGutBatches(kv.Key);
+                var def = Core.Nutrients.Get(kv.Key);
+                if (grams == null || def == null) continue;
+                state.SetReserve(def.Code, def.ToPercent(Math.Min(kv.Value.MaxGrams, grams.Value)));
+            }
         }
 
         /// <summary>Vanilla gives half a stomach on revive; the calorie tank gets at least a day's worth, so a starved player can recover.</summary>
@@ -271,7 +317,7 @@ namespace ComplexNutrition.Modules.Tracking
         private void RecordHeld(IServerPlayer player)
         {
             var attrs = player.Entity.WatchedAttributes;
-            var known = (attrs[ComplexNutritionModSystem.HeldKey] as Vintagestory.API.Datastructures.StringArrayAttribute)?.value ?? new string[0];
+            var known = (attrs[NutritionState.HeldKey] as Vintagestory.API.Datastructures.StringArrayAttribute)?.value ?? new string[0];
             HashSet<string> added = null;
 
             void Consider(ItemStack stack, int depth)
@@ -296,8 +342,8 @@ namespace ComplexNutrition.Modules.Tracking
                 foreach (var slot in inv) Consider(slot?.Itemstack, 0);
             }
             if (added == null) return;
-            attrs[ComplexNutritionModSystem.HeldKey] = new Vintagestory.API.Datastructures.StringArrayAttribute(known.Concat(added).OrderBy(c => c).ToArray());
-            attrs.MarkPathDirty(ComplexNutritionModSystem.HeldKey);
+            attrs[NutritionState.HeldKey] = new Vintagestory.API.Datastructures.StringArrayAttribute(known.Concat(added).OrderBy(c => c).ToArray());
+            attrs.MarkPathDirty(NutritionState.HeldKey);
         }
 
         /// <summary>Speed of digestion from the fibre reserve: 1 at an empty reserve, 1 + the pool's bonus at the full-bonus line or above.</summary>
@@ -329,11 +375,17 @@ namespace ComplexNutrition.Modules.Tracking
                 }
 
                 // The pool absorbs as a whole, faster the more it holds, up to its fastest rate.
+                var def = Core.Nutrients.Get(code);
                 float speed = FiberSpeed(state, pool);
-                float inGut = GutGrams(state, code);
+                float inGut = GutGrams(state, def);
                 float left = pool.Absorb(inGut, hours, speed);
                 float absorbed = inGut - left;
-                SetGut(state, code, left, pool, speed);
+                if (def != null)
+                {
+                    float old = state.GetReserve(code);
+                    float now2 = SetGut(state, def, left, pool, speed);
+                    if (old != now2) Core.PublishReserveChanged(player, code, old, now2);
+                }
 
                 if (absorbed > 0f)
                 {
@@ -348,16 +400,7 @@ namespace ComplexNutrition.Modules.Tracking
                 {
                     float total = 0f;
                     foreach (var g in log) total += g;
-                    state.Protein24 = Math.Min(total, Digest.ProteinMaxGrams);   // past the daily most, protein gives no benefit
-                }
-
-                var def = Core.Nutrients.Get(code);
-                if (def != null)
-                {
-                    float old = state.GetReserve(code);
-                    float now2 = def.ToPercent(left);
-                    state.SetReserve(code, now2);
-                    if (old != now2) Core.PublishReserveChanged(player, code, old, now2);
+                    state.Protein24 = Math.Min(total, Digest.ProteinMaxGrams);   // the bar's top
                 }
             }
             state.AbsorbedHour = hour;
@@ -379,7 +422,7 @@ namespace ComplexNutrition.Modules.Tracking
             var state = StateOf(player.Entity);
             var def = Core.Nutrients.Get(NutrientCodes.Calories);
             if (state == null || def == null || satiety <= 0f) return;
-            float kcal = satiety * Core.Foods.Fallbacks.KcalPerSatiety;
+            float kcal = satiety * Digest.KcalPerSatiety;
             float old = state.GetReserve(def.Code);
             float now = Math.Max(0f, old - def.ToPercent(kcal));
             state.SetReserve(def.Code, now);
@@ -444,21 +487,17 @@ namespace ComplexNutrition.Modules.Tracking
             Core.PublishFoodAbsorbed(absorbed);
         }
 
-        /// <summary>Grams in a gut pool. Saves from before v0.2.4 held one batch per meal; their sum is the pool.</summary>
-        private static float GutGrams(NutritionState state, string code)
-        {
-            state.GetBatches(code, out var grams, out _);
-            float sum = 0f;
-            foreach (var g in grams) sum += g;
-            return sum;
-        }
+        /// <summary>Grams in a gut pool: its reserve, in grams.</summary>
+        private static float GutGrams(NutritionState state, NutrientDefinition def) => def == null ? 0f : def.FromPercent(state.GetReserve(def.Code));
 
-        /// <summary>Stores a gut pool's contents (as a single batch) and how long it will take to empty.</summary>
-        private static void SetGut(NutritionState state, string code, float grams, DigestionPool pool, float speed)
+        /// <summary>Stores a gut pool's contents (its reserve) and how long it will take to empty. Returns the new reserve, in %.</summary>
+        private static float SetGut(NutritionState state, NutrientDefinition def, float grams, DigestionPool pool, float speed)
         {
             bool any = grams > DigestionPool.EmptyGrams;
-            state.SetBatches(code, any ? new[] { grams } : new float[0], any ? new[] { 0f } : new float[0]);
-            state.SetGutHours(code, any ? pool.HoursToEmpty(grams, speed) : 0f);
+            float percent = any ? def.ToPercent(grams) : 0f;
+            state.SetReserve(def.Code, percent);
+            state.SetGutHours(def.Code, any ? pool.HoursToEmpty(grams, speed) : 0f);
+            return percent;
         }
 
         /// <summary>
@@ -472,14 +511,11 @@ namespace ComplexNutrition.Modules.Tracking
             if (multipliers.Count > 0) absorbed.Multipliers[n.Code] = multipliers;
             if (grams <= 0f) return;
 
-            float inGut = GutGrams(state, n.Code);
+            float inGut = GutGrams(state, n);
             float accepted = Math.Min(grams, Math.Max(0f, pool.MaxGrams - inGut));
             if (accepted <= 0.001f) return;
-            SetGut(state, n.Code, inGut + accepted, pool, FiberSpeed(state, pool));
-
             float old = state.GetReserve(n.Code);
-            float updated = n.ToPercent(inGut + accepted);
-            state.SetReserve(n.Code, updated);
+            float updated = SetGut(state, n, inGut + accepted, pool, FiberSpeed(state, pool));
             float percent = n.ToPercent(accepted);
             state.AddAbsorbedToday(n.Code, percent);
             absorbed.Absorbed[n.Code] = percent;
@@ -490,6 +526,7 @@ namespace ComplexNutrition.Modules.Tracking
 
         private void RegisterCommands()
         {
+            var sapi = serverApi;
             var parsers = sapi.ChatCommands.Parsers;
 
             sapi.ChatCommands.GetOrCreate("cnutrition")
@@ -561,29 +598,13 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 float r = state.GetReserve(n.Code);
                 string line = Digest.Pool(n.Code) != null
-                    ? Lang.Get("complexnutrition:cmd-gut-line", Lang.Get(n.LangKey), n.Format(r, Core.Nutrients.ShowPercent), GutHoursText(state.GetGutHours(n.Code), r))
-                    : Lang.Get("complexnutrition:cmd-reserve-line", Lang.Get(n.LangKey), n.Format(r, Core.Nutrients.ShowPercent), DaysText(r));
+                    ? Lang.Get("complexnutrition:cmd-gut-line", Lang.Get(n.LangKey), n.Format(r, Core.ShowPercent), NutrientDisplay.GutHoursText(state.GetGutHours(n.Code), r))
+                    : Lang.Get("complexnutrition:cmd-reserve-line", Lang.Get(n.LangKey), n.Format(r, Core.ShowPercent), NutrientDisplay.DaysText(r));
                 if (withToday) line += $" (today +{Math.Round(state.GetAbsorbedToday(n.Code))}%, cap {Math.Round(n.Cap)}%)";
                 sb.AppendLine(line);
                 if (n.Code == NutrientCodes.Protein) sb.AppendLine(Lang.Get("complexnutrition:protein24-hover", Math.Round(state.Protein24), Math.Round(Digest.ProteinNeedGrams), Math.Round(Digest.ProteinMaxGrams)));
             }
             return sb.ToString().TrimEnd();
-        }
-
-        /// <summary>"empty", or "absorbed in about 2.5 h" for a gut pool.</summary>
-        public static string GutHoursText(float hours, float reserve)
-        {
-            if (reserve <= 0.01f || hours <= 0f) return Lang.Get("complexnutrition:gut-empty");
-            return Lang.Get("complexnutrition:gut-hours", hours < 10f ? hours.ToString("0.0") : Math.Round(hours).ToString("0"));
-        }
-
-        /// <summary>A reserve in % of a day as "0.6 days" or "12 days".</summary>
-        public static string DaysText(float percent)
-        {
-            float days = percent / 100f;
-            return days < 10f
-                ? Lang.Get("complexnutrition:reserve-days", days.ToString("0.0"))
-                : Lang.Get("complexnutrition:reserve-days", Math.Round(days).ToString("0"));
         }
 
         private TextCommandResult SetReserveCommand(IServerPlayer target, string code, float percent)
@@ -598,13 +619,8 @@ namespace ComplexNutrition.Modules.Tracking
                 float old = state.GetReserve(n.Code);
                 float value = Math.Max(0f, percent);
                 var pool = Digest.Pool(n.Code);
-                if (pool != null)
-                {
-                    float grams = Math.Min(pool.MaxGrams, value / 100f * n.DailyTarget);
-                    SetGut(state, n.Code, grams, pool, FiberSpeed(state, pool));
-                    value = n.ToPercent(grams);
-                }
-                state.SetReserve(n.Code, value);
+                if (pool != null) value = SetGut(state, n, Math.Min(pool.MaxGrams, n.FromPercent(value)), pool, FiberSpeed(state, pool));
+                else state.SetReserve(n.Code, value);
                 Core.PublishReserveChanged(target, n.Code, old, value);
             }
             state.MarkDirty();

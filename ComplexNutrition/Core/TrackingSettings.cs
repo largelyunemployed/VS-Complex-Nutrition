@@ -1,8 +1,7 @@
-using ComplexNutrition.Core;
 using Newtonsoft.Json;
 using Vintagestory.API.Common;
 
-namespace ComplexNutrition.Modules.Tracking
+namespace ComplexNutrition.Core
 {
     /// <summary>Tracking rules from config/tracking.json. Per-nutrient numbers (cap, start, drain, sitting limit) live in config/nutrients.json.</summary>
     public class TrackingSettings
@@ -42,10 +41,6 @@ namespace ComplexNutrition.Modules.Tracking
         /// <summary>Real seconds between checks of what each player is holding, for the foods they know.</summary>
         [JsonProperty("heldScanSeconds")] public float HeldScanSeconds = 5f;
 
-        public static TrackingSettings Load(ICoreAPI api)
-        {
-            var asset = api.Assets.TryGet(new AssetLocation(ComplexNutritionModSystem.ModId, AssetPath));
-            return asset?.ToObject<TrackingSettings>() ?? new TrackingSettings();
-        }
+        public static TrackingSettings Load(ICoreAPI api) => ConfigAsset.Load<TrackingSettings>(api, AssetPath);
     }
 }

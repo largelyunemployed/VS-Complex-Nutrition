@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Cairo;
 using ComplexNutrition.Core;
+using ComplexNutrition.UI;
 using HarmonyLib;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
@@ -31,16 +32,6 @@ namespace ComplexNutrition.Modules.Tracking
 
         private static readonly AccessTools.FieldRef<CharacterExtraDialogs, GuiDialogCharacterBase> DlgRef =
             AccessTools.FieldRefAccess<CharacterExtraDialogs, GuiDialogCharacterBase>("dlg");
-
-        /// <summary>Bar colours per nutrient group, in the game's muted palette.</summary>
-        internal static readonly Dictionary<string, double[]> GroupColors = new()
-        {
-            ["Energy"] = new[] { 0.80, 0.55, 0.22, 1.0 },
-            ["Macro"] = GuiStyle.FoodBarColor,
-            ["FatSolubleVitamin"] = new[] { 0.78, 0.68, 0.30, 1.0 },
-            ["WaterSolubleVitamin"] = new[] { 0.86, 0.46, 0.24, 1.0 },
-            ["Mineral"] = new[] { 0.45, 0.56, 0.66, 1.0 },
-        };
 
         public static void Apply(ICoreClientAPI api, ComplexNutritionModSystem system)
         {
@@ -97,7 +88,7 @@ namespace ComplexNutrition.Modules.Tracking
             var attrs = capi?.World?.Player?.Entity?.WatchedAttributes;
             var tree = attrs?.GetTreeAttribute(NutritionState.TreeKey);
             var def = core?.Nutrients.Get(NutrientCodes.Calories);
-            if (tree == null || def == null || !tree.GetBool("tracking")) return false;
+            if (tree == null || def == null || !NutritionState.FromTree(tree).TrackingOn) return false;
             var reserves = tree.GetTreeAttribute("reserves");
             kcal = (reserves?.GetFloat(def.Code) ?? 0f) / 100f * def.DailyTarget;
             maxKcal = Math.Max(def.Cap / 100f * def.DailyTarget, kcal);
@@ -149,9 +140,9 @@ namespace ComplexNutrition.Modules.Tracking
             if (!CalorieTank(out var kcal, out var maxKcal, out var fullness, out var maxFullness)) return "";
             var def = core.Nutrients.Get(NutrientCodes.Calories);
             float pct = def.ToPercent(kcal);
-            return new StatsHover.Builder(Lang.Get(def.LangKey), StatsHover.Hex(GroupColors["Energy"]))
+            return new StatsHover.Builder(Lang.Get(def.LangKey), StatsHover.Hex(NutrientDisplay.GroupColors["Energy"]))
                 .Section(Lang.Get("complexnutrition:hover-status"),
-                    StatsHover.Vtml("complexnutrition:hud-calories", Amount(def, pct), StatsHover.Text(TrackingModule.DaysText(pct))),
+                    StatsHover.Vtml("complexnutrition:hud-calories", Amount(def, pct), StatsHover.Text(NutrientDisplay.DaysText(pct))),
                     StatsHover.Text(Lang.Get("complexnutrition:fullness-hover", (int)Math.Round(fullness), (int)Math.Round(maxFullness))))
                 .ToString();
         }
@@ -419,7 +410,7 @@ namespace ComplexNutrition.Modules.Tracking
 
         /// <summary>An amount as hover VTML, in its unit's colour.</summary>
         private static string Amount(NutrientDefinition def, float percentOfDaily) =>
-            StatsHover.Text(def.Format(percentOfDaily, core.Nutrients.ShowPercent));
+            StatsHover.Text(def.Format(percentOfDaily, core.ShowPercent));
 
         /// <summary>
         /// A gut pool's first hover line (VTML). With the advanced nutrition display: grams, the calories they will give
@@ -428,7 +419,7 @@ namespace ComplexNutrition.Modules.Tracking
         private static string GutLine(NutritionState st, NutrientDefinition def, float reserve)
         {
             string code = def.Code;
-            string hours = TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, reserve);
+            string hours = NutrientDisplay.GutHoursText(st?.GetGutHours(code) ?? 0f, reserve);
             var s = Digestion.Settings;
             var pool = s?.Pool(code);
             if (st == null || pool == null || !Digestion.AdvancedDisplay(capi?.World, st) || reserve <= 0.01f)
@@ -447,7 +438,7 @@ namespace ComplexNutrition.Modules.Tracking
                 StatsHover.Paint(Lang.Get("complexnutrition:gut-rate", Num(rate), Num(kcalRate)), UnitColors.Rate));
         }
 
-        private static string Num(float v) => v >= 10f ? Math.Round(v).ToString("#,0", System.Globalization.CultureInfo.InvariantCulture) : v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+        private static string Num(float v) => Fmt.Number(v);
 
         private static bool IsGutPool(string code) => Digestion.Settings?.Pool(code) != null;
 
@@ -520,7 +511,7 @@ namespace ComplexNutrition.Modules.Tracking
             for (int i = 0; i < nutrients.Count; i++)
             {
                 var n = nutrients[i];
-                var color = GroupColors.TryGetValue(n.Group ?? "", out var c) ? c : GuiStyle.FoodBarColor;
+                var color = NutrientDisplay.ColorOf(n);
                 var code = n.Code;
                 var def = n;
                 if (code == NutrientCodes.Protein && IsGutPool(code))
@@ -552,7 +543,7 @@ namespace ComplexNutrition.Modules.Tracking
                     {
                         float r = NutritionState.Of(capi?.World?.Player?.Entity)?.GetReserve(code) ?? 0f;
                         return NutrientHover(title, color, code,
-                            StatsHover.Vtml("complexnutrition:reserve-hover", Amount(def, r), StatsHover.Text(TrackingModule.DaysText(r))));
+                            StatsHover.Vtml("complexnutrition:reserve-hover", Amount(def, r), StatsHover.Text(NutrientDisplay.DaysText(r))));
                     });
                 }
             }

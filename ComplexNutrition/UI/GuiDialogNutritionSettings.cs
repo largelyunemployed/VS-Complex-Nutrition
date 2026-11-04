@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using ComplexNutrition.Core;
-using ComplexNutrition.Modules.Tracking;
 using Vintagestory.API.Client;
 using Vintagestory.API.Config;
 
@@ -127,23 +126,21 @@ namespace ComplexNutrition.UI
 
                 // ---- World ----
                 Heading(L("settings-cat-world"));
-                string[] startValues = { "1000", "700", "500", "300", "100", "1" };
-                string[] startNames = { "Full", "Easy", "Normal", "Hard", "Brutal", "RockBottom" };
-                Dropdown(L("settings-start"), Lang.Get("worldattribute-complexnutritionStart-desc"),
-                    startValues, startNames.Select(n => Lang.Get("worldconfig-complexnutritionStart-" + n)).ToArray(),
-                    snap.StartCalories ?? "500",
+                Dropdown(L("settings-start"), Lang.Get("worldattribute-" + WorldSettings.StartConditionKey + "-desc"),
+                    WorldSettings.StartOptions.Select(o => o.Value).ToArray(), WorldSettings.StartOptions.Select(o => Lang.Get(o.LangKey)).ToArray(),
+                    snap.StartCalories ?? WorldSettings.DefaultStart,
                     v => core.SendSetting(SettingKeys.StartCalories, v), "start");
                 Switch(L("settings-advanced-default"), L("settings-advanced-default-desc"), snap.AdvancedDefault,
                     on => core.SendSetting(SettingKeys.AdvancedDefault, on ? "true" : "false"), "advanceddefault");
 
-                Switch(L("settings-meatinpots"), Lang.Get("worldattribute-complexnutritionMeatInPots-desc"), snap.MeatInPots,
+                Switch(L("settings-meatinpots"), Lang.Get("worldattribute-" + WorldSettings.MeatInPotsKey + "-desc"), snap.MeatInPots,
                     on => core.SendSetting(SettingKeys.MeatInPots, on ? "true" : "false"), "meatinpots");
 
                 // ---- Modules ----
                 Heading(L("settings-cat-modules"));
-                Switch(L("settings-module-fooddata"), L("settings-module-fooddata-desc"), ModuleOn(snap, "fooddata"),
-                    on => core.SendSetting(SettingKeys.ModulePrefix + "fooddata", on ? "true" : "false"), "module-fooddata");
-                Switch(L("settings-module-tracking"), L("settings-module-tracking-desc"), ModuleOn(snap, TrackingModule.ModuleId),
+                Switch(L("settings-module-fooddata"), L("settings-module-fooddata-desc"), ModuleOn(snap, ModuleIds.FoodData),
+                    on => core.SendSetting(SettingKeys.ModulePrefix + ModuleIds.FoodData, on ? "true" : "false"), "module-fooddata");
+                Switch(L("settings-module-tracking"), L("settings-module-tracking-desc"), ModuleOn(snap, ModuleIds.Tracking),
                     OnTrackingToggled, "module-tracking");
             }
             else
@@ -172,7 +169,7 @@ namespace ComplexNutrition.UI
             SingleComposer.GetSwitch("module-tracking")?.SetValue(!on);
             new GuiDialogConfirm(capi, L(on ? "settings-confirm-on" : "settings-confirm-off"), ok =>
             {
-                if (ok) core.SendSetting(SettingKeys.ModulePrefix + TrackingModule.ModuleId, on ? "true" : "false");
+                if (ok) core.SendSetting(SettingKeys.ModulePrefix + ModuleIds.Tracking, on ? "true" : "false");
             }).TryOpen();
         }
 

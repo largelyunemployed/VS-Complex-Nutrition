@@ -8,7 +8,8 @@ namespace ComplexNutrition.Modules.FoodData
 {
     /// <summary>
     /// BlockPie writes its own tooltip without running collectible behaviours, so the nutrient
-    /// block is added to it with a Harmony postfix instead. Removed again when the module is disabled.
+    /// block is added to it with a Harmony postfix instead. Client only, like the tooltip behaviour (in single player one
+    /// patch serves both sides). Removed again when the module is disabled.
     /// </summary>
     public static class PieTooltipPatch
     {
@@ -36,7 +37,7 @@ namespace ComplexNutrition.Modules.FoodData
         {
             if (core == null || !core.ShowTooltip) return;
             var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack);
-            if (meal != null) dsc.Append(CollectibleBehaviorNutrientInfo.BuildMealTooltip(core.Nutrients, meal, withDebugInfo));
+            if (meal != null) dsc.Append(CollectibleBehaviorNutrientInfo.BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo));
         }
     }
 }

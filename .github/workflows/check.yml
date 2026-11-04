@@ -1,0 +1,48 @@
+name: Check
+
+# Builds the mod against the game's own libraries, runs the tests and checks every JSON file parses.
+# Runs on every push and pull request.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      VS_VERSION: "1.22.7"
+      VINTAGE_STORY: ${{ github.workspace }}/vs-server
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Cache the game server
+        id: vs-cache
+        uses: actions/cache@v4
+        with:
+          path: vs-server
+          key: vs-server-${{ env.VS_VERSION }}
+
+      - name: Download the game server (for its libraries)
+        if: steps.vs-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p vs-server
+          curl -fsSL "https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_${VS_VERSION}.tar.gz" | tar -xz -C vs-server
+
+      - name: Build
+        run: dotnet build -c Release ComplexNutrition/ComplexNutrition.csproj
+
+      - name: Tests
+        run: dotnet run -c Release --project tests/ComplexNutrition.Tests
+
+      - name: Python data scripts compile
+        run: python3 -m py_compile tools/*.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: complexnutrition-mod
+          path: release/*.zip

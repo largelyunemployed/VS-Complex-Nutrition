@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using ComplexNutrition.Core;
-using ComplexNutrition.Modules.Tracking;
 using Vintagestory.API.Client;
 using Vintagestory.API.Config;
 
@@ -42,12 +41,9 @@ namespace ComplexNutrition.UI
 
         private static string L(string key, params object[] args) => Lang.Get("complexnutrition:" + key, args);
 
-        private static double[] ColorOf(NutrientDefinition n) =>
-            CharacterStatsPatch.GroupColors.TryGetValue(n?.Group ?? "", out var c) ? c : GuiStyle.FoodBarColor;
+        private static double[] ColorOf(NutrientDefinition n) => NutrientDisplay.ColorOf(n);
 
-        public static string Num(float v) => v >= 10f
-            ? Math.Round(v).ToString("#,0", CultureInfo.InvariantCulture)
-            : v.ToString("0.#", CultureInfo.InvariantCulture);
+        public static string Num(float v) => Fmt.Number(v);
 
         private static List<PageBlock> Off() => new()
         {
@@ -60,7 +56,7 @@ namespace ComplexNutrition.UI
         /// <summary>Days of a reserve, coloured amber when it is running low and red when it is nearly gone.</summary>
         private static string DaysVtml(NutritionPageData d, NutrientDefinition n, float reserve)
         {
-            string text = StatsHover.Text(TrackingModule.DaysText(reserve));
+            string text = StatsHover.Text(NutrientDisplay.DaysText(reserve));
             float days = reserve / 100f;
             if (n.IsCalories)
             {
@@ -269,7 +265,7 @@ namespace ComplexNutrition.UI
                     float kcalRate = pool.Effective(window, rate) * pool.KcalPerGram;
                     blocks.Add(new TextBlock(StatsHover.Vtml("complexnutrition:window-gut-detail",
                         StatsHover.Text(Num(kcal) + "kcal"),
-                        StatsHover.Text(TrackingModule.GutHoursText(d.State.GetGutHours(code), reserve)),
+                        StatsHover.Text(NutrientDisplay.GutHoursText(d.State.GetGutHours(code), reserve)),
                         StatsHover.Paint(L("gut-rate", Num(rate), Num(kcalRate)), UnitColors.Rate)), true));
                 }
                 else
