@@ -74,6 +74,7 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 listening = true;
                 capi.Event.LevelFinalize += ListenForChanges;
+                hoverListener = capi.Event.RegisterGameTickListener(OnHoverTick, 100);
             }
         }
 
@@ -125,7 +126,7 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 hudBar = bar;
                 hudKcal = -1f;
-                bar.onGetStatbarValue = () => WrapHover(HudHover());
+                bar.onGetStatbarValue = () => MouseOver(bar) ? WrapHover(HudHover()) : "";
             }
             hudOurs = true;
             if (Math.Abs(kcal - hudKcal) < 1f && Math.Abs(fullness - hudFullness) < 0.5f && maxKcal == hudMax) return false;
@@ -164,7 +165,12 @@ namespace ComplexNutrition.Modules.Tracking
             if (capi != null && listening)
             {
                 capi.Event.LevelFinalize -= ListenForChanges;
+                capi.Event.UnregisterGameTickListener(hoverListener);
             }
+            statHovers.Clear();
+            barValues.Clear();
+            hoverBar = null;
+            hoverText = null;
             if (hudBar != null) hudBar.onGetStatbarValue = null;
             hudBar = null;
             hudOurs = false;
@@ -217,7 +223,7 @@ namespace ComplexNutrition.Modules.Tracking
                 float reserve = state.GetReserve(n.Code);
                 float max = Math.Max(n.Cap, reserve);
                 bar.SetLineInterval(100);   // one block per day of storage, or per day's need for a gut pool
-                bar.SetValues(reserve, 0, max);
+                SetBar(bar, reserve, max);
             }
             var protein = composer.GetStatbar(Protein24Bar);
             if (protein != null)
@@ -226,7 +232,7 @@ namespace ComplexNutrition.Modules.Tracking
                 float most = Digestion.Settings?.ProteinMaxGrams ?? 128f;
                 float pct = need > 0f ? state.Protein24 / need * 100f : 0f;
                 protein.SetLineInterval(100);   // a line at the day's need, the end of the bar at the most the body uses
-                protein.SetValues(pct, 0, Math.Max(most / Math.Max(1f, need) * 100f, pct));
+                SetBar(protein, pct, Math.Max(most / Math.Max(1f, need) * 100f, pct));
             }
         }
 
@@ -241,6 +247,67 @@ namespace ComplexNutrition.Modules.Tracking
             string key = "complexnutrition:nutrient-" + code + "-effect";
             string text = Lang.HasTranslation(key) ? Lang.Get(key) : Lang.Get("complexnutrition:effect-placeholder");
             return string.IsNullOrEmpty(text) ? "" : "\n" + text;
+        }
+
+        // Vanilla redraws a bar's hover text into a texture every time the bar's value is set, whether or not the
+        // mouse is over it. With fifteen bars and long descriptions that stalled the game each time the reserves
+        // changed (every few seconds, and several times per food eaten). So a bar only draws its hover text while the
+        // mouse is over it, only bars that visibly moved are redrawn, and OnHoverTick redraws the bar under the mouse
+        // when the mouse arrives or its text changes.
+        private static readonly Dictionary<GuiElementStatbar, System.Func<string>> statHovers = new();
+        private static readonly Dictionary<GuiElementStatbar, float[]> barValues = new();
+        private static GuiElementStatbar hoverBar;
+        private static string hoverText;
+        private static long hoverListener;
+
+        private static bool MouseOver(GuiElementStatbar bar) =>
+            capi != null && bar?.Bounds != null && bar.Bounds.PointInside(capi.Input.MouseX, capi.Input.MouseY);
+
+        /// <summary>Sets a Stats bar's value unless it would move by less than a pixel or so.</summary>
+        private static void SetBar(GuiElementStatbar bar, float value, float max)
+        {
+            if (barValues.TryGetValue(bar, out var last) && last[1] == max && Math.Abs(last[0] - value) <= max * 0.002f) return;
+            barValues[bar] = new[] { value, max };
+            bar.SetValues(value, 0f, max);
+        }
+
+        private static void OnHoverTick(float dt)
+        {
+            if (capi == null) return;
+            GuiElementStatbar bar = null;
+            System.Func<string> text = null;
+            if (hudOurs && hudBar != null && MouseOver(hudBar))
+            {
+                bar = hudBar;
+                text = HudHover;
+            }
+            else if (statHovers.Count > 0)
+            {
+                var dialogs = capi.ModLoader.GetModSystem<CharacterExtraDialogs>();
+                if (dialogs != null && DlgRef(dialogs)?.IsOpened() == true)
+                {
+                    foreach (var kv in statHovers)
+                    {
+                        if (!MouseOver(kv.Key)) continue;
+                        bar = kv.Key;
+                        text = kv.Value;
+                        break;
+                    }
+                }
+            }
+            if (bar == null)
+            {
+                hoverBar = null;
+                hoverText = null;
+                return;
+            }
+            string now = text();
+            if (bar == hoverBar && now == hoverText) return;
+            hoverBar = bar;
+            hoverText = now;
+            // Setting the same values again makes vanilla redraw the hover text, now that the mouse is over the bar.
+            if (bar == hudBar) { if (hudKcal >= 0f && hudMax > 0f) bar.SetValues(hudKcal, 0f, hudMax); }
+            else if (barValues.TryGetValue(bar, out var v)) bar.SetValues(v[0], 0f, v[1]);
         }
 
         /// <summary>Widest a hover box may be, in GUI units (scaled with the GUI scale setting).</summary>
@@ -289,6 +356,10 @@ namespace ComplexNutrition.Modules.Tracking
             if (dlg == null) return true;
             var Composers = dlg.Composers;
             var nutrients = core.Nutrients.All;
+            statHovers.Clear();
+            barValues.Clear();
+            hoverBar = null;
+            hoverText = null;
 
             ElementBounds bounds = Composers["playercharacter"].Bounds;
             ElementBounds envBounds = Composers["environment"].Bounds;
@@ -333,7 +404,9 @@ namespace ComplexNutrition.Modules.Tracking
                 var barBounds = ElementBounds.Fixed(120.0, labelBounds.fixedY + (RowHeight - 8.0) / 2.0 + 1.0, 112.0, 8.0);
                 compo.AddStaticText(label, CairoFont.WhiteDetailText().WithFontSize(13), labelBounds)
                      .AddStatbar(barBounds, color, barCode);
-                compo.GetStatbar(barCode).onGetStatbarValue = () => WrapHover(hover());
+                var statbar = compo.GetStatbar(barCode);
+                statHovers[statbar] = hover;
+                statbar.onGetStatbarValue = () => MouseOver(statbar) ? WrapHover(hover()) : "";
             }
 
             for (int i = 0; i < nutrients.Count; i++)

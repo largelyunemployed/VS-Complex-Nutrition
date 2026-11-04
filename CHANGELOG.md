@@ -6,7 +6,7 @@
 - Protein's diminishing returns start at 65 g digested in 24 hours and fall to nothing at 128 g. Protein past that gives no calories and no benefit.
 - The gut holds up to 240 g of fats (was 100 g).
 - The Stats panel lists Calories, Carbs, Fats, Protein, then fiber, vitamins and minerals. The bars are labelled without "(gut)".
-- New descriptions for calories, carbs, fats, protein and fiber on hover. Hover text on the Stats panel and the HUD calorie bar now wraps to a fixed width instead of running off screen.
+- New descriptions for calories, carbs, fats, protein and fiber on hover. Hover text on the Stats panel and the HUD calorie bar now wraps to a fixed width instead of running off screen. The Stats panel no longer stutters the game when your reserves change, such as after eating: a bar only draws its hover text while the mouse is over it, and only bars that visibly moved are redrawn.
 - Porridge no longer counts cooking water toward fullness.
 - Switching tracking off now sets your vanilla values from your Complex Nutrition ones: satiety from your calorie reserve, and the five food group bars from the nearest reserves. Your Complex Nutrition state is kept and comes back exactly as it was when you switch tracking on again, even if you ate in between.
 - The handbook pages are rewritten, with title case headings, a clearer explanation of diminishing returns, and new text for Pies and Bread, Drinks, Large Meals, Mushrooms and Foods from Other Mods.
