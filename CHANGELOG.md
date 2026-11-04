@@ -15,6 +15,9 @@ A clean-up release: nothing changes in play. The code is tidier and safer to bui
   - The version is set only in `modinfo.json`.
 - `zeroAtGrams` (a pool option not used since v0.3.0) is removed.
 - The pie tooltip patch runs on the client only, like the rest of the tooltips.
+- Fixed: with Percent of a day's need chosen, the Stats panel's gut hovers (the advanced display, and protein's 24-hour line) and the nutrition window's carbs, fats and protein (Overview and Digestion tabs) stayed in grams and kcal. They now switch to percent like everything else. The handbook stays in grams.
+- The settings menu's Amounts choice reads Amounts (Recommended).
+- Switching nutrient tracking back on now says, in red at the bottom of the confirmation box, to close and reopen the character window to see the nutrition bars again.
 - For developers: tests (`tests/ComplexNutrition.Tests`, 24 checks of the digestion maths and the config files), a GitHub check that builds and tests every push, the window preview tool (`tools/preview`) and a release script (`tools/release.sh`). See `docs/DEVELOPING.md`.
 
 ## v0.3.0

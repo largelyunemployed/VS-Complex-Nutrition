@@ -432,13 +432,16 @@ namespace ComplexNutrition.Modules.Tracking
             float rate = pool.Rate(grams, Digestion.FiberSpeed(s, st, pool));
             float kcalRate = pool.Effective(window, rate) * pool.KcalPerGram;
             return StatsHover.Vtml("complexnutrition:gut-hover-advanced",
-                StatsHover.Text(Num(grams) + "g"),
-                StatsHover.Text(Num(kcal) + "kcal"),
+                Amount(def, reserve),
+                StatsHover.Text(Kcal(kcal)),
                 StatsHover.Text(hours),
-                StatsHover.Paint(Lang.Get("complexnutrition:gut-rate", Num(rate), Num(kcalRate)), UnitColors.Rate));
+                StatsHover.Paint(Lang.Get("complexnutrition:gut-rate", def.FormatAmount(rate, core.ShowPercent), Kcal(kcalRate)), UnitColors.Rate));
         }
 
         private static string Num(float v) => Fmt.Number(v);
+
+        /// <summary>Calories as text, as an amount or in % of a day's need, as the player chose.</summary>
+        private static string Kcal(float kcal) => core.Nutrients.Get(NutrientCodes.Calories)?.FormatAmount(kcal, core.ShowPercent) ?? Num(kcal) + "kcal";
 
         private static bool IsGutPool(string code) => Digestion.Settings?.Pool(code) != null;
 
@@ -523,8 +526,8 @@ namespace ComplexNutrition.Modules.Tracking
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
                         float r = st?.GetReserve(code) ?? 0f;
                         return NutrientHover(title, color, code, GutLine(st, def, r),
-                            StatsHover.Text(Lang.Get("complexnutrition:protein24-hover", Math.Round(st?.Protein24 ?? 0f),
-                                Math.Round(Digestion.Settings?.ProteinNeedGrams ?? 64f), Math.Round(Digestion.Settings?.ProteinMaxGrams ?? 128f))));
+                            StatsHover.Text(Lang.Get("complexnutrition:protein24-hover", def.FormatAmount(st?.Protein24 ?? 0f, core.ShowPercent),
+                                def.FormatAmount(Digestion.Settings?.ProteinNeedGrams ?? 64f, core.ShowPercent), def.FormatAmount(Digestion.Settings?.ProteinMaxGrams ?? 128f, core.ShowPercent))));
                     });
                 }
                 else if (IsGutPool(code))

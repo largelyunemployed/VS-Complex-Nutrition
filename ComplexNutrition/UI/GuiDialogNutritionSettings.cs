@@ -104,7 +104,7 @@ namespace ComplexNutrition.UI
                 new[] { L("settings-follow-world", L(worldAdvanced ? "settings-on" : "settings-off")), L("settings-on"), L("settings-off") },
                 (state?.DisplayChoice ?? 0).ToString(),
                 v => core.SendSetting(SettingKeys.Display, v), "advanced");
-            string serverUnits = snap?.ShowPercent == true ? L("settings-units-percent") : L("settings-units-amount");
+            string serverUnits = snap?.ShowPercent == true ? L("settings-units-percent") : L("settings-units-amount-short");
             Dropdown(L("settings-units"), L("settings-units-desc"),
                 new[] { "server", "amount", "percent" },
                 new[] { L("settings-units-server", serverUnits), L("settings-units-amount"), L("settings-units-percent") },
@@ -167,7 +167,8 @@ namespace ComplexNutrition.UI
         {
             // Put the switch back until the server confirms the change.
             SingleComposer.GetSwitch("module-tracking")?.SetValue(!on);
-            new GuiDialogConfirm(capi, L(on ? "settings-confirm-on" : "settings-confirm-off"), ok =>
+            // Our Stats panel only comes back once the character window is reopened, so the box says so.
+            new GuiDialogConfirmTip(capi, L(on ? "settings-confirm-on" : "settings-confirm-off"), on ? L("settings-confirm-on-tip") : null, ok =>
             {
                 if (ok) core.SendSetting(SettingKeys.ModulePrefix + ModuleIds.Tracking, on ? "true" : "false");
             }).TryOpen();

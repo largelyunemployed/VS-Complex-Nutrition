@@ -602,7 +602,7 @@ namespace ComplexNutrition.Modules.Tracking
                     : Lang.Get("complexnutrition:cmd-reserve-line", Lang.Get(n.LangKey), n.Format(r, Core.ShowPercent), NutrientDisplay.DaysText(r));
                 if (withToday) line += $" (today +{Math.Round(state.GetAbsorbedToday(n.Code))}%, cap {Math.Round(n.Cap)}%)";
                 sb.AppendLine(line);
-                if (n.Code == NutrientCodes.Protein) sb.AppendLine(Lang.Get("complexnutrition:protein24-hover", Math.Round(state.Protein24), Math.Round(Digest.ProteinNeedGrams), Math.Round(Digest.ProteinMaxGrams)));
+                if (n.Code == NutrientCodes.Protein) sb.AppendLine(Lang.Get("complexnutrition:protein24-hover", n.FormatAmount(state.Protein24, Core.ShowPercent), n.FormatAmount(Digest.ProteinNeedGrams, Core.ShowPercent), n.FormatAmount(Digest.ProteinMaxGrams, Core.ShowPercent)));
             }
             return sb.ToString().TrimEnd();
         }

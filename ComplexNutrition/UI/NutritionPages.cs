@@ -45,6 +45,12 @@ namespace ComplexNutrition.UI
 
         public static string Num(float v) => Fmt.Number(v);
 
+        /// <summary>An amount of a nutrient, in its unit (g for the macros, kcal for calories), shown as the reader chose: amount or percent of a day.</summary>
+        private static string Amt(NutritionPageData d, string code, float amount) =>
+            d.Nutrients.Get(code)?.FormatAmount(amount, d.ShowPercent) ?? Num(amount);
+
+        private static string Kcal(NutritionPageData d, float kcal) => Amt(d, NutrientCodes.Calories, kcal);
+
         private static List<PageBlock> Off() => new()
         {
             new GapBlock(6),
@@ -169,7 +175,7 @@ namespace ComplexNutrition.UI
                         Value = window,
                         Max = Math.Max(pool.DiminishingAboveGrams, window),
                         Color = ColorOf(n),
-                        Right = StatsHover.Text(L("window-macro-value", Num(window) + "g", Num(pool.DiminishingAboveGrams) + "g")),
+                        Right = StatsHover.Text(L("window-macro-value", Amt(d, code, window), Amt(d, code, pool.DiminishingAboveGrams))),
                     });
                 }
                 var protein = d.Nutrients.Get(NutrientCodes.Protein);
@@ -183,10 +189,10 @@ namespace ComplexNutrition.UI
                         Max = Math.Max(s.ProteinMaxGrams, p24),
                         LineInterval = s.ProteinNeedGrams,
                         Color = ColorOf(protein),
-                        Right = StatsHover.Text(L("window-protein-value", Num(p24) + "g", Num(s.ProteinNeedGrams) + "g")),
+                        Right = StatsHover.Text(L("window-protein-value", Amt(d, protein.Code, p24), Amt(d, protein.Code, s.ProteinNeedGrams))),
                     });
                 }
-                blocks.Add(new TextBlock(StatsHover.Text(L("window-macros-note", Num(s.ProteinMaxGrams) + "g")), true));
+                blocks.Add(new TextBlock(StatsHover.Text(L("window-macros-note", Amt(d, NutrientCodes.Protein, s.ProteinMaxGrams))), true));
             }
 
             blocks.Add(new HeadingBlock(L("window-heading-low")));
@@ -253,7 +259,7 @@ namespace ComplexNutrition.UI
                     Max = Math.Max(pool.MaxGrams, grams),
                     LineInterval = n.DailyTarget,
                     Color = ColorOf(n),
-                    Right = StatsHover.Text(L("window-gut-value", Num(grams) + "g", Num(pool.MaxGrams) + "g")),
+                    Right = StatsHover.Text(L("window-gut-value", Amt(d, code, grams), Amt(d, code, pool.MaxGrams))),
                 });
 
                 float window = Digestion.WindowGrams(d.State, code, pool);
@@ -264,9 +270,9 @@ namespace ComplexNutrition.UI
                     float rate = pool.Rate(grams, speed);
                     float kcalRate = pool.Effective(window, rate) * pool.KcalPerGram;
                     blocks.Add(new TextBlock(StatsHover.Vtml("complexnutrition:window-gut-detail",
-                        StatsHover.Text(Num(kcal) + "kcal"),
+                        StatsHover.Text(Kcal(d, kcal)),
                         StatsHover.Text(NutrientDisplay.GutHoursText(d.State.GetGutHours(code), reserve)),
-                        StatsHover.Paint(L("gut-rate", Num(rate), Num(kcalRate)), UnitColors.Rate)), true));
+                        StatsHover.Paint(L("gut-rate", Amt(d, code, rate), Kcal(d, kcalRate)), UnitColors.Rate)), true));
                 }
                 else
                 {
@@ -274,8 +280,8 @@ namespace ComplexNutrition.UI
                 }
 
                 string limits = code == NutrientCodes.Protein
-                    ? L("window-gut-window-protein", Num(d.State.Protein24) + "g", Num(s.ProteinNeedGrams) + "g", Num(s.ProteinMaxGrams) + "g")
-                    : L("window-gut-window", pool.WindowHours, Num(window) + "g", Num(pool.DiminishingAboveGrams) + "g");
+                    ? L("window-gut-window-protein", Amt(d, code, d.State.Protein24), Amt(d, code, s.ProteinNeedGrams), Amt(d, code, s.ProteinMaxGrams))
+                    : L("window-gut-window", pool.WindowHours, Amt(d, code, window), Amt(d, code, pool.DiminishingAboveGrams));
                 blocks.Add(new TextBlock(StatsHover.Text(limits), true));
                 blocks.Add(new GapBlock(4));
             }
@@ -291,7 +297,7 @@ namespace ComplexNutrition.UI
                     return pool == null ? "0" : Math.Round((Digestion.FiberSpeed(s, d.State, pool) - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture);
                 }
                 blocks.Add(new TextBlock(StatsHover.Text(L("window-fiber-speed", Bonus(NutrientCodes.Carbohydrate), Bonus(NutrientCodes.Fat), Bonus(NutrientCodes.Protein),
-                    Num(s.FiberBonusFullAt / 100f * fiber.DailyTarget) + "g")), true));
+                    fiber.Format(s.FiberBonusFullAt, d.ShowPercent))), true));
             }
             return blocks;
         }

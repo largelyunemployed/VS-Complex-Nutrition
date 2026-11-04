@@ -22,7 +22,7 @@ public class Fake : DispatchProxy
 
 /// <summary>
 /// Draws the nutrition window's tabs for a made-up player (a week or so in) to window-*.png in the folder given,
-/// using the mod's own page code, lang file and config, with a rough stand-in for the dialog frame. Needs the game's
+/// (or, with "percent" as the second argument, amounts in % of a day), using the mod's own page code, lang file and config, with a rough stand-in for the dialog frame. Needs the game's
 /// libraries (VINTAGE_STORY) and a system font; it fakes just enough of the client API for the pages to draw.
 /// </summary>
 static class P
@@ -85,7 +85,8 @@ static class P
             }
         Console.WriteLine("known foods: " + known.Count);
 
-        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 600, Known = known };
+        bool percent = a.Length > 1 && a[1] == "percent";   // second argument "percent": amounts in % of a day
+        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 600, Known = known, ShowPercent = percent };
         Console.WriteLine("writing to " + System.IO.Path.GetFullPath(outDir));
         var tabs = new[] { ("overview", NutritionPages.Overview(data)), ("digestion", NutritionPages.DigestionPage(data)), ("vitamins", NutritionPages.Vitamins(data)), ("minerals", NutritionPages.Minerals(data)) };
         string[] names = { "Overview", "Digestion", "Vitamins", "Minerals" };
