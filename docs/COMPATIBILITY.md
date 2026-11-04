@@ -44,6 +44,8 @@ Each profile has:
 
 Only things the game already treats as food get a profile. Meals, pies and pots work themselves out from their ingredients, so ingredients are all you need to cover.
 
+`portionGrams` matters more than it looks: since v0.2.2 it also sets how full the food makes you (0.3 fullness per gram, out of a stomach of 300), so give it a realistic weight. A food on the category estimate gets a weight worked out from its vanilla satiety. Calories in game come from the macros as they are digested (4 kcal per g of net carbohydrate and protein, 9 per g of fat), so `calories` is only used for the diet ledger and to size estimates. The digestion rules themselves are in `complexnutrition:config/digestion.json` and can be patched like any asset.
+
 ## Nutrients and units
 
 | Code | Unit | Notes |

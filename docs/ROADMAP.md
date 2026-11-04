@@ -20,6 +20,16 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - The vanilla food category bars and their health bonus are replaced (and come back if Tracking is switched off).
 - An in-game handbook guide for all implemented systems (will expand with each update).
 
+### v0.2.2: Digestion
+
+- Fullness comes from each food's weight and empties in 6 hours; cooked food fills you less, so cooking lets you eat more.
+- Fats, protein and carbohydrate are digested over hours, and only digestion fills the calorie tank (7 active days). An empty tank starves you.
+- Fiber speeds up digestion.
+
+### v0.2.3: Start conditions
+
+- A world setting for how full the calorie tank is at spawn: Easy (full), Normal (5 days), Hard (3 days), Brutal (1 day) or Rock Bottom (1%).
+
 ## v0.3: Nutrition UI
 
 - A nutrition window (hotkey N) with tabs: overview, vitamins, minerals, and a 28-day history.

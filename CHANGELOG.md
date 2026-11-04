@@ -2,8 +2,16 @@
 
 ## v0.2.2
 
+- Digestion. Eating no longer fills the calorie reserve directly: fats, protein and carbohydrate (net of fiber) go into the gut and are digested over time, and only what is digested becomes calories (4 kcal per g of carbohydrate and protein, 9 per g of fats). Carbs take about 3 hours, protein 6 and fats 24; the gut holds up to 500 g of carbs, 200 g of protein and 100 g of fats, and anything past that passes through unused. Above 300 g of carbs in 12 hours, 130 g of protein or 70 g of fats in a day, each extra gram gives fewer calories. Rules are in `config/digestion.json`.
+- Fullness now comes from each food's weight: 0.3 per gram, out of a stomach that holds 300 (about 1 kg). Meals, pies and anything cooked, baked, smoked or cured fill 20% less; drinks fill half; porridge counts its cooking water. Fullness drains a fixed 50 per in-game hour and does nothing at 0. A food that doesn't fit has to wait until there is room. Food tooltips show how much each food fills.
+- The calorie reserve is now a tank of 7 active days (19,600 kcal at 2,800 a day); a new character starts with 5 days. Activity burns it as it burned satiety. Starvation comes from an empty tank instead of an empty stomach, and after dying the tank holds at least a day's worth.
+- The bar above the hotbar shows the calorie tank, one block per day, and flashes below 10%. Its hover text shows the tank and fullness.
+- With a fiber reserve at 70% of a day's need or more, digestion runs faster (fats 30%, protein 20%, carbs 10%), less so as the reserve runs down.
+- The Stats panel shows the gut (fats, protein and carbs being digested, with how long until they are absorbed), protein absorbed over the last 24 hours against the 128 g a day needed, and fullness out of 300. Tooltip calories are worked out from the macros, as the body gets them.
+- Switching tracking off puts fullness back on vanilla's 1,500 scale.
 - Fat is now called Fats everywhere: the Stats panel, tooltips, `/nutrition` and the handbook. It sits at the top of the reserves, just below calories, and food tooltips list it first among the macros.
-- Larger stores: vitamin C, the B vitamins, protein, carbohydrate and fiber now hold up to 2 days (was a day and a half), and fats up to 3 days. The handbook's reserves page lists the new sizes.
+- Larger stores: vitamin C, the B vitamins and fiber now hold up to 2 days (was a day and a half).
+- New handbook page on digestion; the other pages are updated to match.
 
 ## v0.2.1
 

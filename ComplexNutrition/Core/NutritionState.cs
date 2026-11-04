@@ -82,6 +82,59 @@ namespace ComplexNutrition.Core
 
         public void ClearSitting() => tree["sitting"] = new TreeAttribute();
 
+        // ---- Digestion (v0.2.2) ----
+
+        private ITreeAttribute Gut => Sub("gut");
+        private ITreeAttribute AbsorbedLog => Sub("absorbed");
+
+        /// <summary>A gut pool's batches: grams left in each, and each one's absorption rate in g per in-game hour.</summary>
+        public void GetBatches(string pool, out float[] grams, out float[] rates)
+        {
+            grams = (Gut[pool + "-g"] as FloatArrayAttribute)?.value ?? new float[0];
+            rates = (Gut[pool + "-r"] as FloatArrayAttribute)?.value ?? new float[0];
+            if (rates.Length != grams.Length)
+            {
+                grams = new float[0];
+                rates = new float[0];
+            }
+        }
+
+        public void SetBatches(string pool, float[] grams, float[] rates)
+        {
+            Gut[pool + "-g"] = new FloatArrayAttribute(grams);
+            Gut[pool + "-r"] = new FloatArrayAttribute(rates);
+        }
+
+        /// <summary>In-game hours until a gut pool is empty, as of the last digestion step.</summary>
+        public float GetGutHours(string pool) => Gut.GetFloat(pool + "-h");
+
+        public void SetGutHours(string pool, float hours) => Gut.SetFloat(pool + "-h", hours);
+
+        /// <summary>
+        /// Grams of a macro absorbed per in-game hour over the last 24 hours, in a ring indexed by the whole
+        /// game hour mod 24. <see cref="AbsorbedHour"/> is the last hour written; older slots are cleared on the way.
+        /// </summary>
+        public float[] GetAbsorbedLog(string pool)
+        {
+            var v = (AbsorbedLog[pool] as FloatArrayAttribute)?.value;
+            return v != null && v.Length == 24 ? v : new float[24];
+        }
+
+        public void SetAbsorbedLog(string pool, float[] hours) => AbsorbedLog[pool] = new FloatArrayAttribute(hours);
+
+        public long AbsorbedHour
+        {
+            get => AbsorbedLog.GetLong("hour", long.MinValue);
+            set => AbsorbedLog.SetLong("hour", value);
+        }
+
+        /// <summary>Protein absorbed over the last 24 in-game hours, in g.</summary>
+        public float Protein24
+        {
+            get => tree.GetFloat("protein24");
+            set => tree.SetFloat("protein24", value);
+        }
+
         /// <summary>Game time (total hours) of the last thing eaten.</summary>
         public double LastMealHours
         {

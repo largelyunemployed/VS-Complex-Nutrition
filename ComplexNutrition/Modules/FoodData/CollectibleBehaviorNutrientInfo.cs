@@ -32,12 +32,13 @@ namespace ComplexNutrition.Modules.FoodData
 
             var resolved = core.Foods.Resolve(collObj);
             if (resolved == null) return;
-            dsc.Append(BuildTooltip(core.Nutrients, resolved, withDebugInfo));
+            dsc.Append(BuildTooltip(core.Nutrients, resolved, withDebugInfo, collObj));
         }
 
         /// <summary>The tooltip block for a single food. Also used by the /cnutrition info command.</summary>
-        public static string BuildTooltip(NutrientRegistry nutrients, ResolvedFoodProfile food, bool withDebugInfo)
+        public static string BuildTooltip(NutrientRegistry nutrients, ResolvedFoodProfile food, bool withDebugInfo, CollectibleObject coll = null)
         {
+            float fullness = Digestion.Settings == null ? 0f : Digestion.FoodFullness(Digestion.Settings, food, coll);
             string header = food.IsLiquid
                 ? Lang.Get("complexnutrition:tooltip-header-litre")
                 : Lang.Get("complexnutrition:tooltip-header-portion", Math.Round(food.PortionGrams));
@@ -51,7 +52,7 @@ namespace ComplexNutrition.Modules.FoodData
             {
                 footer = Lang.Get("complexnutrition:tooltip-source", food.Profile.Source.Description, food.Profile.Source.FdcId);
             }
-            return BuildBlock(nutrients, header, food.PerPortion, withDebugInfo, footer);
+            return BuildBlock(nutrients, header, food.PerPortion, withDebugInfo, footer, fullness);
         }
 
         /// <summary>The tooltip block for a cooked dish or pie.</summary>
@@ -66,15 +67,21 @@ namespace ComplexNutrition.Modules.FoodData
             {
                 footer += "\n" + Lang.Get("complexnutrition:tooltip-meal-unknown", meal.UnknownIngredients);
             }
-            return BuildBlock(nutrients, header, code => meal.Totals.TryGetValue(code, out var v) ? v : 0f, withDebugInfo, footer);
+            return BuildBlock(nutrients, header, code => meal.Totals.TryGetValue(code, out var v) ? v : 0f, withDebugInfo, footer, meal.Fullness);
         }
 
-        private static string BuildBlock(NutrientRegistry nutrients, string header, System.Func<string, float> amount, bool withDebugInfo, string footer)
+        private static string BuildBlock(NutrientRegistry nutrients, string header, System.Func<string, float> rawAmount, bool withDebugInfo, string footer, float fullness)
         {
             var sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine(header);
             bool percent = nutrients.ShowPercent;
+            // With digestion on, the body gets its calories from the macros (4 kcal per g of net carbs and protein,
+            // 9 per g of fats), so that is the figure shown.
+            var digest = Digestion.Settings;
+            System.Func<string, float> amount = digest == null
+                ? rawAmount
+                : code => code == NutrientCodes.Calories ? digest.KcalFromMacros(rawAmount) : rawAmount(code);
             string Macro(string code) => nutrients.Get(code)?.FormatAmount(amount(code), percent) ?? "0";
             sb.AppendLine(Lang.Get(percent ? "complexnutrition:tooltip-macros-percent" : "complexnutrition:tooltip-macros",
                 Macro(NutrientCodes.Calories),
@@ -95,6 +102,10 @@ namespace ComplexNutrition.Modules.FoodData
             if (top.Count > 0)
             {
                 sb.AppendLine(Lang.Get(percent ? "complexnutrition:tooltip-richin" : "complexnutrition:tooltip-richin-amount", string.Join(", ", top)));
+            }
+            if (digest != null && fullness > 0f)
+            {
+                sb.AppendLine(Lang.Get("complexnutrition:tooltip-fullness", Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0"), Math.Round(digest.FullnessMax)));
             }
             if (footer != null) sb.AppendLine(footer);
             return sb.ToString();
