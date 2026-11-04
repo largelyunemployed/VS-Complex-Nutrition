@@ -57,7 +57,7 @@
 	"stats-gut-carbohydrate": "Carbs",
 	"gut-hover": "{0} digesting · {1}",
 	"gut-hover-advanced": "{0} ({1}) digesting - {2}, {3}",
-	"gut-rate": "at {0}g ({1}kcal) an hour",
+	"gut-rate": "at a rate of {0}g ({1}kcal) an hour",
 	"gut-hours": "absorbed in about {0} hours",
 	"gut-empty": "empty",
 	"protein24-hover": "{0}g taken in over the last 24 hours, of the {1}g you need (your body can use up to {2}g).",
