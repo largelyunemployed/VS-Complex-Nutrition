@@ -49,7 +49,7 @@ Only things the game already treats as food get a profile. Meals, pies and pots 
 | Code | Unit | Notes |
 | --- | --- | --- |
 | `calories` | kcal | |
-| `protein`, `carbohydrate`, `fat`, `fiber` | g | |
+| `protein`, `carbohydrate`, `fat`, `fiber` | g | `fat` is shown in game as Fats |
 | `vitaminA`, `vitaminD`, `vitaminE`, `vitaminK`, `vitaminC` | % of US FDA Daily Value | A 900 mcg RAE, D 20 mcg, E 15 mg, K 120 mcg, C 90 mg |
 | `vitaminB` | % DV | Average %DV of thiamin, riboflavin, niacin, B6, folate and B12, each capped at 300% |
 | `calcium`, `iron`, `potassium` | % DV | Calcium 1,300 mg, iron 18 mg, potassium 4,700 mg |

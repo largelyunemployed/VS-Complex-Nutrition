@@ -35,11 +35,11 @@ The release build writes `release/complexnutrition_<version>.zip`; drop it into 
 
 ```sh
 # server: https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_1.22.7.tar.gz
-mkdir -p data/Mods && cp release/complexnutrition_0.2.1.zip data/Mods/
+mkdir -p data/Mods && cp release/complexnutrition_0.2.2.zip data/Mods/
 dotnet VintagestoryServer.dll --dataPath ./data
 ```
 
-The log should show `Loaded 14 nutrients and 164 food profiles`, a coverage line listing the three insect foods on the fallback, and `Module fooddata enabled` and `Module tracking enabled`. (`Nutrient info added to ... foods` is logged by clients, which draw the tooltips.) Then, in the server console:
+The log should show `Loaded 14 nutrients and 203 food profiles`, a coverage line listing the three insect foods on the fallback, and `Module fooddata enabled` and `Module tracking enabled`. (`Nutrient info added to ... foods` is logged by clients, which draw the tooltips.) Then, in the server console:
 
 - `/cnutrition coverage` lists foods without their own profile.
 - `/cnutrition info game:fruit-blueberry` prints the nutrient block that item's tooltip shows.

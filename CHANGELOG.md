@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.2.2
+
+- Fat is now called Fats everywhere: the Stats panel, tooltips, `/nutrition` and the handbook. It sits at the top of the reserves, just below calories, and food tooltips list it first among the macros.
+- Larger stores: vitamin C, the B vitamins, protein, carbohydrate and fiber now hold up to 2 days (was a day and a half), and fats up to 3 days. The handbook's reserves page lists the new sizes.
+
 ## v0.2.1
 
 - Vanilla satiety is now called Fullness: how much your stomach holds. The Stats panel, food and drink tooltips and the handbook use the new name, and hovering over the bar next to the hotbar shows "Fullness: 1070 / 1500".

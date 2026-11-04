@@ -8,7 +8,7 @@
 > Please keep this in mind when using, auditing or building on this mod, and report anything that looks or plays wrong.
 > The issues tab on the github repo will be monitored, but there are also alternative contact points listed below.
 
-Complex Nutrition expands Vintage Story's nutrition system. Every food gets real-world calories, macronutrients (protein, carbohydrate, fat, fiber), vitamins and minerals. Your body tracks reserves of each, and a balanced diet over in-game weeks earns buffs while a narrow one slowly costs you.
+Complex Nutrition expands Vintage Story's nutrition system. Every food gets real-world calories, macronutrients (fats, protein, carbohydrate, fiber), vitamins and minerals. Your body tracks reserves of each, and a balanced diet over in-game weeks earns buffs while a narrow one slowly costs you.
 
 **Target game version:** 1.22.7 (latest stable)
 **Status:** design stage, no playable release yet.
@@ -69,7 +69,7 @@ Turning one module off never breaks the others, and with all modules off the gam
 ## Tracked nutrients (default set)
 
 - **Energy:** calories
-- **Macros:** protein, carbohydrate, fat, fiber
+- **Macros:** fats, protein, carbohydrate, fiber
 - **Fat-soluble vitamins:** A, D, E, K
 - **Water-soluble vitamins:** C, B-complex
 - **Minerals:** calcium, iron, potassium

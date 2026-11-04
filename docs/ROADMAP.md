@@ -7,7 +7,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 ## v0.1: Food data (released)
 
 - Real-world nutrients for every vanilla food (341 items), from USDA FoodData Central, per 100 g.
-- 14 tracked nutrients: calories; protein, carbohydrate, fat, fiber; vitamins A, D, E, K; vitamin C and the B vitamins; calcium, iron and potassium.
+- 14 tracked nutrients: calories; fats, protein, carbohydrate, fiber; vitamins A, D, E, K; vitamin C and the B vitamins; calcium, iron and potassium.
 - Nutrition shown in item tooltips. No gameplay changes.
 - Mod feasibility testing: the mod loads cleanly on a 1.22.7 server and a data table of every food is in [FOOD_DATA.md](FOOD_DATA.md).
 - VS Mod DB thumbnail, description and roadmap drafts.
@@ -33,7 +33,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - Different nutrients fail on different clocks: vitamin C and B in days, minerals in a week or two, vitamins A, D, E and K over weeks.
 - Specific deficiencies have their own effects (scurvy slows healing, low iron costs max health, and so on), each with its own switch.
 - Every nutrient gets a gameplay effect of its own, even if a small one.
-- A balanced, healthy micronutrient profile raises how much protein, carbohydrate, fat and fiber you can store, and with them the calorie store.
+- A balanced, healthy micronutrient profile raises how much fats, protein, carbohydrate and fiber you can store, and with them the calorie store.
 
 ## v0.5: Health and effects UI
 
