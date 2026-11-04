@@ -19,6 +19,9 @@ namespace ComplexNutrition.Core
         public float Servings;
         public bool Cooked;
         public int UnknownIngredients;
+
+        /// <summary>Fullness of what <see cref="Totals"/> covers (a serving, or the pie), before spoilage; 0 while digestion is off.</summary>
+        public float Fullness;
     }
 
     /// <summary>
@@ -96,6 +99,10 @@ namespace ComplexNutrition.Core
                 float mul = stateFactor * (result.Cooked ? core.Cooking.Cooked(n.Code) : 1f);
                 result.Totals[n.Code] = result.Totals.TryGetValue(n.Code, out var v) ? v * mul : 0f;
             }
+
+            // Fullness follows weight, not the bake state; a pie's is for the slices left.
+            float fullness = Digestion.MealFullness(core, world, null, stack, contents, null, false);
+            result.Fullness = result.IsPie ? fullness * result.PieSlices / 4f : fullness;
             return result;
         }
     }

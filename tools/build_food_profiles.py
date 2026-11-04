@@ -340,7 +340,7 @@ def write_report(rows, ratio):
     L.append("")
     L.append("**Sources.** USDA FoodData Central, SR Legacy (April 2018). Micronutrients are %% of the US FDA Daily Value; \"B\" is the mean %%DV of thiamin, riboflavin, niacin, B6, folate and B12 (each capped at 300%%). Where USDA has no matching food, the nearest real food is used and the note says so.".replace("%%", "%"))
     L.append("")
-    L.append("| Item | Name | Satiety | Portion | kcal | Protein g | Carbs g | Fat g | Fiber g | Top micronutrients (%DV per portion) | USDA source | Notes |")
+    L.append("| Item | Name | Satiety | Portion | kcal | Protein g | Carbs g | Fats g | Fiber g | Top micronutrients (%DV per portion) | USDA source | Notes |")
     L.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |")
     for r in sorted(rows, key=lambda r: r["code"]):
         v = r["v"]

@@ -6,7 +6,7 @@ Every vanilla Vintage Story 1.22.7 food, its vanilla satiety, and the real-world
 
 **Sources.** USDA FoodData Central, SR Legacy (April 2018). Micronutrients are % of the US FDA Daily Value; "B" is the mean %DV of thiamin, riboflavin, niacin, B6, folate and B12 (each capped at 300%). Where USDA has no matching food, the nearest real food is used and the note says so.
 
-| Item | Name | Satiety | Portion | kcal | Protein g | Carbs g | Fat g | Fiber g | Top micronutrients (%DV per portion) | USDA source | Notes |
+| Item | Name | Satiety | Portion | kcal | Protein g | Carbs g | Fats g | Fiber g | Top micronutrients (%DV per portion) | USDA source | Notes |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- | --- |
 | `alcoholportion` | Aqua Vitae | 40.0 | 1 L | 2744 | 0.0 | 0.0 | 0.0 | 0.0 | Fe 2, B 1 | [Alcoholic beverage, distilled, all (gin, rum, vodka, whiskey) 100 proof](https://fdc.nal.usda.gov/food-details/173664/nutrients) | Aqua vitae; 100 proof spirit used. |
 | `bread-amaranth-charred` | Amaranth bread (charred) | 210.0 | 225 g | 119 | 4.3 | 20.9 | 2.2 | 2.1 | Fe 14, B 5, Ca 4 | [Amaranth grain, uncooked](https://fdc.nal.usda.gov/food-details/170682/nutrients) | No USDA amaranth bread; grain rescaled to 37% water (typical bread), vitamin C lost in baking. Gameplay multiplier x0.2 on all nutrients. |

@@ -14,7 +14,8 @@ namespace ComplexNutrition.Modules.Tracking
 {
     /// <summary>
     /// Client: while the server tracks this player, the Stats panel next to the character dialog shows one
-    /// bar per nutrient reserve in place of vanilla's five food category bars. Everything else on the panel
+    /// bar per nutrient reserve (and per gut pool) in place of vanilla's five food category bars, and the HUD
+    /// bar above the hotbar shows the calorie tank in place of satiety. Everything else on the panel
     /// is laid out as vanilla does it (CharacterExtraDialogs.ComposeStatsGui in 1.22.7). When the server does
     /// not track the player, vanilla's panel is left alone.
     /// </summary>
@@ -52,40 +53,108 @@ namespace ComplexNutrition.Modules.Tracking
                     prefix: new HarmonyMethod(typeof(CharacterStatsPatch), nameof(ComposeStatsPrefix)));
                 harmony.Patch(AccessTools.Method(typeof(CharacterExtraDialogs), "UpdateStatBars"),
                     prefix: new HarmonyMethod(typeof(CharacterStatsPatch), nameof(UpdateStatBarsPrefix)));
+
+                // The HUD bar above the hotbar: calories in place of satiety (an internal class, so looked up by name).
+                hudType = AccessTools.TypeByName("Vintagestory.Client.NoObf.HudStatbar");
+                var update = hudType == null ? null : AccessTools.Method(hudType, "UpdateSaturation");
+                var flash = hudType == null ? null : AccessTools.Method(hudType, "OnFlashStatbars");
+                hudBarField = hudType == null ? null : AccessTools.Field(hudType, "saturationbar");
+                hudLastField = hudType == null ? null : AccessTools.Field(hudType, "lastSaturation");
+                if (update != null && flash != null && hudBarField != null)
+                {
+                    harmony.Patch(update, prefix: new HarmonyMethod(typeof(CharacterStatsPatch), nameof(HudUpdatePrefix)));
+                    harmony.Patch(flash, postfix: new HarmonyMethod(typeof(CharacterStatsPatch), nameof(HudFlashPostfix)));
+                }
+                else
+                {
+                    capi.Logger.Warning("[complexnutrition] Could not find the HUD satiety bar; it keeps showing fullness instead of calories.");
+                }
             }
             if (!listening)
             {
                 listening = true;
                 capi.Event.LevelFinalize += ListenForChanges;
-                hudListener = capi.Event.RegisterGameTickListener(_ => LabelFullnessBar(), 1000);
             }
         }
 
-        private static long hudListener;
-        private static GuiElementStatbar labelledBar;
+        private static Type hudType;
+        private static System.Reflection.FieldInfo hudBarField;
+        private static System.Reflection.FieldInfo hudLastField;
+        private static GuiElementStatbar hudBar;
+        private static float hudKcal = -1f, hudFullness = -1f, hudMax = -1f;
+        private static bool hudOurs;
+
+        /// <summary>The calorie tank in kcal and its size, or false while the server does not track this player.</summary>
+        private static bool CalorieTank(out float kcal, out float maxKcal, out float fullness, out float maxFullness)
+        {
+            kcal = maxKcal = fullness = maxFullness = 0f;
+            var attrs = capi?.World?.Player?.Entity?.WatchedAttributes;
+            var tree = attrs?.GetTreeAttribute(NutritionState.TreeKey);
+            var def = core?.Nutrients.Get(NutrientCodes.Calories);
+            if (tree == null || def == null || !tree.GetBool("tracking")) return false;
+            var reserves = tree.GetTreeAttribute("reserves");
+            kcal = (reserves?.GetFloat(def.Code) ?? 0f) / 100f * def.DailyTarget;
+            maxKcal = Math.Max(def.Cap / 100f * def.DailyTarget, kcal);
+            var hunger = attrs.GetTreeAttribute("hunger");
+            fullness = hunger?.GetFloat("currentsaturation") ?? 0f;
+            maxFullness = hunger?.GetFloat("maxsaturation") ?? 0f;
+            return true;
+        }
 
         /// <summary>
-        /// Vanilla's satiety bar next to the hotbar only shows "1070 / 1500" on hover. Label it as fullness, so
-        /// it reads as how much the stomach holds, next to the calorie reserve. The HUD recomposes now and then
-        /// (resizing, GUI scale), which makes a new bar, so this checks once a second.
+        /// Vanilla redraws the satiety bar every 20 ms when the value changed. While tracking runs, it shows the
+        /// calorie tank instead, one block per active day, with fullness in its hover text.
         /// </summary>
-        private static void LabelFullnessBar()
+        public static bool HudUpdatePrefix(object __instance)
         {
-            if (capi == null) return;
-            var hud = capi.Gui.LoadedGuis.FirstOrDefault(g => g.GetType().Name == "HudStatbar");
-            var bar = hud?.Composers["statbar"]?.GetStatbar("saturationstatbar");
-            if (bar == null || bar == labelledBar) return;
-            labelledBar = bar;
-            bar.onGetStatbarValue = () =>
+            var bar = hudBarField?.GetValue(__instance) as GuiElementStatbar;
+            if (!CalorieTank(out var kcal, out var maxKcal, out var fullness, out var maxFullness))
             {
-                var hunger = capi?.World?.Player?.Entity?.WatchedAttributes.GetTreeAttribute("hunger");
-                if (hunger == null) return "";
-                return Lang.Get("complexnutrition:fullness-hover",
-                    (int)Math.Round(hunger.GetFloat("currentsaturation")), (int)Math.Round(hunger.GetFloat("maxsaturation")));
-            };
-            // The hover text is only redrawn when the bar's value is set, so set it once now.
-            var tree = capi.World?.Player?.Entity?.WatchedAttributes.GetTreeAttribute("hunger");
-            if (tree != null) bar.SetValues(tree.GetFloat("currentsaturation"), 0, tree.GetFloat("maxsaturation"));
+                if (hudOurs && bar != null)
+                {
+                    // Tracking stopped: hand the bar back to vanilla and make it redraw.
+                    bar.onGetStatbarValue = null;
+                    hudLastField?.SetValue(__instance, -1f);
+                    hudOurs = false;
+                    hudBar = null;
+                }
+                return true;
+            }
+            if (bar == null) return false;
+            if (bar != hudBar)
+            {
+                hudBar = bar;
+                hudKcal = -1f;
+                bar.onGetStatbarValue = HudHover;
+            }
+            hudOurs = true;
+            if (Math.Abs(kcal - hudKcal) < 1f && Math.Abs(fullness - hudFullness) < 0.5f && maxKcal == hudMax) return false;
+            hudKcal = kcal;
+            hudFullness = fullness;
+            hudMax = maxKcal;
+            var def = core.Nutrients.Get(NutrientCodes.Calories);
+            bar.SetLineInterval(def.DailyTarget);   // one block per active day
+            bar.SetValues(kcal, 0f, maxKcal);
+            return false;
+        }
+
+        private static string HudHover()
+        {
+            if (!CalorieTank(out var kcal, out var maxKcal, out var fullness, out var maxFullness)) return "";
+            var def = core.Nutrients.Get(NutrientCodes.Calories);
+            float pct = def.ToPercent(kcal);
+            return Lang.Get("complexnutrition:hud-calories", def.Format(pct, core.Nutrients.ShowPercent), TrackingModule.DaysText(pct))
+                + "\n" + Lang.Get("complexnutrition:fullness-hover", (int)Math.Round(fullness), (int)Math.Round(maxFullness));
+        }
+
+        /// <summary>Vanilla flashes the bar below 20% satiety; while tracking runs it flashes below 10% of a full calorie tank instead.</summary>
+        public static void HudFlashPostfix(object __instance)
+        {
+            if (!CalorieTank(out var kcal, out var maxKcal, out _, out _)) return;
+            if (hudBarField?.GetValue(__instance) is not GuiElementStatbar bar) return;
+            var mode = capi.World.Player.WorldData.CurrentGameMode;
+            float below = Digestion.Settings?.FlashBelow ?? 0.1f;
+            bar.ShouldFlash = mode != EnumGameMode.Creative && mode != EnumGameMode.Spectator && maxKcal > 0f && kcal / maxKcal < below;
         }
 
         public static void Remove()
@@ -95,9 +164,10 @@ namespace ComplexNutrition.Modules.Tracking
             if (capi != null && listening)
             {
                 capi.Event.LevelFinalize -= ListenForChanges;
-                capi.Event.UnregisterGameTickListener(hudListener);
             }
-            labelledBar = null;
+            if (hudBar != null) hudBar.onGetStatbarValue = null;
+            hudBar = null;
+            hudOurs = false;
             listening = false;
             capi = null;
             core = null;
@@ -146,10 +216,22 @@ namespace ComplexNutrition.Modules.Tracking
                 if (bar == null) continue;
                 float reserve = state.GetReserve(n.Code);
                 float max = Math.Max(n.Cap, reserve);
-                bar.SetLineInterval(100);   // one block per day of storage
+                bar.SetLineInterval(100);   // one block per day of storage, or per day's need for a gut pool
                 bar.SetValues(reserve, 0, max);
             }
+            var protein = composer.GetStatbar(Protein24Bar);
+            if (protein != null)
+            {
+                float need = Digestion.Settings?.ProteinNeedGrams ?? 128f;
+                float pct = need > 0f ? state.Protein24 / need * 100f : 0f;
+                protein.SetLineInterval(100);   // the line marks a day's need
+                protein.SetValues(pct, 0, Math.Max(150f, pct));
+            }
         }
+
+        private const string Protein24Bar = "cn-protein24";
+
+        private static bool IsGutPool(string code) => Digestion.Settings?.Pool(code) != null;
 
         /// <summary>Vanilla's ComposeStatsGui with the nutrition block swapped for our reserve bars.</summary>
         public static bool ComposeStatsPrefix(CharacterExtraDialogs __instance)
@@ -171,7 +253,7 @@ namespace ComplexNutrition.Modules.Tracking
             // usually fit in that; grow the panel only if they don't (header, rows, Physical block of up to 10 lines).
             double envHeight = envBounds.InnerHeight / RuntimeEnv.GUIScale + 10.0;
             double vanillaHeight = bounds.InnerHeight / RuntimeEnv.GUIScale - GuiStyle.ElementToDialogPadding - 20.0 + envHeight;
-            double neededHeight = 45.0 + nutrients.Count * RowHeight + 28.0 + 10 * 20.0 + 10.0;
+            double neededHeight = 45.0 + (nutrients.Count + 1) * RowHeight + 28.0 + 10 * 20.0 + 10.0;
             ElementBounds bgBounds = ElementBounds.Fixed(0.0, 0.0, 235.0, Math.Max(vanillaHeight, neededHeight))
                 .WithFixedPadding(GuiStyle.ElementToDialogPadding);
             ElementBounds dialogBounds = bgBounds.ForkBoundingParent().WithAlignment(EnumDialogArea.LeftMiddle)
@@ -195,23 +277,56 @@ namespace ComplexNutrition.Modules.Tracking
             ElementBounds labelBounds = ElementBounds.Fixed(0.0, 25.0, 200.0, 20.0);
             compo.AddStaticText(Lang.Get("complexnutrition:stats-heading"), CairoFont.WhiteSmallText().WithWeight(FontWeight.Bold), labelBounds);
             labelBounds = labelBounds.BelowCopy().WithFixedWidth(118.0).WithFixedHeight(RowHeight);
+            // Calories, then the three gut pools and the 24-hour protein bar, then the stored nutrients.
+            int lastGut = -1;
+            for (int i = 0; i < nutrients.Count; i++) if (IsGutPool(nutrients[i].Code)) lastGut = i;
+            bool firstRow = true;
+            void Row(string label, string barCode, double[] color, System.Func<string> hover)
+            {
+                if (!firstRow) labelBounds = labelBounds.BelowCopy();
+                firstRow = false;
+                var barBounds = ElementBounds.Fixed(120.0, labelBounds.fixedY + (RowHeight - 8.0) / 2.0 + 1.0, 112.0, 8.0);
+                compo.AddStaticText(label, CairoFont.WhiteDetailText().WithFontSize(13), labelBounds)
+                     .AddStatbar(barBounds, color, barCode);
+                compo.GetStatbar(barCode).onGetStatbarValue = () => hover();
+            }
+
             for (int i = 0; i < nutrients.Count; i++)
             {
                 var n = nutrients[i];
-                if (i > 0) labelBounds = labelBounds.BelowCopy();
-                var barBounds = ElementBounds.Fixed(120.0, labelBounds.fixedY + (RowHeight - 8.0) / 2.0 + 1.0, 112.0, 8.0);
                 var color = GroupColors.TryGetValue(n.Group ?? "", out var c) ? c : GuiStyle.FoodBarColor;
-                compo.AddStaticText(Lang.Get(n.LangKey), CairoFont.WhiteDetailText().WithFontSize(13), labelBounds)
-                     .AddStatbar(barBounds, color, "cn-" + n.Code);
                 var code = n.Code;
                 var def = n;
-                compo.GetStatbar("cn-" + code).onGetStatbarValue = () =>
+                if (IsGutPool(code))
                 {
-                    float r = NutritionState.Of(capi?.World?.Player?.Entity)?.GetReserve(code) ?? 0f;
-                    return Lang.Get("complexnutrition:reserve-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.DaysText(r))
-                        + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
-                        + "\n" + Lang.Get("complexnutrition:effect-placeholder");
-                };
+                    Row(Lang.Get("complexnutrition:stats-gut-" + code), "cn-" + code, color, () =>
+                    {
+                        var st = NutritionState.Of(capi?.World?.Player?.Entity);
+                        float r = st?.GetReserve(code) ?? 0f;
+                        return Lang.Get("complexnutrition:gut-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, r))
+                            + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role");
+                    });
+                }
+                else
+                {
+                    Row(Lang.Get(n.LangKey), "cn-" + code, color, () =>
+                    {
+                        float r = NutritionState.Of(capi?.World?.Player?.Entity)?.GetReserve(code) ?? 0f;
+                        string effect = "complexnutrition:nutrient-" + code + "-effect";
+                        return Lang.Get("complexnutrition:reserve-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.DaysText(r))
+                            + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
+                            + "\n" + (Lang.HasTranslation(effect) ? Lang.Get(effect) : Lang.Get("complexnutrition:effect-placeholder"));
+                    });
+                }
+                if (i == lastGut)
+                {
+                    Row(Lang.Get("complexnutrition:stats-protein24"), Protein24Bar, color, () =>
+                    {
+                        float g = NutritionState.Of(capi?.World?.Player?.Entity)?.Protein24 ?? 0f;
+                        return Lang.Get("complexnutrition:protein24-hover", Math.Round(g), Math.Round(Digestion.Settings?.ProteinNeedGrams ?? 128f))
+                            + "\n" + Lang.Get("complexnutrition:effect-placeholder");
+                    });
+                }
             }
             leftColumnBoundsW = leftColumnBoundsW.FixedUnder(labelBounds, -5.0);
 
@@ -228,7 +343,7 @@ namespace ComplexNutrition.Modules.Tracking
             }
             if (saturation.HasValue)
             {
-                compo.AddStaticText(Lang.Get("Satiety"), CairoFont.WhiteDetailText(), leftColumnBoundsW = leftColumnBoundsW.BelowCopy())
+                compo.AddStaticText(Lang.Get("complexnutrition:stats-fullness"), CairoFont.WhiteDetailText(), leftColumnBoundsW = leftColumnBoundsW.BelowCopy())
                     .AddDynamicText((int)Math.Round(saturation.Value) + " / " + (int)Math.Round(maxSaturation.Value), CairoFont.WhiteDetailText(), rightColumnBounds = rightColumnBounds.FlatCopy().WithFixedPosition(rightColumnBounds.fixedX, leftColumnBoundsW.fixedY), "satiety");
             }
             if (bodyTemp != null)

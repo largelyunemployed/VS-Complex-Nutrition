@@ -110,6 +110,7 @@ namespace ComplexNutrition.Core
                 if (tree != null && !IsModuleEnabled(TrackingModule.ModuleId))
                 {
                     tree.SetBool("tracking", false);
+                    Digestion.UseVanillaScale(player.Entity, new DigestionSettings().VanillaFullnessMax);   // back to vanilla's fullness scale if we changed it
                     player.Entity.WatchedAttributes.MarkPathDirty(NutritionState.TreeKey);
                 }
             };
@@ -231,7 +232,7 @@ namespace ComplexNutrition.Core
             var resolved = Foods.Resolve(coll);
             if (resolved == null) return TextCommandResult.Success(loc + " has no nutrient data (not a food, or a meal made from ingredients).");
             // The tooltip behaviour lives on the client only, so build the same block directly.
-            return TextCommandResult.Success($"{loc}:" + CollectibleBehaviorNutrientInfo.BuildTooltip(Nutrients, resolved, true));
+            return TextCommandResult.Success($"{loc}:" + CollectibleBehaviorNutrientInfo.BuildTooltip(Nutrients, resolved, true, coll));
         }
 
         /// <summary>
