@@ -127,9 +127,13 @@ namespace ComplexNutrition.UI
                 // ---- World ----
                 Heading(L("settings-cat-world"));
                 Dropdown(L("settings-start"), Lang.Get("worldattribute-" + WorldSettings.StartConditionKey + "-desc"),
-                    WorldSettings.StartOptions.Select(o => o.Value).ToArray(), WorldSettings.StartOptions.Select(o => Lang.Get(o.LangKey)).ToArray(),
+                    WorldSettings.StartOptions.Select(o => o.Value).ToArray(), WorldSettings.StartOptions.Select(o => Lang.Get(o.LangKey(WorldSettings.StartConditionKey))).ToArray(),
                     snap.StartCalories ?? WorldSettings.DefaultStart,
                     v => core.SendSetting(SettingKeys.StartCalories, v), "start");
+                Dropdown(L("settings-respawn"), Lang.Get("worldattribute-" + WorldSettings.RespawnConditionKey + "-desc"),
+                    WorldSettings.StartOptions.Select(o => o.Value).ToArray(), WorldSettings.StartOptions.Select(o => Lang.Get(o.LangKey(WorldSettings.RespawnConditionKey))).ToArray(),
+                    snap.RespawnCalories ?? WorldSettings.DefaultRespawn,
+                    v => core.SendSetting(SettingKeys.RespawnCalories, v), "respawn");
                 Switch(L("settings-advanced-default"), L("settings-advanced-default-desc"), snap.AdvancedDefault,
                     on => core.SendSetting(SettingKeys.AdvancedDefault, on ? "true" : "false"), "advanceddefault");
 

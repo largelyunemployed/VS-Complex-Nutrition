@@ -260,15 +260,21 @@ namespace ComplexNutrition.Tests
         public static void WorldConfigMatchesStartOptions()
         {
             var attrs = (JArray)Repo.Json(Repo.Mod("worldconfig.json"))["worldConfigAttributes"];
-            var start = attrs.First(a => (string)a["code"] == WorldSettings.StartConditionKey);
-            Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Value)), string.Join(",", start["values"].Select(v => (string)v)), "start values");
-            Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Name)), string.Join(",", start["names"].Select(v => (string)v)), "start names");
-            Assert.Equal(WorldSettings.DefaultStart, (string)start["default"], "start default");
+            var lang = Repo.Json(Repo.Mod("assets", "game", "lang", "worldconfig-en.json"));
+            foreach (var (key, def) in new[] { (WorldSettings.StartConditionKey, WorldSettings.DefaultStart), (WorldSettings.RespawnConditionKey, WorldSettings.DefaultRespawn) })
+            {
+                var attr = attrs.First(a => (string)a["code"] == key);
+                Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Value)), string.Join(",", attr["values"].Select(v => (string)v)), key + " values");
+                Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Name)), string.Join(",", attr["names"].Select(v => (string)v)), key + " names");
+                Assert.Equal(def, (string)attr["default"], key + " default");
+                foreach (var o in WorldSettings.StartOptions) Assert.True(lang[o.LangKey(key)] != null, "worldconfig-en.json has " + o.LangKey(key));
+                Assert.True(lang["worldattribute-" + key] != null && lang["worldattribute-" + key + "-desc"] != null, "worldconfig-en.json names and describes " + key);
+            }
+            Assert.Near(0.7, WorldSettings.StoreShare(700f), 1e-6, "Easy keeps 70% of each store");
+            Assert.Near(0.001, WorldSettings.StoreShare(1f), 1e-6, "Rock Bottom keeps 0.1%");
             foreach (var key in new[] { WorldSettings.AdvancedDisplayKey, WorldSettings.MeatInPotsKey })
                 Assert.True(attrs.Any(a => (string)a["code"] == key), "worldconfig.json has " + key);
 
-            var lang = Repo.Json(Repo.Mod("assets", "game", "lang", "worldconfig-en.json"));
-            foreach (var o in WorldSettings.StartOptions) Assert.True(lang[o.LangKey] != null, "worldconfig-en.json has " + o.LangKey);
         }
 
         [Test]

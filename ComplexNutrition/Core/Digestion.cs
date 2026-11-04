@@ -168,9 +168,6 @@ namespace ComplexNutrition.Core
 
         [JsonProperty("starvationSeconds")] public float StarvationSeconds = 6f;
 
-        /// <summary>After death, the calorie tank holds at least this much, in % of a day's need.</summary>
-        [JsonProperty("reviveCalories")] public float ReviveCalories = 100;
-
         /// <summary>Below this share of a full tank the HUD calorie bar flashes.</summary>
         [JsonProperty("flashBelow")] public float FlashBelow = 0.1f;
 

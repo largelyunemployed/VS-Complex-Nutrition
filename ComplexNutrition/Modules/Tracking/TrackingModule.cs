@@ -180,16 +180,34 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// A character new to Complex Nutrition starts with the calorie tank the world's start condition picks:
-        /// Easy 7 days (full), Normal 5, Hard 3, Brutal 1, Rock Bottom 1% of a day. Only on first join, never on respawn.
+        /// A character new to Complex Nutrition starts with what the world's start condition picks: the calorie tank
+        /// (Full 10 days, Easy 7, Normal 5, Hard 3, Brutal 1, Rock Bottom 1% of a day) and the same share of every
+        /// vitamin and mineral store (Full 100%, Easy 70%, ...). Only on first join; respawning uses the respawn condition.
+        /// Worlds from before v0.2.4 have none, and the nutrients' startReserve applies.
         /// </summary>
         private void ApplyStartCondition(IServerPlayer player, NutritionState state)
         {
-            var def = Core.Nutrients.Get(NutrientCodes.Calories);
-            if (def == null) return;
             float? start = WorldSettings.StartCalories(sapi.World);
-            if (start == null) return;
-            state.SetReserve(def.Code, Math.Max(0f, Math.Min(def.Cap, start.Value)));
+            if (start != null) ApplyCondition(player, state, start.Value, publish: false);
+        }
+
+        /// <summary>
+        /// Sets the calorie tank to <paramref name="calories"/> (% of a day) and each vitamin and mineral to the same share
+        /// of its store (<see cref="WorldSettings.StoreShare"/>).
+        /// </summary>
+        private void ApplyCondition(IServerPlayer player, NutritionState state, float calories, bool publish)
+        {
+            float share = WorldSettings.StoreShare(calories);
+            foreach (var n in Core.Nutrients.All)
+            {
+                float value;
+                if (n.IsCalories) value = Math.Clamp(calories, 0f, n.Cap);
+                else if (n.IsMicronutrient) value = n.Cap * share;
+                else continue;
+                float old = state.GetReserve(n.Code);
+                state.SetReserve(n.Code, value);
+                if (publish && old != value) Core.PublishReserveChanged(player, n.Code, old, value);
+            }
         }
 
         /// <summary>Saves from v0.2.2 to v0.3.0 kept the gut as batches as well as in the reserves; since v0.3.1 the reserve is the one record.</summary>
@@ -204,17 +222,30 @@ namespace ComplexNutrition.Modules.Tracking
             }
         }
 
-        /// <summary>Vanilla gives half a stomach on revive; the calorie tank gets at least a day's worth, so a starved player can recover.</summary>
+        /// <summary>
+        /// A respawned character gets the world's respawn condition (Brutal unless set: 1 day of calories and 10% of each
+        /// vitamin and mineral store). The gut and the last 24 hours of digestion are cleared, so the new body starts fresh.
+        /// Fiber is kept. Vanilla gives half a stomach of fullness.
+        /// </summary>
         private void OnRespawn(IServerPlayer player)
         {
             var state = player?.Entity == null ? null : StateOf(player.Entity);
-            var def = Core.Nutrients.Get(NutrientCodes.Calories);
-            if (state == null || def == null) return;
-            float old = state.GetReserve(def.Code);
-            if (old >= Digest.ReviveCalories) return;
-            state.SetReserve(def.Code, Digest.ReviveCalories);
+            if (state == null) return;
+            ApplyCondition(player, state, WorldSettings.RespawnCalories(sapi.World), publish: true);
+            foreach (var kv in Digest.Pools)
+            {
+                var def = Core.Nutrients.Get(kv.Key);
+                if (def != null)
+                {
+                    float old = state.GetReserve(def.Code);
+                    SetGut(state, def, 0f, kv.Value, 1f);
+                    if (old != 0f) Core.PublishReserveChanged(player, def.Code, old, 0f);
+                }
+                state.SetAbsorbedLog(kv.Key, new float[24]);
+            }
+            state.Protein24 = 0f;
+            state.ClearSitting();
             state.MarkDirty();
-            Core.PublishReserveChanged(player, def.Code, old, Digest.ReviveCalories);
         }
 
         /// <summary>Lets vanilla recompute its nutrition HP bonus; our patch keeps it at zero while tracking is on.</summary>

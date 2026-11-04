@@ -144,6 +144,7 @@
 	"settings-logfallbacks": "Log foods without data",
 	"settings-logfallbacks-desc": "Lists every food that has no nutrition data of its own in the server log when the world loads. Useful when adding foods from other mods.",
 	"settings-start": "Starting calories",
+	"settings-respawn": "Respawn calories",
 	"settings-advanced-default": "Advanced display default",
 	"settings-advanced-default-desc": "Whether the advanced nutrition display is on for players who follow the world setting.",
 	"settings-module-fooddata": "Complex Nutrition Tooltips",

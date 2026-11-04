@@ -17,6 +17,7 @@ namespace ComplexNutrition.Core
         public Dictionary<string, bool> Modules = new();
         /// <summary>The world's start condition (% of a day in the calorie tank), or null when the world has none.</summary>
         public string StartCalories;
+        public string RespawnCalories;
         public bool AdvancedDefault;
         public bool MeatInPots;
 
@@ -54,6 +55,7 @@ namespace ComplexNutrition.Core
         public const string LogFallbacks = "logFallbacks";
         public const string DisplayUnits = "displayUnits";
         public const string StartCalories = "startCalories";
+        public const string RespawnCalories = "respawnCalories";
         public const string AdvancedDefault = "advancedDefault";
         public const string MeatInPots = "meatInPots";
         /// <summary>Prefix for a module switch: "module:tracking".</summary>

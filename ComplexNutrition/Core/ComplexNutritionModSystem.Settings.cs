@@ -136,6 +136,7 @@ namespace ComplexNutrition.Core
             DisplayUnits = Config.ShowPercent ? "percent" : "amount",
             Modules = modules.ToDictionary(m => m.Id, m => m.IsEnabled),
             StartCalories = WorldSettings.StartCalories(sapi.World)?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            RespawnCalories = WorldSettings.RespawnCalories(sapi.World).ToString(System.Globalization.CultureInfo.InvariantCulture),
             AdvancedDefault = Digestion.WorldAdvancedDefault(sapi.World),
             MeatInPots = WorldSettings.Bool(sapi.World, WorldSettings.MeatInPotsKey),
         };
@@ -191,6 +192,11 @@ namespace ComplexNutrition.Core
                 case SettingKeys.StartCalories:
                     if (!WorldSettings.IsStartOption(value)) return;
                     sapi.World.Config.SetString(WorldSettings.StartConditionKey, value);
+                    saveConfig = false;
+                    break;
+                case SettingKeys.RespawnCalories:
+                    if (!WorldSettings.IsStartOption(value)) return;
+                    sapi.World.Config.SetString(WorldSettings.RespawnConditionKey, value);
                     saveConfig = false;
                     break;
                 case SettingKeys.MeatInPots:
@@ -296,6 +302,7 @@ namespace ComplexNutrition.Core
             {
                 cfg.SetBool(WorldSettings.AdvancedDisplayKey, snap.AdvancedDefault);
                 if (snap.StartCalories != null) cfg.SetString(WorldSettings.StartConditionKey, snap.StartCalories);
+                if (snap.RespawnCalories != null) cfg.SetString(WorldSettings.RespawnConditionKey, snap.RespawnCalories);
             }
 
             settingsDialog?.Refresh();
