@@ -110,7 +110,8 @@ namespace ComplexNutrition.Core
                 if (tree != null && !IsModuleEnabled(TrackingModule.ModuleId))
                 {
                     tree.SetBool("tracking", false);
-                    Digestion.UseVanillaScale(player.Entity, new DigestionSettings().VanillaFullnessMax);   // back to vanilla's fullness scale if we changed it
+                    // Tracking was switched off since this player last played: vanilla values from ours, ours kept for later.
+                    Digestion.ConvertToVanilla(player.Entity, Nutrients, Foods.Fallbacks.KcalPerSatiety, DigestionSettings.Load(sapi));
                     player.Entity.WatchedAttributes.MarkPathDirty(NutritionState.TreeKey);
                 }
             };

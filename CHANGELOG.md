@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.2.3
+
+- Protein has one bar on the Stats panel. It shows protein taken in over the last 24 hours against the 64 g a day you need, and its hover text adds what is still being digested. The daily need falls from 128 g to 64 g (0.8 g per kg of bodyweight, enough to keep muscle), and 128 g is now the most the body uses in 24 hours.
+- Protein's diminishing returns start at 65 g digested in 24 hours and fall to nothing at 128 g. Protein past that gives no calories and no benefit.
+- The gut holds up to 240 g of fats (was 100 g).
+- The Stats panel lists Calories, Carbs, Fats, Protein, then fiber, vitamins and minerals. The bars are labelled without "(gut)".
+- New descriptions for calories, carbs, fats, protein and fiber on hover. Hover text on the Stats panel and the HUD calorie bar now wraps to a fixed width instead of running off screen. The Stats panel no longer stutters the game when your reserves change, such as after eating: a bar only draws its hover text while the mouse is over it, and only bars that visibly moved are redrawn.
+- Porridge no longer counts cooking water toward fullness.
+- Switching tracking off now sets your vanilla values from your Complex Nutrition ones: satiety from your calorie reserve, and the five food group bars from the nearest reserves. Your Complex Nutrition state is kept and comes back exactly as it was when you switch tracking on again, even if you ate in between.
+- The handbook pages are rewritten, with title case headings, a clearer explanation of diminishing returns, and new text for Pies and Bread, Drinks, Large Meals, Mushrooms and Foods from Other Mods.
+
 ## v0.2.2
 
 - Digestion. Eating no longer fills the calorie reserve directly: fats, protein and carbohydrate (net of fiber) go into the gut and are digested over time, and only what is digested becomes calories (4 kcal per g of carbohydrate and protein, 9 per g of fats). Carbs take about 3 hours, protein 6 and fats 24; the gut holds up to 500 g of carbs, 200 g of protein and 100 g of fats, and anything past that passes through unused. Above 300 g of carbs in 12 hours, 130 g of protein or 70 g of fats in a day, each extra gram gives fewer calories. Rules are in `config/digestion.json`.

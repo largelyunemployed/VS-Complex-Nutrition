@@ -11,7 +11,7 @@
     <!-- Point this at your Vintage Story install (the folder holding VintagestoryAPI.dll),
          or set the VINTAGE_STORY environment variable. -->
     <VintageStoryPath Condition="'$(VintageStoryPath)' == ''">$(VINTAGE_STORY)</VintageStoryPath>
-    <ModVersion>0.2.2</ModVersion>
+    <ModVersion>0.2.3</ModVersion>
   </PropertyGroup>
 
   <ItemGroup>
