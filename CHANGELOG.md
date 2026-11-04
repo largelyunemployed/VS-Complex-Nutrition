@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.3.3
+
+- The Overview tab tells you more about your calories:
+  - how many calories the food in your gut will still give once it is digested, and how many of them are being lost to diminishing returns
+  - the calories you burned in the last hour, the last 24 hours and the last 7 days
+  - while you are hurt, what each health point costs to heal and about how much getting back to full health will cost
+- The History tab has a second chart: the calories digestion added to your reserve each day (green) against the calories you burned (red), with the daily averages for the last week under it. Burned and gained calories start counting when you first play this version.
+- Healing costs what a recovering body really needs. A body that is healing needs 33 to 44kcal per kg a day instead of about 25, more the worse the injury. For an 80kg character that makes each health point healed on your own cost about 22kcal when barely hurt and up to about 53kcal when badly hurt, so more damage costs more than its share to heal. This replaces vanilla's satiety cost. Healing items cost nothing. The numbers are in `config/tracking.json`.
+- Short food tooltips: hovering over a food shows its calories and how much it fills you on one line, and holding Ctrl opens the full nutrient block. Bowls and pies work the same way. Each player can switch this off under Display in the settings menu.
+- New Running Low icon: a small bowl right of the hotbar, dim while all is well, amber when something on the Running Low list is low and red when something is nearly gone or the calorie reserve is under a day. Click it to open the nutrition window. Each player can switch it off under Display in the settings menu.
+
 ## v0.3.2
 
 - New History tab in the nutrition window: a chart of the last 28 days. Each bar is the calories you ate that day, coloured by food group (fruit, vegetables, protein foods, grains, dairy), with a dashed line at a day's need. A white line shows one store at the end of each day: the calorie tank, fiber or any vitamin or mineral, picked from the Line list at the bottom of the window. Under the chart, how much you ate a day over the last week, where most of it came from, and the picked store now and a week ago. History starts recording when you first play this version.
