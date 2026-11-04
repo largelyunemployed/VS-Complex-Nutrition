@@ -8,7 +8,7 @@
 | `ComplexNutrition/Core/` | Config, nutrient registry, food database, cooked-dish sums, eating hooks, player nutrition state and diet ledger, module loader and events (`ComplexNutritionModSystem`) |
 | `ComplexNutrition/UI/` | v0.3 nutrition window and settings menu: page blocks and their Cairo renderer (`NutritionPage.cs`, also usable outside the game for previews), the tab builders (`NutritionPages.cs`), the window and the settings dialog |
 | `ComplexNutrition/Modules/FoodData/` | v0.1 module: tooltip behaviour, pie tooltip patch, fallback logging |
-| `ComplexNutrition/Modules/Tracking/` | v0.2 module: reserves, draining, absorption, hunger patches, Stats panel bars, `/nutrition` and admin commands |
+| `ComplexNutrition/Modules/Tracking/` | v0.2 module: reserves, draining, absorption, hunger patches, Stats panel bars, `/cnutrition` commands |
 | `ComplexNutrition/assets/complexnutrition/config/cooking.json` | Multipliers for cooked dishes and pie bake states |
 | `ComplexNutrition/assets/complexnutrition/config/nutrients.json` | The 14 nutrients: units, daily targets, and tracking caps, start reserves, drain and sitting limits |
 | `ComplexNutrition/assets/complexnutrition/config/tracking.json` | Tracking rules: sitting window, diminishing returns, ledger length, update rate |
@@ -50,7 +50,7 @@ The log should show `Loaded 14 nutrients and 203 food profiles`, a coverage line
 
 Tracking needs a player in the world. With a client connected:
 
-- `/nutrition` (any player) lists your reserves.
+- `/cnutrition stats` (any player) lists your reserves, `/cnutrition display` sets your advanced display choice and `/cnutrition settings` opens the settings menu. The other `/cnutrition` subcommands are for admins.
 - `/cnutrition reserves <player>` adds today's intake and each cap.
 - `/cnutrition setreserve <player> <nutrient|all> <percent>` sets reserves, for testing.
 - `/cnutrition ledger <player>` shows the diet ledger (calories per food category per day).

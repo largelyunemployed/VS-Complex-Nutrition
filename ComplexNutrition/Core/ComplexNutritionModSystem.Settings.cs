@@ -71,9 +71,7 @@ namespace ComplexNutrition.Core
             serverChannel.SetMessageHandler<SettingsChangePacket>(OnSettingsChange);
             api.Event.PlayerNowPlaying += SendSettings;
 
-            api.ChatCommands.GetOrCreate("nutrition")
-                .WithDescription("Show your nutrient reserves")
-                .RequiresPrivilege(Privilege.chat)
+            api.ChatCommands.GetOrCreate("cnutrition")
                 .BeginSubCommand("settings")
                     .WithDescription("Open the Complex Nutrition settings menu")
                     .RequiresPlayer()

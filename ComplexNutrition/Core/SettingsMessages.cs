@@ -38,7 +38,7 @@ namespace ComplexNutrition.Core
         public string Value;
     }
 
-    /// <summary>Server to client: open the settings menu (from /nutrition settings).</summary>
+    /// <summary>Server to client: open the settings menu (from /cnutrition settings).</summary>
     [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
     public class OpenSettingsPacket
     {

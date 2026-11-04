@@ -8,7 +8,7 @@ using Vintagestory.API.Config;
 namespace ComplexNutrition.UI
 {
     /// <summary>
-    /// The settings menu (the Settings button in the nutrition window, or /nutrition settings). Every toggle the mod has
+    /// The settings menu (the Settings button in the nutrition window, or /cnutrition settings). Every toggle the mod has
     /// so far, in four categories. Display is for every player; Food Info, World and Modules only show for admins
     /// (in single player you are the admin). Each row's label has a hover that says what it does.
     /// </summary>

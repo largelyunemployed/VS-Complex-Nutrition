@@ -8,12 +8,17 @@
   - Vitamins and Minerals: each one's store, days left, what it does and the best foods you know for it.
 - Running Low lists the calorie reserve under 1 day, and vitamins A, D, E and K and the minerals under 2 days (amber, red under half a day). Carbs, fats, protein, fiber, vitamin C and the B vitamins refresh too quickly to need a warning. The thresholds are in `config/tracking.json`.
 - Food suggestions only use foods you have held. The server remembers every food each player has had in their hotbar, backpack or hand.
-- New settings menu: the Settings button in the nutrition window, or `/nutrition settings`. Display (every player): Advanced nutrition display (follow the world, on or off) and Amounts or percent. Food Info, World and Modules (admins, and you in single player): food tooltips, the server's default for amounts or percent, logging foods without data, Starting calories, the Advanced display default, Poultry and bushmeat in pots, and the Food data and Nutrient tracking modules. Hover over a setting's name to see what it does.
+- New settings menu: the Settings button in the nutrition window, or `/cnutrition settings`. Display (every player): Advanced nutrition display (follow the world, on or off) and Amounts or percent. Food Info, World and Modules (admins, and you in single player): food tooltips, the server's default for amounts or percent, logging foods without data, Starting calories, the Advanced display default, Poultry and bushmeat in pots, and the Complex Nutrition Tooltips and Nutrient tracking modules. Hover over a setting's name to see what it does.
 - Amounts or percent is now each player's own choice, saved on their computer in `ModConfig/complexnutrition-client.json`, with the server's setting as the default.
 - Nutrient tracking can be switched off and on while the game runs, after a confirmation. Switching off saves everyone's reserves and sets their vanilla food groups from them; switching on puts everyone back exactly where they were. Admins can also use `/cnutrition module <fooddata|tracking> <on|off>`.
-- Cooking pots hold up to 10 of an ingredient per slot (vanilla 6).
+- Cooking pots hold up to 10 of an ingredient per slot (vanilla 6), and cook meals of up to 10 servings.
 - New world setting, Poultry and bushmeat in pots (off by default): raw, cooked and cured poultry and bushmeat count as meat in meat stews and soups. It takes effect the next time the world loads. Admins can also switch it on for any world, including ones made before v0.3.0, with `/cnutrition meatinpots on` (or `off`).
 - Protein no longer stops giving calories at 128g. Up to 64g digested in 24 hours, each gram gives its full 4kcal; from 64g to 128g each gram gives a little less, down to 80%; past 128g each gram gives 50%.
+- Healing works from the calorie tank: while tracking runs you heal at full speed whenever there are any calories in reserve, however full your stomach is (vanilla heals at full speed only above 75% satiety). Healing costs the same as in vanilla, taken as calories. With an empty tank you don't heal.
+- All commands now start with `/cnutrition`: `/cnutrition stats` lists your reserves (was `/nutrition`), `/cnutrition display` sets your advanced display (was `/nutritiondisplay`) and `/cnutrition settings` opens the settings menu. The admin subcommands are unchanged.
+- The Food data module is now called Complex Nutrition Tooltips in the settings menu.
+- Fixed a crash when switching nutrient tracking off with the character screen open: the Stats panel now switches back to vanilla's.
+- Fixed a stutter every few seconds while digesting with the character screen open: the Stats bars are redrawn a couple at a time, and only when they move by a pixel.
 - New handbook page, The Nutrition Window. The other pages mention the window, the settings, the bigger pots and the new protein curve.
 
 ## v0.2.4

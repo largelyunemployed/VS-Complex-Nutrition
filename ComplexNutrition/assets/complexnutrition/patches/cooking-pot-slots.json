@@ -10,5 +10,31 @@
 		"file": "game:blocktypes/clay/fired/dirtypot.json",
 		"path": "/attributesByType/*-empty/maxContainerSlotStackSize",
 		"value": 10
+	},
+	{
+		"comment": "Vanilla refuses a meal of more than 6 servings (maxServingSize defaults to 6), so 10 per slot needs 10 servings too.",
+		"op": "add",
+		"file": "game:blocktypes/clay/fired/pot.json",
+		"path": "/attributes/maxServingSize",
+		"value": 10
+	},
+	{
+		"op": "add",
+		"file": "game:blocktypes/clay/fired/dirtypot.json",
+		"path": "/attributes/maxServingSize",
+		"value": 10
+	},
+	{
+		"comment": "How many servings a pot takes when a meal is moved into it.",
+		"op": "replace",
+		"file": "game:blocktypes/clay/fired/pot.json",
+		"path": "/attributes/servingCapacity",
+		"value": 10
+	},
+	{
+		"op": "replace",
+		"file": "game:blocktypes/clay/fired/dirtypot.json",
+		"path": "/attributes/servingCapacity",
+		"value": 10
 	}
 ]

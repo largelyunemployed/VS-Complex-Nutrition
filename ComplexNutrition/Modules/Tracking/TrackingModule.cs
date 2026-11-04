@@ -492,7 +492,8 @@ namespace ComplexNutrition.Modules.Tracking
         {
             var parsers = sapi.ChatCommands.Parsers;
 
-            sapi.ChatCommands.GetOrCreate("nutrition")
+            sapi.ChatCommands.GetOrCreate("cnutrition")
+                .BeginSubCommand("stats")
                 .WithDescription("Show your nutrient reserves")
                 .RequiresPlayer()
                 .RequiresPrivilege(Privilege.chat)
@@ -503,9 +504,9 @@ namespace ComplexNutrition.Modules.Tracking
                     return state == null
                         ? TextCommandResult.Error(Lang.Get("complexnutrition:cmd-no-state"))
                         : TextCommandResult.Success(ReserveReport(state, false, args.Caller.Entity));
-                });
-
-            sapi.ChatCommands.Create("nutritiondisplay")
+                })
+                .EndSubCommand()
+                .BeginSubCommand("display")
                 .WithDescription("Choose how much detail nutrition tooltips show: advanced, simple, or world (follow the world setting)")
                 .RequiresPlayer()
                 .RequiresPrivilege(Privilege.chat)
@@ -523,9 +524,8 @@ namespace ComplexNutrition.Modules.Tracking
                     bool on = Digestion.AdvancedDisplay(sapi.World, state);
                     string which = state.DisplayChoice == 0 ? Lang.Get("complexnutrition:display-world") : Lang.Get("complexnutrition:display-own");
                     return TextCommandResult.Success(Lang.Get(on ? "complexnutrition:display-on" : "complexnutrition:display-off", which));
-                });
-
-            sapi.ChatCommands.GetOrCreate("cnutrition")
+                })
+                .EndSubCommand()
                 .BeginSubCommand("reserves")
                     .WithDescription("Show a player's nutrient reserves and today's intake")
                     .RequiresPrivilege(Privilege.controlserver)

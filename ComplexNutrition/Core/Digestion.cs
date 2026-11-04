@@ -316,7 +316,7 @@ namespace ComplexNutrition.Core
         public const string AdvancedDisplayKey = "complexnutritionAdvancedDisplay";
 
         /// <summary>
-        /// Whether this player sees the advanced nutrition display: their own choice (/nutritiondisplay) if they made
+        /// Whether this player sees the advanced nutrition display: their own choice (/cnutrition display) if they made
         /// one, otherwise the world setting.
         /// </summary>
         public static bool AdvancedDisplay(IWorldAccessor world, NutritionState state)
