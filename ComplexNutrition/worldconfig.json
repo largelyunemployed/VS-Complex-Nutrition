@@ -1,4 +1,5 @@
 {
+	"playStyles": [],
 	"worldConfigAttributes": [
 		{ "category": "complexnutrition", "code": "complexnutritionStart", "dataType": "dropdown", "values": [ "700", "500", "300", "100", "1" ], "names": [ "Easy", "Normal", "Hard", "Brutal", "RockBottom" ], "default": "500" }
 	]
