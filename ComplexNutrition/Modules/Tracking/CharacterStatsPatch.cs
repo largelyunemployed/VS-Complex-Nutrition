@@ -125,7 +125,7 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 hudBar = bar;
                 hudKcal = -1f;
-                bar.onGetStatbarValue = HudHover;
+                bar.onGetStatbarValue = () => WrapHover(HudHover());
             }
             hudOurs = true;
             if (Math.Abs(kcal - hudKcal) < 1f && Math.Abs(fullness - hudFullness) < 0.5f && maxKcal == hudMax) return false;
@@ -243,6 +243,41 @@ namespace ComplexNutrition.Modules.Tracking
             return string.IsNullOrEmpty(text) ? "" : "\n" + text;
         }
 
+        /// <summary>Widest a hover box may be, in GUI units (scaled with the GUI scale setting).</summary>
+        private const double HoverWidth = 340.0;
+        private static CairoFont hoverFont;
+
+        /// <summary>
+        /// Vanilla draws a bar's hover text one line per "\n" with no wrapping, so long descriptions run off
+        /// screen. This breaks each line between words so none is wider than <see cref="HoverWidth"/>,
+        /// measured in the font vanilla draws the hover in (GuiElementStatbar.valueFont).
+        /// </summary>
+        private static string WrapHover(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            hoverFont ??= CairoFont.WhiteSmallText();
+            double max = GuiElement.scaled(HoverWidth);
+            var sb = new System.Text.StringBuilder(text.Length + 16);
+            var lines = text.Split('\n');
+            for (int li = 0; li < lines.Length; li++)
+            {
+                if (li > 0) sb.Append('\n');
+                string line = "";
+                foreach (var word in lines[li].Split(' '))
+                {
+                    string next = line.Length == 0 ? word : line + " " + word;
+                    if (line.Length > 0 && hoverFont.GetTextExtents(next).Width > max)
+                    {
+                        sb.Append(line).Append('\n');
+                        line = word;
+                    }
+                    else line = next;
+                }
+                sb.Append(line);
+            }
+            return sb.ToString();
+        }
+
         private static bool IsGutPool(string code) => Digestion.Settings?.Pool(code) != null;
 
         /// <summary>Vanilla's ComposeStatsGui with the nutrition block swapped for our reserve bars.</summary>
@@ -298,7 +333,7 @@ namespace ComplexNutrition.Modules.Tracking
                 var barBounds = ElementBounds.Fixed(120.0, labelBounds.fixedY + (RowHeight - 8.0) / 2.0 + 1.0, 112.0, 8.0);
                 compo.AddStaticText(label, CairoFont.WhiteDetailText().WithFontSize(13), labelBounds)
                      .AddStatbar(barBounds, color, barCode);
-                compo.GetStatbar(barCode).onGetStatbarValue = () => hover();
+                compo.GetStatbar(barCode).onGetStatbarValue = () => WrapHover(hover());
             }
 
             for (int i = 0; i < nutrients.Count; i++)
