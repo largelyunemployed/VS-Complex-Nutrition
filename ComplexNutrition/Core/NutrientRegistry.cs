@@ -58,14 +58,15 @@ namespace ComplexNutrition.Core
         /// <summary>Converts an amount in <see cref="Unit"/> to % of the daily target.</summary>
         public float ToPercent(float amount) => DailyTarget > 0 ? amount / DailyTarget * 100f : 0f;
 
-        /// <summary>A quantity given in % of the daily target, as text: "72 g", "1,920 kcal", "7.0 mg",
+        /// <summary>A quantity given in % of the daily target, as text: "72g", "1,920kcal", "7.0mg",
         /// or "37%" when <paramref name="percent"/> is set ("37% DV" for a nutrient with no unit to show).</summary>
         public string Format(float percentOfDaily, bool percent)
         {
             if (percent) return Number(percentOfDaily) + "%";
             if (string.IsNullOrEmpty(DisplayUnit)) return Number(percentOfDaily) + "% DV";
             float amount = IsMicronutrient ? percentOfDaily / 100f * DvAmount : percentOfDaily / 100f * DailyTarget;
-            return Number(amount) + " " + DisplayUnit;
+            // Units sit right against the number: "94g", "80kcal", "7.0mg".
+            return Number(amount) + DisplayUnit;
         }
 
         /// <summary>An amount in <see cref="Unit"/> (as food profiles store it), as text like <see cref="Format"/>.</summary>

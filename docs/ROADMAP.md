@@ -23,12 +23,14 @@ Every module has its own switch. With all of them off, the game plays exactly li
 ### v0.2.2: Digestion
 
 - Fullness comes from each food's weight and empties in 6 hours; cooked food fills you less, so cooking lets you eat more.
-- Fats, protein and carbohydrate are digested over hours, and only digestion fills the calorie tank (7 active days). An empty tank starves you.
+- Fats, protein and carbohydrate are digested over hours, and only digestion fills the calorie tank (10 active days since v0.2.4). An empty tank starves you.
 - Fiber speeds up digestion.
 
 ### v0.2.4: Start conditions
 
-- A world setting for how full the calorie tank is at spawn: Easy (full), Normal (5 days), Hard (3 days), Brutal (1 day) or Rock Bottom (1%).
+- A world setting, on the Complex Nutrition tab when you create a world, for how full the calorie tank is when a character first joins: Full (10 days), Easy (7 days), Normal (5 days), Hard (3 days), Brutal (1 day) or Rock Bottom (0.01 days).
+- The calorie tank holds 10 active days, the stomach holds 600 fullness (100 an hour drained), and the gut absorbs faster the more it holds, up to a limit.
+- An Advanced nutrition display setting (world default, per-player override with /nutritiondisplay) that shows calories, time and absorption rate for the food being digested.
 
 ## v0.3: Nutrition UI
 

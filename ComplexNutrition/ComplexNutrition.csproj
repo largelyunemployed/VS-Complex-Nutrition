@@ -11,7 +11,7 @@
     <!-- Point this at your Vintage Story install (the folder holding VintagestoryAPI.dll),
          or set the VINTAGE_STORY environment variable. -->
     <VintageStoryPath Condition="'$(VintageStoryPath)' == ''">$(VINTAGE_STORY)</VintageStoryPath>
-    <ModVersion>0.2.3</ModVersion>
+    <ModVersion>0.2.4</ModVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,6 +43,7 @@
 
   <ItemGroup>
     <None Include="modinfo.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="worldconfig.json" CopyToOutputDirectory="PreserveNewest" />
     <None Include="modicon.png" CopyToOutputDirectory="PreserveNewest" Condition="Exists('modicon.png')" />
     <None Include="assets/**/*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
@@ -54,7 +55,7 @@
       <ModZip>$(MSBuildProjectDirectory)/../release/complexnutrition_$(ModVersion).zip</ModZip>
     </PropertyGroup>
     <ItemGroup>
-      <ModFiles Include="$(OutDir)ComplexNutrition.dll;$(OutDir)ComplexNutrition.pdb;$(OutDir)modinfo.json" />
+      <ModFiles Include="$(OutDir)ComplexNutrition.dll;$(OutDir)ComplexNutrition.pdb;$(OutDir)modinfo.json;$(OutDir)worldconfig.json" />
       <ModFiles Include="$(OutDir)modicon.png" Condition="Exists('$(OutDir)modicon.png')" />
       <ModAssets Include="$(OutDir)assets/**/*" />
     </ItemGroup>

@@ -17,7 +17,7 @@ namespace ComplexNutrition.Modules.Tracking
     /// switching it off brings both back.
     ///
     /// Since v0.2.2 it also runs digestion (see <see cref="DigestionSettings"/>): vanilla satiety becomes
-    /// fullness (max 300, filled by each food's weight, draining at a fixed rate), eaten fats, protein and net
+    /// fullness (max 600, filled by each food's weight, draining at a fixed rate), eaten fats, protein and net
     /// carbohydrate go into gut pools that are absorbed over hours, and only absorption fills the calorie
     /// tank. Activity burns the tank as it burned satiety, and an empty tank starves.
     /// </summary>
@@ -114,13 +114,45 @@ namespace ComplexNutrition.Modules.Tracking
         private void InitPlayer(IServerPlayer player)
         {
             if (player?.Entity == null) return;
-            var state = NutritionState.GetOrCreate(player.Entity, Core.Nutrients, NowHours, out _);
+            var state = NutritionState.GetOrCreate(player.Entity, Core.Nutrients, NowHours, out bool created);
+            if (created) ApplyStartCondition(player, state);
             state.TrackingOn = true;
             state.LastUpdateHours = NowHours;
             Digestion.UseOurScale(player.Entity, Digest);
+            if (created)
+            {
+                // A new character starts with an empty stomach, whatever the start condition.
+                var hunger = player.Entity.GetBehavior<EntityBehaviorHunger>();
+                if (hunger != null) hunger.Saturation = EmptyStomach;
+            }
             EnsureDay(player, state);
             state.MarkDirty();
             RefreshVanillaHealthBonus(player);
+        }
+
+        /// <summary>World setting (see worldconfig.json): the calorie tank of a new character, in % of a day.</summary>
+        public const string StartConditionKey = "complexnutritionStart";
+
+        /// <summary>
+        /// A character new to Complex Nutrition starts with the calorie tank the world's start condition picks:
+        /// Easy 7 days (full), Normal 5, Hard 3, Brutal 1, Rock Bottom 1% of a day. Only on first join, never on respawn.
+        /// </summary>
+        private void ApplyStartCondition(IServerPlayer player, NutritionState state)
+        {
+            var def = Core.Nutrients.Get(NutrientCodes.Calories);
+            if (def == null) return;
+            float? start = StartCalories(sapi);
+            if (start == null) return;
+            state.SetReserve(def.Code, Math.Max(0f, Math.Min(def.Cap, start.Value)));
+        }
+
+        /// <summary>The world's start condition in % of a day, or null when the world has none (the nutrient's startReserve applies).</summary>
+        public static float? StartCalories(ICoreServerAPI api)
+        {
+            // Set at world creation it is a string; set with /worldconfig it may be stored as a number.
+            object raw = api.World.Config?[StartConditionKey]?.GetValue();
+            string value = Convert.ToString(raw, System.Globalization.CultureInfo.InvariantCulture);
+            return float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float start) ? start : null;
         }
 
         /// <summary>Vanilla gives half a stomach on revive; the calorie tank gets at least a day's worth, so a starved player can recover.</summary>
@@ -225,12 +257,7 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>Speed of digestion from the fibre reserve: 1 at an empty reserve, 1 + the pool's bonus at the full-bonus line or above.</summary>
-        public float FiberSpeed(NutritionState state, DigestionPool pool)
-        {
-            float full = Math.Max(1f, Digest.FiberBonusFullAt);
-            float share = Math.Clamp(state.GetReserve(NutrientCodes.Fiber) / full, 0f, 1f);
-            return 1f + pool.FiberSpeedBonus * share;
-        }
+        public float FiberSpeed(NutritionState state, DigestionPool pool) => Digestion.FiberSpeed(Digest, state, pool);
 
         /// <summary>
         /// One digestion step: each gut batch is absorbed at its own rate (faster with fibre), absorbed grams
@@ -257,27 +284,12 @@ namespace ComplexNutrition.Modules.Tracking
                     for (long h = lastHour + 1; h <= hour; h++) log[(int)(h % 24)] = 0f;
                 }
 
-                state.GetBatches(code, out var grams, out var rates);
+                // The pool absorbs as a whole, faster the more it holds, up to its fastest rate.
                 float speed = FiberSpeed(state, pool);
-                float absorbed = 0f, left = 0f, eta = 0f;
-                var keepG = new List<float>(grams.Length);
-                var keepR = new List<float>(grams.Length);
-                for (int i = 0; i < grams.Length; i++)
-                {
-                    float rate = rates[i] * speed;
-                    float take = Math.Min(grams[i], rate * hours);
-                    absorbed += take;
-                    float rest = grams[i] - take;
-                    if (rest > 0.001f)
-                    {
-                        keepG.Add(rest);
-                        keepR.Add(rates[i]);
-                        left += rest;
-                        if (rate > 0f) eta = Math.Max(eta, rest / rate);
-                    }
-                }
-                state.SetBatches(code, keepG.ToArray(), keepR.ToArray());
-                state.SetGutHours(code, eta);
+                float inGut = GutGrams(state, code);
+                float left = pool.Absorb(inGut, hours, speed);
+                float absorbed = inGut - left;
+                SetGut(state, code, left, pool, speed);
 
                 if (absorbed > 0f)
                 {
@@ -388,8 +400,25 @@ namespace ComplexNutrition.Modules.Tracking
             Core.PublishFoodAbsorbed(absorbed);
         }
 
+        /// <summary>Grams in a gut pool. Saves from before v0.2.4 held one batch per meal; their sum is the pool.</summary>
+        private static float GutGrams(NutritionState state, string code)
+        {
+            state.GetBatches(code, out var grams, out _);
+            float sum = 0f;
+            foreach (var g in grams) sum += g;
+            return sum;
+        }
+
+        /// <summary>Stores a gut pool's contents (as a single batch) and how long it will take to empty.</summary>
+        private static void SetGut(NutritionState state, string code, float grams, DigestionPool pool, float speed)
+        {
+            bool any = grams > DigestionPool.EmptyGrams;
+            state.SetBatches(code, any ? new[] { grams } : new float[0], any ? new[] { 0f } : new float[0]);
+            state.SetGutHours(code, any ? pool.HoursToEmpty(grams, speed) : 0f);
+        }
+
         /// <summary>
-        /// Puts eaten grams in a gut pool as a new batch, absorbed evenly over the pool's window.
+        /// Puts eaten grams in a gut pool, which absorbs them along with whatever it already holds.
         /// What does not fit in the pool passes through unused.
         /// </summary>
         private void AddToGut(IServerPlayer player, NutritionState state, NutrientDefinition n, DigestionPool pool, float grams, FoodAbsorbedInfo absorbed)
@@ -399,27 +428,10 @@ namespace ComplexNutrition.Modules.Tracking
             if (multipliers.Count > 0) absorbed.Multipliers[n.Code] = multipliers;
             if (grams <= 0f) return;
 
-            state.GetBatches(n.Code, out var batchGrams, out var rates);
-            float inGut = 0f;
-            foreach (var g in batchGrams) inGut += g;
+            float inGut = GutGrams(state, n.Code);
             float accepted = Math.Min(grams, Math.Max(0f, pool.MaxGrams - inGut));
             if (accepted <= 0.001f) return;
-
-            var g2 = new List<float>(batchGrams) { accepted };
-            var r2 = new List<float>(rates) { accepted / Math.Max(0.01f, pool.AbsorbHours) };
-            int max = Math.Max(2, Digest.MaxBatches);
-            while (g2.Count > max)
-            {
-                // Merge the two oldest: the same grams, absorbed at their combined rate.
-                g2[1] += g2[0];
-                r2[1] += r2[0];
-                g2.RemoveAt(0);
-                r2.RemoveAt(0);
-            }
-            state.SetBatches(n.Code, g2.ToArray(), r2.ToArray());
-            float eta = state.GetGutHours(n.Code);
-            float speed = FiberSpeed(state, pool);
-            state.SetGutHours(n.Code, Math.Max(eta, pool.AbsorbHours / speed));
+            SetGut(state, n.Code, inGut + accepted, pool, FiberSpeed(state, pool));
 
             float old = state.GetReserve(n.Code);
             float updated = n.ToPercent(inGut + accepted);
@@ -447,6 +459,26 @@ namespace ComplexNutrition.Modules.Tracking
                     return state == null
                         ? TextCommandResult.Error(Lang.Get("complexnutrition:cmd-no-state"))
                         : TextCommandResult.Success(ReserveReport(state, false, args.Caller.Entity));
+                });
+
+            sapi.ChatCommands.Create("nutritiondisplay")
+                .WithDescription("Choose how much detail nutrition tooltips show: advanced, simple, or world (follow the world setting)")
+                .RequiresPlayer()
+                .RequiresPrivilege(Privilege.chat)
+                .WithArgs(parsers.OptionalWordRange("mode", "advanced", "simple", "world"))
+                .HandleWith(args =>
+                {
+                    var state = NutritionState.Of(args.Caller.Entity);
+                    if (state == null) return TextCommandResult.Error(Lang.Get("complexnutrition:cmd-no-state"));
+                    string mode = args.Parsers[0].IsMissing ? null : (string)args[0];
+                    if (mode != null)
+                    {
+                        state.DisplayChoice = mode == "advanced" ? 1 : mode == "simple" ? 2 : 0;
+                        state.MarkDirty();
+                    }
+                    bool on = Digestion.AdvancedDisplay(sapi.World, state);
+                    string which = state.DisplayChoice == 0 ? Lang.Get("complexnutrition:display-world") : Lang.Get("complexnutrition:display-own");
+                    return TextCommandResult.Success(Lang.Get(on ? "complexnutrition:display-on" : "complexnutrition:display-off", which));
                 });
 
             sapi.ChatCommands.GetOrCreate("cnutrition")
@@ -524,10 +556,8 @@ namespace ComplexNutrition.Modules.Tracking
                 var pool = Digest.Pool(n.Code);
                 if (pool != null)
                 {
-                    // A gut pool holds batches: replace them with one fresh batch of that size.
                     float grams = Math.Min(pool.MaxGrams, value / 100f * n.DailyTarget);
-                    state.SetBatches(n.Code, grams > 0f ? new[] { grams } : new float[0], grams > 0f ? new[] { grams / Math.Max(0.01f, pool.AbsorbHours) } : new float[0]);
-                    state.SetGutHours(n.Code, grams > 0f ? pool.AbsorbHours / FiberSpeed(state, pool) : 0f);
+                    SetGut(state, n.Code, grams, pool, FiberSpeed(state, pool));
                     value = n.ToPercent(grams);
                 }
                 state.SetReserve(n.Code, value);
@@ -544,7 +574,7 @@ namespace ComplexNutrition.Modules.Tracking
             var sb = new StringBuilder(target.PlayerName + " ate (kcal by food category):");
             foreach (var d in days)
             {
-                sb.Append($"\nDay {d.Day}: {Math.Round(d.TotalKcal)} kcal");
+                sb.Append($"\nDay {d.Day}: {Math.Round(d.TotalKcal)}kcal");
                 foreach (var kv in d.KcalByCategory.OrderByDescending(kv => kv.Value)) sb.Append($", {kv.Key} {Math.Round(kv.Value)}");
             }
             return TextCommandResult.Success(sb.ToString());

@@ -83,12 +83,13 @@ namespace ComplexNutrition.Modules.FoodData
                 ? rawAmount
                 : code => code == NutrientCodes.Calories ? digest.KcalFromMacros(rawAmount) : rawAmount(code);
             string Macro(string code) => nutrients.Get(code)?.FormatAmount(amount(code), percent) ?? "0";
-            sb.AppendLine(Lang.Get(percent ? "complexnutrition:tooltip-macros-percent" : "complexnutrition:tooltip-macros",
+            // Amounts in their unit colours (grams green, kcal orange, mg and mcg yellow), as on the Stats panel.
+            sb.AppendLine(UnitColors.Paint(Lang.Get(percent ? "complexnutrition:tooltip-macros-percent" : "complexnutrition:tooltip-macros",
                 Macro(NutrientCodes.Calories),
                 Macro(NutrientCodes.Protein),
                 Macro(NutrientCodes.Carbohydrate),
                 Macro(NutrientCodes.Fat),
-                Macro(NutrientCodes.Fiber)));
+                Macro(NutrientCodes.Fiber))));
 
             // The micronutrients that cover the most of a day's need, shown in the same units as the reserves.
             var top = nutrients.All
@@ -101,7 +102,7 @@ namespace ComplexNutrition.Modules.FoodData
                 .ToList();
             if (top.Count > 0)
             {
-                sb.AppendLine(Lang.Get(percent ? "complexnutrition:tooltip-richin" : "complexnutrition:tooltip-richin-amount", string.Join(", ", top)));
+                sb.AppendLine(UnitColors.Paint(Lang.Get(percent ? "complexnutrition:tooltip-richin" : "complexnutrition:tooltip-richin-amount", string.Join(", ", top))));
             }
             if (digest != null && fullness > 0f)
             {

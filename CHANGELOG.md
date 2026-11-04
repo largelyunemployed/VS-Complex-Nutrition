@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.2.4
+
+- New world setting, Starting calories, on a new Complex Nutrition tab when you create a world. It sets how much is in a character's calorie tank the first time they join: Full (10 days), Easy (7 days), Normal (5 days, the default and the amount before this version), Hard (3 days), Brutal (1 day) or Rock Bottom (0.01 days, good luck!). Respawning is not affected. Server owners can change it later with `/worldconfig complexnutritionStart <1000|700|500|300|100|1>`.
+- The calorie tank holds 10 active days (28,000 kcal), up from 7 (19,600 kcal). The HUD bar still flashes below 10% of a full tank, which is now 1 day.
+- The stomach holds 600 fullness (up from 300, about 2 kg of food) and still empties in 6 hours, draining an even 100 an hour. A new character starts with an empty stomach, whatever the start condition.
+- The gut absorbs each macro faster the more of it there is, up to a limit, instead of absorbing each meal at its own steady rate. Carbs absorb at up to 90 g an hour (half speed at 30 g), protein at up to 15 g an hour (half speed at 10 g) and fats at up to 6 g an hour (half speed at 15 g). So 100 g of carbs takes about 3 hours and 300 g about 5 and a half, 40 g of protein about 5 and a half hours, and 70 g of fats about a day. Fiber still raises the top speeds.
+- New world setting, Advanced nutrition display (off by default). When it is on, hovering over the Carbs, Fats and Protein bars shows the grams being digested, the calories they will give after diminishing returns, how long they will take, and how fast they are being absorbed, in grams and kcal an hour. Each player can override it for themselves with `/nutritiondisplay advanced`, `/nutritiondisplay simple` or `/nutritiondisplay world`.
+- Units now sit right against their numbers everywhere in game ("94g", "80kcal", "7.0mg", "4mcg"), and "h" is written as "hours". Hover boxes wrap at 550px.
+- The hover boxes on the Stats panel and the HUD calorie bar are easier to read. Each one starts with the bar's name in its colour, then splits into sections with gold headings: Status (amounts and time left), About (what the nutrient does) and, where it applies, In Game. The "no effect yet" note is shown in grey. Amounts are coloured by unit everywhere the mod shows them (hovers, food tooltips and the handbook): grams green, kcal orange, mg, mcg and % DV (the B vitamins) yellow. The absorption rate segment ("at 6.4g (26kcal) an hour") is red, with its amounts still green and orange.
+- The handbook's Nutrient Reserves page mentions the setting. The Digestion page explains that absorption times are for one serving on its own and gives examples of when each diminishing-returns limit is reached. Every amount in the handbook and tooltips carries its unit, with "fullness" as the unit for the stomach.
+
 ## v0.2.3
 
 - Protein has one bar on the Stats panel. It shows protein taken in over the last 24 hours against the 64 g a day you need, and its hover text adds what is still being digested. The daily need falls from 128 g to 64 g (0.8 g per kg of bodyweight, enough to keep muscle), and 128 g is now the most the body uses in 24 hours.

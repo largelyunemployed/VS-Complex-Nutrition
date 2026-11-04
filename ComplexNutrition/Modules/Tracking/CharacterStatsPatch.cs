@@ -75,6 +75,8 @@ namespace ComplexNutrition.Modules.Tracking
                 listening = true;
                 capi.Event.LevelFinalize += ListenForChanges;
                 hoverListener = capi.Event.RegisterGameTickListener(OnHoverTick, 100);
+                hoverBox = new StatsHover(capi, UpdateHover);
+                capi.Event.RegisterRenderer(hoverBox, EnumRenderStage.Ortho, "complexnutrition-statshover");
             }
         }
 
@@ -115,6 +117,7 @@ namespace ComplexNutrition.Modules.Tracking
                 {
                     // Tracking stopped: hand the bar back to vanilla and make it redraw.
                     bar.onGetStatbarValue = null;
+                    bar.ShowValueOnHover = true;
                     hudLastField?.SetValue(__instance, -1f);
                     hudOurs = false;
                     hudBar = null;
@@ -126,7 +129,7 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 hudBar = bar;
                 hudKcal = -1f;
-                bar.onGetStatbarValue = () => MouseOver(bar) ? WrapHover(HudHover()) : "";
+                bar.ShowValueOnHover = false;   // StatsHover draws its hover instead
             }
             hudOurs = true;
             if (Math.Abs(kcal - hudKcal) < 1f && Math.Abs(fullness - hudFullness) < 0.5f && maxKcal == hudMax) return false;
@@ -144,8 +147,11 @@ namespace ComplexNutrition.Modules.Tracking
             if (!CalorieTank(out var kcal, out var maxKcal, out var fullness, out var maxFullness)) return "";
             var def = core.Nutrients.Get(NutrientCodes.Calories);
             float pct = def.ToPercent(kcal);
-            return Lang.Get("complexnutrition:hud-calories", def.Format(pct, core.Nutrients.ShowPercent), TrackingModule.DaysText(pct))
-                + "\n" + Lang.Get("complexnutrition:fullness-hover", (int)Math.Round(fullness), (int)Math.Round(maxFullness));
+            return new StatsHover.Builder(Lang.Get(def.LangKey), StatsHover.Hex(GroupColors["Energy"]))
+                .Section(Lang.Get("complexnutrition:hover-status"),
+                    StatsHover.Vtml("complexnutrition:hud-calories", Amount(def, pct), StatsHover.Text(TrackingModule.DaysText(pct))),
+                    StatsHover.Text(Lang.Get("complexnutrition:fullness-hover", (int)Math.Round(fullness), (int)Math.Round(maxFullness))))
+                .ToString();
         }
 
         /// <summary>Vanilla flashes the bar below 20% satiety; while tracking runs it flashes below 10% of a full calorie tank instead.</summary>
@@ -166,12 +172,20 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 capi.Event.LevelFinalize -= ListenForChanges;
                 capi.Event.UnregisterGameTickListener(hoverListener);
+                if (hoverBox != null) capi.Event.UnregisterRenderer(hoverBox, EnumRenderStage.Ortho);
             }
+            hoverBox?.Dispose();
+            hoverBox = null;
+            dialogs = null;
             statHovers.Clear();
             barValues.Clear();
             hoverBar = null;
-            hoverText = null;
-            if (hudBar != null) hudBar.onGetStatbarValue = null;
+            hoverFunc = null;
+            if (hudBar != null)
+            {
+                hudBar.onGetStatbarValue = null;
+                hudBar.ShowValueOnHover = true;
+            }
             hudBar = null;
             hudOurs = false;
             listening = false;
@@ -239,25 +253,32 @@ namespace ComplexNutrition.Modules.Tracking
         private const string Protein24Bar = "cn-protein24";
 
         /// <summary>
-        /// The hover's last line: a nutrient's own "-effect" text when it has one (empty = none, for nutrients whose
-        /// description already says what they do), otherwise the "planned" note.
+        /// A Stats bar's hover: the row's name as a title in the bar's colour, a Status section with the given lines,
+        /// the nutrient's role under About, then its "-effect" text under In Game when it has one (empty = none, for
+        /// nutrients whose description already says what they do), or the "planned" note in grey when it has none.
         /// </summary>
-        private static string EffectLine(string code)
+        private static string NutrientHover(string title, double[] color, string code, params string[] status)
         {
+            var b = new StatsHover.Builder(title, StatsHover.Hex(color))
+                .Section(Lang.Get("complexnutrition:hover-status"), status)
+                .Section(Lang.Get("complexnutrition:hover-about"), StatsHover.Text(Lang.Get("complexnutrition:nutrient-" + code + "-role")));
             string key = "complexnutrition:nutrient-" + code + "-effect";
-            string text = Lang.HasTranslation(key) ? Lang.Get(key) : Lang.Get("complexnutrition:effect-placeholder");
-            return string.IsNullOrEmpty(text) ? "" : "\n" + text;
+            if (!Lang.HasTranslation(key)) b.Note(Lang.Get("complexnutrition:effect-placeholder"));
+            else b.Section(Lang.Get("complexnutrition:hover-ingame"), StatsHover.Text(Lang.Get(key)));
+            return b.ToString();
         }
 
         // Vanilla redraws a bar's hover text into a texture every time the bar's value is set, whether or not the
         // mouse is over it. With fifteen bars and long descriptions that stalled the game each time the reserves
-        // changed (every few seconds, and several times per food eaten). So a bar only draws its hover text while the
-        // mouse is over it, only bars that visibly moved are redrawn, and OnHoverTick redraws the bar under the mouse
-        // when the mouse arrives or its text changes.
+        // changed (every few seconds, and several times per food eaten). So our bars turn vanilla's hover off and
+        // StatsHover draws one box for the bar under the mouse: its text is built when the mouse arrives and every
+        // 100 ms after, and the box is only redrawn when that text changes. Only bars that visibly moved are set.
         private static readonly Dictionary<GuiElementStatbar, System.Func<string>> statHovers = new();
         private static readonly Dictionary<GuiElementStatbar, float[]> barValues = new();
+        private static StatsHover hoverBox;
+        private static CharacterExtraDialogs dialogs;
         private static GuiElementStatbar hoverBar;
-        private static string hoverText;
+        private static System.Func<string> hoverFunc;
         private static long hoverListener;
 
         private static bool MouseOver(GuiElementStatbar bar) =>
@@ -271,79 +292,82 @@ namespace ComplexNutrition.Modules.Tracking
             bar.SetValues(value, 0f, max);
         }
 
-        private static void OnHoverTick(float dt)
+        /// <summary>Our bar under the mouse (the HUD bar, or a Stats bar while the panel is open), with its hover text.</summary>
+        private static GuiElementStatbar HoveredBar(out System.Func<string> text)
         {
-            if (capi == null) return;
-            GuiElementStatbar bar = null;
-            System.Func<string> text = null;
+            text = null;
+            if (capi == null || capi.Input.MouseGrabbed) return null;
             if (hudOurs && hudBar != null && MouseOver(hudBar))
             {
-                bar = hudBar;
                 text = HudHover;
+                return hudBar;
             }
-            else if (statHovers.Count > 0)
+            if (statHovers.Count == 0) return null;
+            dialogs ??= capi.ModLoader.GetModSystem<CharacterExtraDialogs>();
+            if (dialogs == null || DlgRef(dialogs)?.IsOpened() != true) return null;
+            foreach (var kv in statHovers)
             {
-                var dialogs = capi.ModLoader.GetModSystem<CharacterExtraDialogs>();
-                if (dialogs != null && DlgRef(dialogs)?.IsOpened() == true)
-                {
-                    foreach (var kv in statHovers)
-                    {
-                        if (!MouseOver(kv.Key)) continue;
-                        bar = kv.Key;
-                        text = kv.Value;
-                        break;
-                    }
-                }
+                if (!MouseOver(kv.Key)) continue;
+                text = kv.Value;
+                return kv.Key;
             }
+            return null;
+        }
+
+        /// <summary>Every frame: shows the box for the bar the mouse just moved onto, or hides it.</summary>
+        private static void UpdateHover()
+        {
+            var bar = HoveredBar(out var text);
             if (bar == null)
             {
                 hoverBar = null;
-                hoverText = null;
+                hoverFunc = null;
+                hoverBox?.Hide();
                 return;
             }
-            string now = text();
-            if (bar == hoverBar && now == hoverText) return;
+            if (bar == hoverBar) return;
             hoverBar = bar;
-            hoverText = now;
-            // Setting the same values again makes vanilla redraw the hover text, now that the mouse is over the bar.
-            if (bar == hudBar) { if (hudKcal >= 0f && hudMax > 0f) bar.SetValues(hudKcal, 0f, hudMax); }
-            else if (barValues.TryGetValue(bar, out var v)) bar.SetValues(v[0], 0f, v[1]);
+            hoverFunc = text;
+            hoverBox?.Show(text());
         }
 
-        /// <summary>Widest a hover box may be, in GUI units (scaled with the GUI scale setting).</summary>
-        private const double HoverWidth = 450.0;
-        private static CairoFont hoverFont;
+        /// <summary>Every 100 ms: refreshes the shown box's text (redrawn only if it changed).</summary>
+        private static void OnHoverTick(float dt)
+        {
+            if (hoverBar != null && hoverFunc != null) hoverBox?.Show(hoverFunc());
+        }
+
+        /// <summary>An amount as hover VTML, in its unit's colour.</summary>
+        private static string Amount(NutrientDefinition def, float percentOfDaily) =>
+            StatsHover.Text(def.Format(percentOfDaily, core.Nutrients.ShowPercent));
 
         /// <summary>
-        /// Vanilla draws a bar's hover text one line per "\n" with no wrapping, so long descriptions run off
-        /// screen. This breaks each line between words so none is wider than <see cref="HoverWidth"/>,
-        /// measured in the font vanilla draws the hover in (GuiElementStatbar.valueFont).
+        /// A gut pool's first hover line (VTML). With the advanced nutrition display: grams, the calories they will give
+        /// (after diminishing returns), time to absorb and the current absorption rate; otherwise grams and time.
         /// </summary>
-        private static string WrapHover(string text)
+        private static string GutLine(NutritionState st, NutrientDefinition def, float reserve)
         {
-            if (string.IsNullOrEmpty(text)) return text;
-            hoverFont ??= CairoFont.WhiteSmallText();
-            double max = GuiElement.scaled(HoverWidth);
-            var sb = new System.Text.StringBuilder(text.Length + 16);
-            var lines = text.Split('\n');
-            for (int li = 0; li < lines.Length; li++)
+            string code = def.Code;
+            string hours = TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, reserve);
+            var s = Digestion.Settings;
+            var pool = s?.Pool(code);
+            if (st == null || pool == null || !Digestion.AdvancedDisplay(capi?.World, st) || reserve <= 0.01f)
             {
-                if (li > 0) sb.Append('\n');
-                string line = "";
-                foreach (var word in lines[li].Split(' '))
-                {
-                    string next = line.Length == 0 ? word : line + " " + word;
-                    if (line.Length > 0 && hoverFont.GetTextExtents(next).Width > max)
-                    {
-                        sb.Append(line).Append('\n');
-                        line = word;
-                    }
-                    else line = next;
-                }
-                sb.Append(line);
+                return StatsHover.Vtml("complexnutrition:gut-hover", Amount(def, reserve), StatsHover.Text(hours));
             }
-            return sb.ToString();
+            float grams = reserve / 100f * def.DailyTarget;
+            float window = Digestion.WindowGrams(st, code, pool);
+            float kcal = pool.Effective(window, grams) * pool.KcalPerGram;
+            float rate = pool.Rate(grams, Digestion.FiberSpeed(s, st, pool));
+            float kcalRate = pool.Effective(window, rate) * pool.KcalPerGram;
+            return StatsHover.Vtml("complexnutrition:gut-hover-advanced",
+                StatsHover.Text(Num(grams) + "g"),
+                StatsHover.Text(Num(kcal) + "kcal"),
+                StatsHover.Text(hours),
+                StatsHover.Paint(Lang.Get("complexnutrition:gut-rate", Num(rate), Num(kcalRate)), UnitColors.Rate));
         }
+
+        private static string Num(float v) => v >= 10f ? Math.Round(v).ToString("#,0", System.Globalization.CultureInfo.InvariantCulture) : v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
 
         private static bool IsGutPool(string code) => Digestion.Settings?.Pool(code) != null;
 
@@ -359,7 +383,7 @@ namespace ComplexNutrition.Modules.Tracking
             statHovers.Clear();
             barValues.Clear();
             hoverBar = null;
-            hoverText = null;
+            hoverFunc = null;
 
             ElementBounds bounds = Composers["playercharacter"].Bounds;
             ElementBounds envBounds = Composers["environment"].Bounds;
@@ -405,8 +429,8 @@ namespace ComplexNutrition.Modules.Tracking
                 compo.AddStaticText(label, CairoFont.WhiteDetailText().WithFontSize(13), labelBounds)
                      .AddStatbar(barBounds, color, barCode);
                 var statbar = compo.GetStatbar(barCode);
+                statbar.ShowValueOnHover = false;   // StatsHover draws its hover instead
                 statHovers[statbar] = hover;
-                statbar.onGetStatbarValue = () => MouseOver(statbar) ? WrapHover(hover()) : "";
             }
 
             for (int i = 0; i < nutrients.Count; i++)
@@ -417,36 +441,33 @@ namespace ComplexNutrition.Modules.Tracking
                 var def = n;
                 if (code == NutrientCodes.Protein && IsGutPool(code))
                 {
-                    Row(Lang.Get(n.LangKey), Protein24Bar, color, () =>
+                    string title = Lang.Get(n.LangKey);
+                    Row(title, Protein24Bar, color, () =>
                     {
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
                         float r = st?.GetReserve(code) ?? 0f;
-                        return Lang.Get("complexnutrition:gut-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, r))
-                            + "\n" + Lang.Get("complexnutrition:protein24-hover", Math.Round(st?.Protein24 ?? 0f),
-                                Math.Round(Digestion.Settings?.ProteinNeedGrams ?? 64f), Math.Round(Digestion.Settings?.ProteinMaxGrams ?? 128f))
-                            + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
-                            + EffectLine(code);
+                        return NutrientHover(title, color, code, GutLine(st, def, r),
+                            StatsHover.Text(Lang.Get("complexnutrition:protein24-hover", Math.Round(st?.Protein24 ?? 0f),
+                                Math.Round(Digestion.Settings?.ProteinNeedGrams ?? 64f), Math.Round(Digestion.Settings?.ProteinMaxGrams ?? 128f))));
                     });
                 }
                 else if (IsGutPool(code))
                 {
-                    Row(Lang.Get("complexnutrition:stats-gut-" + code), "cn-" + code, color, () =>
+                    string title = Lang.Get("complexnutrition:stats-gut-" + code);
+                    Row(title, "cn-" + code, color, () =>
                     {
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
-                        float r = st?.GetReserve(code) ?? 0f;
-                        return Lang.Get("complexnutrition:gut-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, r))
-                            + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
-                            + EffectLine(code);
+                        return NutrientHover(title, color, code, GutLine(st, def, st?.GetReserve(code) ?? 0f));
                     });
                 }
                 else
                 {
-                    Row(Lang.Get(n.LangKey), "cn-" + code, color, () =>
+                    string title = Lang.Get(n.LangKey);
+                    Row(title, "cn-" + code, color, () =>
                     {
                         float r = NutritionState.Of(capi?.World?.Player?.Entity)?.GetReserve(code) ?? 0f;
-                        return Lang.Get("complexnutrition:reserve-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.DaysText(r))
-                            + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
-                            + EffectLine(code);
+                        return NutrientHover(title, color, code,
+                            StatsHover.Vtml("complexnutrition:reserve-hover", Amount(def, r), StatsHover.Text(TrackingModule.DaysText(r))));
                     });
                 }
             }

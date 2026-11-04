@@ -1,15 +1,14 @@
 {
-	"_comment": "Complex Nutrition digestion rules (since v0.2.2), used while tracking runs. Fullness: the stomach holds fullnessMax (vanilla satiety's maximum while tracking runs; vanilla's own is vanillaFullnessMax). Each food fills fullnessPerGram per gram of its weight; meals, pies and anything whose code contains one of cookedWords fill cookedFullness times that; liquids fill liquidFullness times that. Fullness drains fullnessDrainPerHour per in-game hour. Satiety from other mods' code for food without data fills unknownFullnessPerSatiety per point. Gut pools: eating adds grams of net carbohydrate (carbohydrate minus fibre), protein and fats; each bite is absorbed evenly over absorbHours, a pool holds at most maxGrams and the rest passes through unused. Absorbed grams give kcalPerGram calories; above diminishingAboveGrams absorbed within windowHours, an extra x grams count as diminishingScaleGrams * ln(1 + x / diminishingScaleGrams); with zeroAtGrams set, the yield per gram instead falls in a straight line to nothing at zeroAtGrams, and grams past it give nothing. Protein absorbed over 24 hours is measured against proteinNeedGrams (the least the body needs) and counts up to proteinMaxGrams. With a fibre reserve at fiberBonusFullAt % of a day's need or more, a pool digests fiberSpeedBonus faster (less in step with a lower reserve). An empty calorie tank deals starvationDamage every starvationSeconds. After death the tank holds at least reviveCalories (% of a day). The HUD calorie bar flashes below flashBelow of a full tank.",
-	"fullnessMax": 300,
+	"_comment": "Complex Nutrition digestion rules (since v0.2.2), used while tracking runs. Fullness: the stomach holds fullnessMax (a new character starts empty) (vanilla satiety's maximum while tracking runs; vanilla's own is vanillaFullnessMax). Each food fills fullnessPerGram per gram of its weight; meals, pies and anything whose code contains one of cookedWords fill cookedFullness times that; liquids fill liquidFullness times that. Fullness drains fullnessDrainPerHour per in-game hour. Satiety from other mods' code for food without data fills unknownFullnessPerSatiety per point. Gut pools: eating adds grams of net carbohydrate (carbohydrate minus fibre), protein and fats; a pool holds at most maxGrams and the rest passes through unused. Since v0.2.4 a pool absorbs maxRateGrams * g / (halfRateGrams + g) grams per in-game hour while it holds g grams: little when nearly empty, levelling off at maxRateGrams when full. Absorbed grams give kcalPerGram calories; above diminishingAboveGrams absorbed within windowHours, an extra x grams count as diminishingScaleGrams * ln(1 + x / diminishingScaleGrams); with zeroAtGrams set, the yield per gram instead falls in a straight line to nothing at zeroAtGrams, and grams past it give nothing. Protein absorbed over 24 hours is measured against proteinNeedGrams (the least the body needs) and counts up to proteinMaxGrams. With a fibre reserve at fiberBonusFullAt % of a day's need or more, a pool's rate is fiberSpeedBonus faster (less in step with a lower reserve). An empty calorie tank deals starvationDamage every starvationSeconds. After death the tank holds at least reviveCalories (% of a day). The HUD calorie bar flashes below flashBelow of a full tank.",
+	"fullnessMax": 600,
 	"vanillaFullnessMax": 1500,
 	"fullnessPerGram": 0.3,
-	"fullnessDrainPerHour": 50,
+	"fullnessDrainPerHour": 100,
 	"cookedFullness": 0.8,
 	"liquidFullness": 0.5,
 	"cookedWords": [ "cooked", "smoked", "cured", "bread", "baked", "roasted", "charred" ],
 	"unknownFullnessPerSatiety": 0.2,
 	"fiberBonusFullAt": 70,
-	"maxBatches": 24,
 	"proteinNeedGrams": 64,
 	"proteinMaxGrams": 128,
 	"starvationDamage": 0.125,
@@ -17,8 +16,8 @@
 	"reviveCalories": 100,
 	"flashBelow": 0.1,
 	"pools": {
-		"carbohydrate": { "maxGrams": 500, "absorbHours": 3,  "kcalPerGram": 4, "diminishingAboveGrams": 300, "windowHours": 12, "diminishingScaleGrams": 150, "fiberSpeedBonus": 0.1 },
-		"protein":      { "maxGrams": 200, "absorbHours": 6,  "kcalPerGram": 4, "diminishingAboveGrams": 65,  "zeroAtGrams": 128, "windowHours": 24, "fiberSpeedBonus": 0.2 },
-		"fat":          { "maxGrams": 240, "absorbHours": 24, "kcalPerGram": 9, "diminishingAboveGrams": 70,  "windowHours": 24, "diminishingScaleGrams": 35,  "fiberSpeedBonus": 0.3 }
+		"carbohydrate": { "maxGrams": 500, "maxRateGrams": 90, "halfRateGrams": 30, "kcalPerGram": 4, "diminishingAboveGrams": 300, "windowHours": 12, "diminishingScaleGrams": 150, "fiberSpeedBonus": 0.1 },
+		"protein":      { "maxGrams": 200, "maxRateGrams": 15, "halfRateGrams": 10, "kcalPerGram": 4, "diminishingAboveGrams": 65,  "zeroAtGrams": 128, "windowHours": 24, "fiberSpeedBonus": 0.2 },
+		"fat":          { "maxGrams": 240, "maxRateGrams": 6,  "halfRateGrams": 15, "kcalPerGram": 9, "diminishingAboveGrams": 70,  "windowHours": 24, "diminishingScaleGrams": 35,  "fiberSpeedBonus": 0.3 }
 	}
 }

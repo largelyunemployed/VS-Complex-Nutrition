@@ -47,6 +47,13 @@ namespace ComplexNutrition.Core
             return state;
         }
 
+        /// <summary>The player's own nutrition display choice: 0 = follow the world setting, 1 = advanced, 2 = simple.</summary>
+        public int DisplayChoice
+        {
+            get => tree.GetInt("display");
+            set => tree.SetInt("display", value);
+        }
+
         /// <summary>True while the server runs tracking for this player. Clients show our bars only then.</summary>
         public bool TrackingOn
         {
