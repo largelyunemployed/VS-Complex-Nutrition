@@ -296,18 +296,7 @@ namespace ComplexNutrition.Modules.Tracking
                 bar.SetLineInterval(100);   // one block per day of storage, or per day's need for a gut pool
                 SetBar(bar, reserve, max, now);
             }
-            var protein = composer.GetStatbar(Protein24Bar);
-            if (protein != null)
-            {
-                float need = Digestion.Settings?.ProteinNeedGrams ?? 64f;
-                float most = Digestion.Settings?.ProteinMaxGrams ?? 128f;
-                float pct = need > 0f ? state.Protein24 / need * 100f : 0f;
-                protein.SetLineInterval(100);   // a line at the day's need, the end of the bar at the most the body uses
-                SetBar(protein, pct, Math.Max(most / Math.Max(1f, need) * 100f, pct), now);
-            }
         }
-
-        private const string Protein24Bar = "cn-protein24";
 
         /// <summary>
         /// A Stats bar's hover: the row's name as a title in the bar's colour, a Status section with the given lines,
@@ -536,8 +525,9 @@ namespace ComplexNutrition.Modules.Tracking
                 var def = n;
                 if (code == NutrientCodes.Protein && IsGutPool(code))
                 {
+                    // The bar shows the protein in the gut, like carbs and fats; the 24-hour total is in the hover.
                     string title = Lang.Get(n.LangKey);
-                    Row(title, Protein24Bar, color, () =>
+                    Row(title, "cn-" + code, color, () =>
                     {
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
                         float r = st?.GetReserve(code) ?? 0f;

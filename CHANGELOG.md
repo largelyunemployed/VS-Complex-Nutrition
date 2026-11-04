@@ -19,6 +19,7 @@
 - The Food data module is now called Complex Nutrition Tooltips in the settings menu.
 - Fixed a crash when switching nutrient tracking off with the character screen open: the Stats panel now switches back to vanilla's.
 - Fixed a stutter every few seconds while digesting with the character screen open: the Stats bars are redrawn a couple at a time, and only when they move by a pixel.
+- The Protein bar on the Stats panel shows the protein in your gut, like Carbs and Fats. The amount taken in over the last 24 hours is in its hover and on the window's Overview.
 - New handbook page, The Nutrition Window. The other pages mention the window, the settings, the bigger pots and the new protein curve.
 
 ## v0.2.4
