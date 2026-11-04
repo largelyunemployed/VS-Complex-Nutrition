@@ -1,8 +1,12 @@
 {
-	"_comment": "Complex Nutrition tracking rules. Per-nutrient caps, start reserves, drain and sitting limits are in nutrients.json. sittingHours: food eaten within this many in-game hours of the previous food counts as one sitting. diminishingScale: above a nutrient's sitting limit, an extra x (in % of a day) adds scale * ln(1 + x / scale). ledgerDays: in-game days of diet history kept. updateSeconds: real seconds between reserve updates. minDrainHours: in-game hours between drains.",
+	"_comment": "Complex Nutrition tracking rules. Per-nutrient caps, start reserves, drain and sitting limits are in nutrients.json. sittingHours: food eaten within this many in-game hours of the previous food counts as one sitting. diminishingScale: above a nutrient's sitting limit, an extra x (in % of a day) adds scale * ln(1 + x / scale). ledgerDays: in-game days of diet history kept. updateSeconds: real seconds between reserve updates. minDrainHours: in-game hours between drains. lowCaloriesDays, lowDays and lowGroups: when the nutrition window lists a nutrient as running low (the calorie tank below lowCaloriesDays days; nutrients of the lowGroups groups below lowDays days). heldScanSeconds: real seconds between checks of what each player holds, for the foods the window suggests.",
 	"sittingHours": 1.0,
 	"diminishingScale": 100,
 	"ledgerDays": 28,
 	"updateSeconds": 3,
-	"minDrainHours": 0.1
+	"minDrainHours": 0.1,
+	"lowCaloriesDays": 1,
+	"lowDays": 2,
+	"lowGroups": [ "FatSolubleVitamin", "Mineral" ],
+	"heldScanSeconds": 5
 }

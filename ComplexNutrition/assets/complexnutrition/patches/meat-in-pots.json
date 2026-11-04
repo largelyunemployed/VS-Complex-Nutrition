@@ -1,0 +1,290 @@
+[
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/0/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "poultry-cooked",
+			"shapeElement": "bowl/meat stew/*",
+			"textureMapping": [
+				"meat",
+				"group5"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/0/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-raw",
+			"shapeElement": "bowl/meat stew/*",
+			"textureMapping": [
+				"meat",
+				"group5"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/0/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-cooked",
+			"shapeElement": "bowl/meat stew/*",
+			"textureMapping": [
+				"meat",
+				"group5"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/0/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-cured",
+			"shapeElement": "bowl/meat stew/*",
+			"textureMapping": [
+				"meat",
+				"group5"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/3/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "poultry-cooked",
+			"shapeElement": "bowl/poultry/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/3/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-raw",
+			"shapeElement": "bowl/poultry/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/3/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-cooked",
+			"shapeElement": "bowl/poultry/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/3/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-cured",
+			"shapeElement": "bowl/poultry/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/4/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "poultry-cooked",
+			"shapeElement": "bowl/poultry 2/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/4/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-raw",
+			"shapeElement": "bowl/poultry 2/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/4/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-cooked",
+			"shapeElement": "bowl/poultry 2/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/meatystew.json",
+		"path": "/ingredients/4/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-cured",
+			"shapeElement": "bowl/poultry 2/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/soup.json",
+		"path": "/ingredients/4/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "poultry-cooked",
+			"shapeElement": "bowl/meat/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/soup.json",
+		"path": "/ingredients/4/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-raw",
+			"shapeElement": "bowl/meat/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/soup.json",
+		"path": "/ingredients/4/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-cooked",
+			"shapeElement": "bowl/meat/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	},
+	{
+		"op": "add",
+		"file": "game:recipes/cooking/soup.json",
+		"path": "/ingredients/4/validStacks/-",
+		"value": {
+			"type": "item",
+			"code": "bushmeat-cured",
+			"shapeElement": "bowl/meat/*",
+			"textureMapping": [
+				"meat",
+				"group3"
+			]
+		},
+		"condition": {
+			"when": "complexnutritionMeatInPots",
+			"isValue": "true"
+		}
+	}
+]

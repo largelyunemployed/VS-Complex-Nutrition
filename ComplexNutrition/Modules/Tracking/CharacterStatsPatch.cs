@@ -33,7 +33,7 @@ namespace ComplexNutrition.Modules.Tracking
             AccessTools.FieldRefAccess<CharacterExtraDialogs, GuiDialogCharacterBase>("dlg");
 
         /// <summary>Bar colours per nutrient group, in the game's muted palette.</summary>
-        private static readonly Dictionary<string, double[]> GroupColors = new()
+        internal static readonly Dictionary<string, double[]> GroupColors = new()
         {
             ["Energy"] = new[] { 0.80, 0.55, 0.22, 1.0 },
             ["Macro"] = GuiStyle.FoodBarColor,
@@ -74,7 +74,10 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 listening = true;
                 capi.Event.LevelFinalize += ListenForChanges;
+                // Switched on while the game runs (from the settings menu): the level is already loaded.
+                if (capi.World?.Player?.Entity != null) ListenForChanges();
                 hoverListener = capi.Event.RegisterGameTickListener(OnHoverTick, 100);
+                barListener = capi.Event.RegisterGameTickListener(ApplyPendingBars, 40);
                 hoverBox = new StatsHover(capi, UpdateHover);
                 capi.Event.RegisterRenderer(hoverBox, EnumRenderStage.Ortho, "complexnutrition-statshover");
             }
@@ -116,7 +119,6 @@ namespace ComplexNutrition.Modules.Tracking
                 if (hudOurs && bar != null)
                 {
                     // Tracking stopped: hand the bar back to vanilla and make it redraw.
-                    bar.onGetStatbarValue = null;
                     bar.ShowValueOnHover = true;
                     hudLastField?.SetValue(__instance, -1f);
                     hudOurs = false;
@@ -168,10 +170,20 @@ namespace ComplexNutrition.Modules.Tracking
         {
             harmony?.UnpatchAll(HarmonyId);
             harmony = null;
+            // With our patches gone, put vanilla's Stats panel back so vanilla's own updates find its bars.
+            try
+            {
+                if (capi != null) RecomposeVanilla(capi.ModLoader.GetModSystem<CharacterExtraDialogs>());
+            }
+            catch (Exception e)
+            {
+                capi?.Logger.Warning("[complexnutrition] Could not restore the vanilla Stats panel: {0}", e.Message);
+            }
             if (capi != null && listening)
             {
                 capi.Event.LevelFinalize -= ListenForChanges;
                 capi.Event.UnregisterGameTickListener(hoverListener);
+                capi.Event.UnregisterGameTickListener(barListener);
                 if (hoverBox != null) capi.Event.UnregisterRenderer(hoverBox, EnumRenderStage.Ortho);
             }
             hoverBox?.Dispose();
@@ -179,11 +191,11 @@ namespace ComplexNutrition.Modules.Tracking
             dialogs = null;
             statHovers.Clear();
             barValues.Clear();
+            pendingBars.Clear();
             hoverBar = null;
             hoverFunc = null;
             if (hudBar != null)
             {
-                hudBar.onGetStatbarValue = null;
                 hudBar.ShowValueOnHover = true;
             }
             hudBar = null;
@@ -193,9 +205,14 @@ namespace ComplexNutrition.Modules.Tracking
             core = null;
         }
 
+        private static object listenedEntity;
+
         private static void ListenForChanges()
         {
-            capi?.World?.Player?.Entity?.WatchedAttributes.RegisterModifiedListener(NutritionState.TreeKey, () =>
+            var entity = capi?.World?.Player?.Entity;
+            if (entity == null || ReferenceEquals(entity, listenedEntity)) return;   // one listener per player entity, however often tracking is switched on
+            listenedEntity = entity;
+            entity.WatchedAttributes.RegisterModifiedListener(NutritionState.TreeKey, () =>
             {
                 if (capi == null) return;
                 var dialogs = capi.ModLoader.GetModSystem<CharacterExtraDialogs>();
@@ -210,12 +227,52 @@ namespace ComplexNutrition.Modules.Tracking
             return state != null && state.TrackingOn && core != null && core.Nutrients.All.Count > 0 ? state : null;
         }
 
+        /// <summary>True while the Stats panel holds our bars rather than vanilla's five food bars.</summary>
+        private static bool IsOurPanel(GuiComposer composer) =>
+            composer != null && core != null && core.Nutrients.All.Any(n => composer.GetStatbar("cn-" + n.Code) != null);
+
+        /// <summary>
+        /// Tracking stopped while our panel is in place (the server's update can arrive before the module switch):
+        /// vanilla's UpdateStatBars would look for its food bars there and crash, so recompose the panel the vanilla
+        /// way first. Returns false when there is no panel to fix.
+        /// </summary>
+        private static bool RecomposeVanilla(CharacterExtraDialogs dialogs)
+        {
+            var dlg = dialogs == null ? null : DlgRef(dialogs);
+            var composer = dlg?.Composers["playerstats"];
+            if (!IsOurPanel(composer)) return false;
+            statHovers.Clear();
+            barValues.Clear();
+            pendingBars.Clear();
+            hoverBar = null;
+            hoverFunc = null;
+            if (dlg.Composers["playercharacter"] == null || dlg.Composers["environment"] == null)
+            {
+                // Not composed yet: drop ours, vanilla composes its own when the dialog next opens.
+                dlg.Composers.Remove("playerstats");
+                return true;
+            }
+            dialogs.ComposeStatsGui();   // our prefix lets vanilla through now tracking is off
+            return true;
+        }
+
         public static bool UpdateStatBarsPrefix(CharacterExtraDialogs __instance)
         {
-            if (TrackedState() == null) return true;
+            if (TrackedState() == null)
+            {
+                // ComposeStatsGui ends by calling UpdateStatBars itself, on vanilla's bars.
+                if (RecomposeVanilla(__instance)) return false;
+                return true;
+            }
             var dlg = DlgRef(__instance);
             var composer = dlg?.Composers["playerstats"];
             if (composer == null || !dlg.IsOpened()) return false;
+            if (!IsOurPanel(composer))
+            {
+                // Tracking started while vanilla's panel was open: swap ours in.
+                __instance.ComposeStatsGui();
+                return false;
+            }
 
             var hunger = capi.World.Player.Entity.WatchedAttributes.GetTreeAttribute("hunger");
             if (hunger != null)
@@ -226,7 +283,7 @@ namespace ComplexNutrition.Modules.Tracking
             return false;
         }
 
-        private static void UpdateBars(GuiComposer composer)
+        private static void UpdateBars(GuiComposer composer, bool now = false)
         {
             var state = TrackedState();
             if (composer == null || state == null) return;
@@ -237,20 +294,9 @@ namespace ComplexNutrition.Modules.Tracking
                 float reserve = state.GetReserve(n.Code);
                 float max = Math.Max(n.Cap, reserve);
                 bar.SetLineInterval(100);   // one block per day of storage, or per day's need for a gut pool
-                SetBar(bar, reserve, max);
-            }
-            var protein = composer.GetStatbar(Protein24Bar);
-            if (protein != null)
-            {
-                float need = Digestion.Settings?.ProteinNeedGrams ?? 64f;
-                float most = Digestion.Settings?.ProteinMaxGrams ?? 128f;
-                float pct = need > 0f ? state.Protein24 / need * 100f : 0f;
-                protein.SetLineInterval(100);   // a line at the day's need, the end of the bar at the most the body uses
-                SetBar(protein, pct, Math.Max(most / Math.Max(1f, need) * 100f, pct));
+                SetBar(bar, reserve, max, now);
             }
         }
-
-        private const string Protein24Bar = "cn-protein24";
 
         /// <summary>
         /// A Stats bar's hover: the row's name as a title in the bar's colour, a Status section with the given lines,
@@ -284,12 +330,46 @@ namespace ComplexNutrition.Modules.Tracking
         private static bool MouseOver(GuiElementStatbar bar) =>
             capi != null && bar?.Bounds != null && bar.Bounds.PointInside(capi.Input.MouseX, capi.Input.MouseY);
 
-        /// <summary>Sets a Stats bar's value unless it would move by less than a pixel or so.</summary>
-        private static void SetBar(GuiElementStatbar bar, float value, float max)
+        // Each SetValues redraws and blurs the bar on a worker thread and uploads two textures on the main thread.
+        // Digestion moves several bars every update (and the hunger and nutrition trees both report each update),
+        // so setting them all at once gave a hitch every few seconds. Changes are queued instead, the newest value
+        // per bar wins, and a few are applied every 40 ms.
+        private static readonly Dictionary<GuiElementStatbar, float[]> pendingBars = new();
+        private static long barListener;
+        private const int BarsPerStep = 2;
+
+        /// <summary>Queues a Stats bar's new value unless it would move by less than a pixel.</summary>
+        private static void SetBar(GuiElementStatbar bar, float value, float max, bool now)
         {
-            if (barValues.TryGetValue(bar, out var last) && last[1] == max && Math.Abs(last[0] - value) <= max * 0.002f) return;
-            barValues[bar] = new[] { value, max };
-            bar.SetValues(value, 0f, max);
+            if (now)
+            {
+                // A freshly composed panel: draw every bar straight away.
+                pendingBars.Remove(bar);
+                barValues[bar] = new[] { value, max };
+                bar.SetValues(value, 0f, max);
+                return;
+            }
+            double px = Math.Max(20.0, bar.Bounds?.InnerWidth ?? 0.0);   // the bar's width on screen
+            if (barValues.TryGetValue(bar, out var last) && last[1] == max && max > 0f && Math.Abs(last[0] - value) / max * px < 1.0)
+            {
+                pendingBars.Remove(bar);
+                return;
+            }
+            pendingBars[bar] = new[] { value, max };
+        }
+
+        private static void ApplyPendingBars(float dt)
+        {
+            if (pendingBars.Count == 0) return;
+            int done = 0;
+            foreach (var bar in pendingBars.Keys.ToArray())
+            {
+                if (done++ >= BarsPerStep) break;
+                var v = pendingBars[bar];
+                pendingBars.Remove(bar);
+                barValues[bar] = v;
+                bar.SetValues(v[0], 0f, v[1]);
+            }
         }
 
         /// <summary>Our bar under the mouse (the HUD bar, or a Stats bar while the panel is open), with its hover text.</summary>
@@ -382,6 +462,7 @@ namespace ComplexNutrition.Modules.Tracking
             var nutrients = core.Nutrients.All;
             statHovers.Clear();
             barValues.Clear();
+            pendingBars.Clear();
             hoverBar = null;
             hoverFunc = null;
 
@@ -418,6 +499,9 @@ namespace ComplexNutrition.Modules.Tracking
 
             ElementBounds labelBounds = ElementBounds.Fixed(0.0, 25.0, 200.0, 20.0);
             compo.AddStaticText(Lang.Get("complexnutrition:stats-heading"), CairoFont.WhiteSmallText().WithWeight(FontWeight.Bold), labelBounds);
+            // Opens the nutrition window (also Left Alt + N).
+            compo.AddSmallButton(Lang.Get("complexnutrition:stats-open-window"), () => { core?.ToggleWindow(); return true; },
+                ElementBounds.Fixed(172.0, 24.0, 0.0, 0.0).WithFixedPadding(5.0, 1.0), EnumButtonStyle.Small, "cn-openwindow");
             labelBounds = labelBounds.BelowCopy().WithFixedWidth(118.0).WithFixedHeight(RowHeight);
             // Calories, carbs and fats (in the gut), protein (in the gut and over the last 24 hours), then the stored nutrients.
             bool firstRow = true;
@@ -441,8 +525,9 @@ namespace ComplexNutrition.Modules.Tracking
                 var def = n;
                 if (code == NutrientCodes.Protein && IsGutPool(code))
                 {
+                    // The bar shows the protein in the gut, like carbs and fats; the 24-hour total is in the hover.
                     string title = Lang.Get(n.LangKey);
-                    Row(title, Protein24Bar, color, () =>
+                    Row(title, "cn-" + code, color, () =>
                     {
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
                         float r = st?.GetReserve(code) ?? 0f;
@@ -514,7 +599,7 @@ namespace ComplexNutrition.Modules.Tracking
                 .EndChildElements()
                 .Compose();
 
-            UpdateBars(compo);
+            UpdateBars(compo, true);
             return false;
         }
 

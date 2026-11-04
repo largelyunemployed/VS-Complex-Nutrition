@@ -17,7 +17,7 @@ namespace ComplexNutrition.Core
         public bool ShowTooltip = true;
 
         /// <summary>
-        /// How amounts are shown in tooltips, the Stats panel and /nutrition: "amount" (grams, kcal, mg or mcg)
+        /// How amounts are shown in tooltips, the Stats panel and /cnutrition stats: "amount" (grams, kcal, mg or mcg)
         /// or "percent" (% of a day's need). Display only; each player's own file decides what they see.
         /// </summary>
         public string DisplayUnits = "amount";

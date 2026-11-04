@@ -1,7 +1,9 @@
+using System;
 using HarmonyLib;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.Server;
+using Vintagestory.API.Util;
 using Vintagestory.GameContent;
 
 namespace ComplexNutrition.Modules.Tracking
@@ -9,7 +11,7 @@ namespace ComplexNutrition.Modules.Tracking
     /// <summary>
     /// Server-side patches on vanilla's hunger behaviour, applied only while tracking runs:
     /// calories burn as satiety burned, fullness no longer burns with activity, starvation moves to the
-    /// calorie tank, and the five category bars give no extra HP.
+    /// calorie tank, the five category bars give no extra HP, and healing runs on the calorie tank.
     /// </summary>
     public static class HungerPatches
     {
@@ -28,6 +30,46 @@ namespace ComplexNutrition.Modules.Tracking
                 prefix: new HarmonyMethod(typeof(HungerPatches), nameof(HealthBoostPrefix)));
             harmony.Patch(AccessTools.Method(typeof(EntityBehaviorHunger), "SlowTick"),
                 prefix: new HarmonyMethod(typeof(HungerPatches), nameof(SlowTickPrefix)));
+            var regen = AccessTools.Method(typeof(EntityBehaviorHealth), "ApplyRegenAndHunger");
+            if (regen != null && SecondsRef != null)
+            {
+                harmony.Patch(regen, prefix: new HarmonyMethod(typeof(HungerPatches), nameof(RegenPrefix)));
+            }
+        }
+
+        private static readonly AccessTools.FieldRef<EntityBehaviorHealth, float> SecondsRef =
+            AccessTools.Field(typeof(EntityBehaviorHealth), "secondsSinceLastUpdate") == null ? null
+            : AccessTools.FieldRefAccess<EntityBehaviorHealth, float>("secondsSinceLastUpdate");
+        private static readonly System.Reflection.MethodInfo SatPerHpGetter =
+            AccessTools.PropertyGetter(typeof(EntityBehaviorHealth), "SaturationPerHealthPoint");
+
+        /// <summary>
+        /// Vanilla heals at full speed only above 75% fullness, slower below, and pays for it in satiety. While
+        /// tracking runs, a player heals at full speed whenever there is anything in the calorie tank, and the
+        /// same cost comes out of the tank as calories. With an empty tank there is no healing.
+        /// </summary>
+        public static bool RegenPrefix(EntityBehaviorHealth __instance)
+        {
+            if (module == null || __instance.entity is not EntityPlayer ep) return true;
+            if (ep.Player?.WorldData?.CurrentGameMode == EnumGameMode.Creative) return true;
+            var player = ep.World.PlayerByUid(ep.PlayerUID) as IServerPlayer;
+            var state = player == null ? null : module.StateOf(ep);
+            if (state == null) return true;
+
+            float health = __instance.Health, max = __instance.MaxHealth;
+            if (health >= max) return false;
+            if (state.GetReserve(Core.NutrientCodes.Calories) <= 0f) return false;
+
+            float speed = StringUtil.ToFloat(ep.Api.World.Config.GetString("playerHealthRegenSpeed", "1"), 0f);
+            float perSecond = 0.000333333f * speed;
+            var cal = ep.Api.World.Calendar;
+            float gameSeconds = SecondsRef(__instance) * cal.SpeedOfTime * cal.CalendarSpeedMul;
+            float healed = Math.Min(gameSeconds * perSecond, max - health);
+            if (healed <= 0f) return false;
+            float satPerHp = SatPerHpGetter?.Invoke(__instance, null) is float f ? f : 75f;
+            module.BurnSatiety(player, satPerHp * healed);
+            __instance.Health = health + healed;
+            return false;
         }
 
         public static void Remove()

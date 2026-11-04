@@ -11,7 +11,7 @@
     <!-- Point this at your Vintage Story install (the folder holding VintagestoryAPI.dll),
          or set the VINTAGE_STORY environment variable. -->
     <VintageStoryPath Condition="'$(VintageStoryPath)' == ''">$(VINTAGE_STORY)</VintageStoryPath>
-    <ModVersion>0.2.4</ModVersion>
+    <ModVersion>0.3.0</ModVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +33,10 @@
     </Reference>
     <Reference Include="cairo-sharp">
       <HintPath>$(VintageStoryPath)/Lib/cairo-sharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="protobuf-net">
+      <HintPath>$(VintageStoryPath)/Lib/protobuf-net.dll</HintPath>
       <Private>false</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json">

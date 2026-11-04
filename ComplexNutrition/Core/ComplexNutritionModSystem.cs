@@ -88,6 +88,8 @@ namespace ComplexNutrition.Core
 
         public override void StartClientSide(Vintagestory.API.Client.ICoreClientAPI capi)
         {
+            StartClientSettings(capi);
+
             // Guide pages load in asset order, which would put ours above the game's own Starter Guide; move them after.
             var handbook = capi.ModLoader.GetModSystem<Vintagestory.GameContent.ModSystemSurvivalHandbook>();
             if (handbook != null)
@@ -112,6 +114,8 @@ namespace ComplexNutrition.Core
 
         public override void StartServerSide(ICoreServerAPI sapi)
         {
+            StartServerSettings(sapi);
+
             // Tell each joining player's client whether tracking runs on this server, so it shows our bars or vanilla's.
             sapi.Event.PlayerNowPlaying += player =>
             {
@@ -126,29 +130,34 @@ namespace ComplexNutrition.Core
             };
 
             sapi.ChatCommands.GetOrCreate("cnutrition")
-                .WithDescription("Complex Nutrition tools")
-                .RequiresPrivilege(Privilege.controlserver)
+                .WithDescription("Complex Nutrition: /cnutrition stats, settings and display for every player; the rest for admins")
+                .RequiresPrivilege(Privilege.chat)
                 .BeginSubCommand("coverage")
                     .WithDescription("List vanilla foods that have no profile of their own")
+                    .RequiresPrivilege(Privilege.controlserver)
                     .HandleWith(_ => TextCommandResult.Success(CoverageReport(sapi, verbose: true)))
                 .EndSubCommand()
                 .BeginSubCommand("info")
                     .WithDescription("Show the nutrient block for an item or block code, as the tooltip shows it")
+                    .RequiresPrivilege(Privilege.controlserver)
                     .WithArgs(sapi.ChatCommands.Parsers.Word("code"))
                     .HandleWith(args => InfoCommand(sapi, (string)args[0]))
                 .EndSubCommand()
                 .BeginSubCommand("meal")
                     .WithDescription("Work out a dish: /cnutrition meal <container code> <servings> <ingredient code>... (use code*N for N of one ingredient)")
+                    .RequiresPrivilege(Privilege.controlserver)
                     .WithArgs(sapi.ChatCommands.Parsers.Word("container"), sapi.ChatCommands.Parsers.Float("servings"), sapi.ChatCommands.Parsers.All("ingredients"))
                     .HandleWith(args => MealCommand(sapi, (string)args[0], (float)args[1], (string)args[2]))
                 .EndSubCommand()
                 .BeginSubCommand("template")
                     .WithDescription("Write a ready-to-edit profile file for every food on the category estimate, optionally only one mod's (by domain), to ModData/complexnutrition/")
+                    .RequiresPrivilege(Privilege.controlserver)
                     .WithArgs(sapi.ChatCommands.Parsers.OptionalWord("domain"))
                     .HandleWith(args => TextCommandResult.Success(WriteTemplate(sapi, args.Parsers[0].IsMissing ? null : (string)args[0])))
                 .EndSubCommand()
                 .BeginSubCommand("dump")
                     .WithDescription("Write every food item, its vanilla values and its profile to ModData/complexnutrition/foods.json")
+                    .RequiresPrivilege(Privilege.controlserver)
                     .HandleWith(_ => TextCommandResult.Success(DumpFoods(sapi)))
                 .EndSubCommand();
         }
@@ -179,6 +188,7 @@ namespace ComplexNutrition.Core
         public override void Dispose()
         {
             if (api == null) return;
+            DisposeSettings();
             foreach (var module in modules.Where(m => m.IsEnabled).Reverse()) module.Disable(api);
             if (api.Side == EnumAppSide.Server) EatingHooks.Remove();
         }

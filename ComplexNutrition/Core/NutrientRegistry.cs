@@ -107,13 +107,19 @@ namespace ComplexNutrition.Core
                 return;
             }
 
-            var file = asset.ToObject<NutrientRegistryFile>();
+            Set(asset.ToObject<NutrientRegistryFile>(), api.Logger);
+        }
+
+        /// <summary>Replaces the list with the nutrients in this file (also used by UI previews outside the game).</summary>
+        public void Set(NutrientRegistryFile file, ILogger logger = null)
+        {
+            byCode.Clear();
             foreach (var def in file.Nutrients)
             {
                 if (string.IsNullOrWhiteSpace(def.Code)) continue;
                 if (byCode.ContainsKey(def.Code))
                 {
-                    api.Logger.Warning("[complexnutrition] Nutrient '{0}' is defined twice; keeping the first.", def.Code);
+                    logger?.Warning("[complexnutrition] Nutrient '{0}' is defined twice; keeping the first.", def.Code);
                     continue;
                 }
                 byCode[def.Code] = def;

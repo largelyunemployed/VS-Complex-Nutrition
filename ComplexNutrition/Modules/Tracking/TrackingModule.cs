@@ -40,6 +40,8 @@ namespace ComplexNutrition.Modules.Tracking
         private ICoreServerAPI sapi;
         private long tickListener;
         private float starveTimer;
+        private float heldTimer;
+        private bool commandsRegistered;
 
         public void Enable(ICoreAPI api, ComplexNutritionModSystem core)
         {
@@ -67,7 +69,8 @@ namespace ComplexNutrition.Modules.Tracking
                 sapi.Event.PlayerRespawn += OnRespawn;
                 tickListener = sapi.Event.RegisterGameTickListener(OnTick, (int)(Math.Max(0.5f, Settings.UpdateSeconds) * 1000));
                 foreach (IServerPlayer player in sapi.World.AllOnlinePlayers) InitPlayer(player);
-                RegisterCommands();
+                if (!commandsRegistered) RegisterCommands();
+                commandsRegistered = true;
             }
             else if (api is ICoreClientAPI capi)
             {
@@ -201,6 +204,9 @@ namespace ComplexNutrition.Modules.Tracking
             starveTimer += dt;
             bool starveNow = starveTimer >= Digest.StarvationSeconds;
             if (starveNow) starveTimer = 0f;
+            heldTimer += dt;
+            bool scanHeld = heldTimer >= Settings.HeldScanSeconds;
+            if (scanHeld) heldTimer = 0f;
 
             foreach (IServerPlayer player in sapi.World.AllOnlinePlayers)
             {
@@ -212,6 +218,7 @@ namespace ComplexNutrition.Modules.Tracking
                     continue;
                 }
                 EnsureDay(player, state);
+                if (scanHeld) RecordHeld(player);
 
                 var mode = player.WorldData.CurrentGameMode;
                 bool drains = player.Entity.Alive && mode != EnumGameMode.Creative && mode != EnumGameMode.Spectator;
@@ -254,6 +261,43 @@ namespace ComplexNutrition.Modules.Tracking
                 }
                 state.MarkDirty();
             }
+        }
+
+        /// <summary>
+        /// Remembers every food the player has held in their hotbar, backpack or mouse slot (and the drink in a held
+        /// container), in WatchedAttributes["complexnutritionHeld"], so the nutrition window only suggests foods they know.
+        /// Kept outside our state tree so it is only sent when something new is added.
+        /// </summary>
+        private void RecordHeld(IServerPlayer player)
+        {
+            var attrs = player.Entity.WatchedAttributes;
+            var known = (attrs[ComplexNutritionModSystem.HeldKey] as Vintagestory.API.Datastructures.StringArrayAttribute)?.value ?? new string[0];
+            HashSet<string> added = null;
+
+            void Consider(ItemStack stack, int depth)
+            {
+                var coll = stack?.Collectible;
+                if (coll?.Code == null || depth > 1) return;
+                if (coll is BlockLiquidContainerBase container)
+                {
+                    Consider(container.GetContent(stack), depth + 1);
+                    return;
+                }
+                if (FoodDatabase.IsComposite(coll) || Core.Foods.Resolve(coll) == null) return;
+                string code = coll.Code.ToString();
+                if (Array.IndexOf(known, code) >= 0 || (added?.Contains(code) ?? false)) return;
+                (added ??= new HashSet<string>()).Add(code);
+            }
+
+            foreach (var invName in new[] { GlobalConstants.hotBarInvClassName, GlobalConstants.backpackInvClassName, GlobalConstants.mousecursorInvClassName })
+            {
+                var inv = player.InventoryManager?.GetOwnInventory(invName);
+                if (inv == null) continue;
+                foreach (var slot in inv) Consider(slot?.Itemstack, 0);
+            }
+            if (added == null) return;
+            attrs[ComplexNutritionModSystem.HeldKey] = new Vintagestory.API.Datastructures.StringArrayAttribute(known.Concat(added).OrderBy(c => c).ToArray());
+            attrs.MarkPathDirty(ComplexNutritionModSystem.HeldKey);
         }
 
         /// <summary>Speed of digestion from the fibre reserve: 1 at an empty reserve, 1 + the pool's bonus at the full-bonus line or above.</summary>
@@ -448,7 +492,8 @@ namespace ComplexNutrition.Modules.Tracking
         {
             var parsers = sapi.ChatCommands.Parsers;
 
-            sapi.ChatCommands.Create("nutrition")
+            sapi.ChatCommands.GetOrCreate("cnutrition")
+                .BeginSubCommand("stats")
                 .WithDescription("Show your nutrient reserves")
                 .RequiresPlayer()
                 .RequiresPrivilege(Privilege.chat)
@@ -459,9 +504,9 @@ namespace ComplexNutrition.Modules.Tracking
                     return state == null
                         ? TextCommandResult.Error(Lang.Get("complexnutrition:cmd-no-state"))
                         : TextCommandResult.Success(ReserveReport(state, false, args.Caller.Entity));
-                });
-
-            sapi.ChatCommands.Create("nutritiondisplay")
+                })
+                .EndSubCommand()
+                .BeginSubCommand("display")
                 .WithDescription("Choose how much detail nutrition tooltips show: advanced, simple, or world (follow the world setting)")
                 .RequiresPlayer()
                 .RequiresPrivilege(Privilege.chat)
@@ -479,9 +524,8 @@ namespace ComplexNutrition.Modules.Tracking
                     bool on = Digestion.AdvancedDisplay(sapi.World, state);
                     string which = state.DisplayChoice == 0 ? Lang.Get("complexnutrition:display-world") : Lang.Get("complexnutrition:display-own");
                     return TextCommandResult.Success(Lang.Get(on ? "complexnutrition:display-on" : "complexnutrition:display-off", which));
-                });
-
-            sapi.ChatCommands.GetOrCreate("cnutrition")
+                })
+                .EndSubCommand()
                 .BeginSubCommand("reserves")
                     .WithDescription("Show a player's nutrient reserves and today's intake")
                     .RequiresPrivilege(Privilege.controlserver)

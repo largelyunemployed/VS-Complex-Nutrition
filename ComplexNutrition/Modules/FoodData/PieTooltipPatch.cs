@@ -34,7 +34,7 @@ namespace ComplexNutrition.Modules.FoodData
 
         public static void Postfix(ItemSlot inSlot, StringBuilder dsc, IWorldAccessor world, bool withDebugInfo)
         {
-            if (core == null || !core.Config.ShowTooltip) return;
+            if (core == null || !core.ShowTooltip) return;
             var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack);
             if (meal != null) dsc.Append(CollectibleBehaviorNutrientInfo.BuildMealTooltip(core.Nutrients, meal, withDebugInfo));
         }

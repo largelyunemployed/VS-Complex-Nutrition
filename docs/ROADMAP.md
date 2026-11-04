@@ -34,9 +34,10 @@ Every module has its own switch. With all of them off, the game plays exactly li
 
 ## v0.3: Nutrition UI
 
-- A nutrition window (hotkey N) with tabs: overview, vitamins, minerals, and a 28-day history.
-- A shorter tooltip block that expands on a key press.
-- An optional little HUD icon that turns amber or red when something is running low.
+- v0.3.0: a nutrition window (Left Alt + N), the size of the handbook, with Overview, Digestion, Vitamins and Minerals tabs, and a settings menu holding every toggle so far.
+- v0.3.1: a 28-day history tab and trend arrows.
+- v0.3.2: a shorter tooltip block that expands while you hold Ctrl, and an optional little HUD icon right of the hotbar that turns amber or red when something is running low.
+- v0.3.3: Discover Nutrition, a setting that hides a food's values ("???") until you have eaten it.
 
 ## v0.4: Diet tiers and effects
 
@@ -77,6 +78,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 ## v1.0: Settings menu
 
 - Every module and number adjustable in game, with sliders and toggles, as well as in the config file and by server command.
+- A Complex Nutrition Guide (PDF) for new players, written once the core features are tested and settled: an overview, how nutrition is gained, each nutrient, the calorie system with tips, reading the UI, a food nutrient table and a modder's annex. Rebuilt with each release after that.
 
 ## After 1.0: Who knows!
 

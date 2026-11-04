@@ -72,6 +72,19 @@ namespace ComplexNutrition.Core
         /// </summary>
         [JsonProperty("zeroAtGrams")] public float ZeroAtGrams;
 
+        /// <summary>
+        /// Optional two-tier taper (v0.3.0, protein). When set above <see cref="DiminishingAboveGrams"/>, the yield per gram falls
+        /// in a straight line from full at the diminishing line to <see cref="TaperEndValue"/> here, and every gram past it
+        /// yields <see cref="BeyondValue"/>. The log curve is not used. 0 = off.
+        /// </summary>
+        [JsonProperty("taperEndGrams")] public float TaperEndGrams;
+
+        /// <summary>Yield per gram at <see cref="TaperEndGrams"/> (0.8 = 80%).</summary>
+        [JsonProperty("taperEndValue")] public float TaperEndValue = 1f;
+
+        /// <summary>Yield per gram past <see cref="TaperEndGrams"/> (0.5 = 50%).</summary>
+        [JsonProperty("beyondValue")] public float BeyondValue = 1f;
+
         /// <summary>How much faster this pool digests with a full fibre reserve (0.3 = 30% faster).</summary>
         [JsonProperty("fiberSpeedBonus")] public float FiberSpeedBonus;
 
@@ -84,6 +97,15 @@ namespace ComplexNutrition.Core
         private float Curve(float total)
         {
             if (total <= DiminishingAboveGrams) return total;
+            if (TaperEndGrams > DiminishingAboveGrams)
+            {
+                float span = TaperEndGrams - DiminishingAboveGrams;
+                float over = Math.Min(total, TaperEndGrams) - DiminishingAboveGrams;
+                float drop = 1f - TaperEndValue;
+                float v = DiminishingAboveGrams + over - drop * over * over / (2f * span);
+                if (total > TaperEndGrams) v += (total - TaperEndGrams) * BeyondValue;
+                return v;
+            }
             if (ZeroAtGrams > DiminishingAboveGrams)
             {
                 float span = ZeroAtGrams - DiminishingAboveGrams;
@@ -169,7 +191,7 @@ namespace ComplexNutrition.Core
                 s.Pools = new Dictionary<string, DigestionPool>
                 {
                     [NutrientCodes.Carbohydrate] = new() { MaxGrams = 500, MaxRateGrams = 90, HalfRateGrams = 30, KcalPerGram = 4, DiminishingAboveGrams = 300, WindowHours = 12, DiminishingScaleGrams = 150, FiberSpeedBonus = 0.1f },
-                    [NutrientCodes.Protein] = new() { MaxGrams = 200, MaxRateGrams = 15, HalfRateGrams = 10, KcalPerGram = 4, DiminishingAboveGrams = 65, ZeroAtGrams = 128, WindowHours = 24, FiberSpeedBonus = 0.2f },
+                    [NutrientCodes.Protein] = new() { MaxGrams = 200, MaxRateGrams = 15, HalfRateGrams = 10, KcalPerGram = 4, DiminishingAboveGrams = 64, TaperEndGrams = 128, TaperEndValue = 0.8f, BeyondValue = 0.5f, WindowHours = 24, FiberSpeedBonus = 0.2f },
                     [NutrientCodes.Fat] = new() { MaxGrams = 240, MaxRateGrams = 6, HalfRateGrams = 15, KcalPerGram = 9, DiminishingAboveGrams = 70, WindowHours = 24, DiminishingScaleGrams = 35, FiberSpeedBonus = 0.3f },
                 };
             }
@@ -294,13 +316,19 @@ namespace ComplexNutrition.Core
         public const string AdvancedDisplayKey = "complexnutritionAdvancedDisplay";
 
         /// <summary>
-        /// Whether this player sees the advanced nutrition display: their own choice (/nutritiondisplay) if they made
+        /// Whether this player sees the advanced nutrition display: their own choice (/cnutrition display) if they made
         /// one, otherwise the world setting.
         /// </summary>
         public static bool AdvancedDisplay(IWorldAccessor world, NutritionState state)
         {
             int own = state?.DisplayChoice ?? 0;
             if (own != 0) return own == 1;
+            return WorldAdvancedDefault(world);
+        }
+
+        /// <summary>The world's Advanced nutrition display setting (set at world creation, or in the settings menu).</summary>
+        public static bool WorldAdvancedDefault(IWorldAccessor world)
+        {
             string v = Convert.ToString(world?.Config?[AdvancedDisplayKey]?.GetValue(), System.Globalization.CultureInfo.InvariantCulture);
             return string.Equals(v, "true", StringComparison.OrdinalIgnoreCase);
         }

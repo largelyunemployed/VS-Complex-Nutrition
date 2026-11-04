@@ -21,7 +21,7 @@ namespace ComplexNutrition.Modules.FoodData
         public override void GetHeldItemInfo(ItemSlot inSlot, StringBuilder dsc, IWorldAccessor world, bool withDebugInfo)
         {
             base.GetHeldItemInfo(inSlot, dsc, world, withDebugInfo);
-            if (!core.Config.ShowTooltip) return;
+            if (!core.ShowTooltip) return;
 
             if (MealNutrition.IsMealContainer(collObj))
             {

@@ -9,5 +9,7 @@
 	"worldconfig-complexnutritionStart-Brutal": "Brutal: 1 day calorie reserve",
 	"worldconfig-complexnutritionStart-RockBottom": "Rock Bottom: 0.01 days calorie reserve (good luck!)",
 	"worldattribute-complexnutritionAdvancedDisplay": "Advanced nutrition display",
-	"worldattribute-complexnutritionAdvancedDisplay-desc": "Shows more detail when you hover over the Carbs, Fats and Protein bars: how many calories the food being digested will give, how long it will take and how fast it is being absorbed. Each player can change this for themselves in game by typing /nutritiondisplay."
+	"worldattribute-complexnutritionAdvancedDisplay-desc": "Shows more detail when you hover over the Carbs, Fats and Protein bars: how many calories the food being digested will give, how long it will take and how fast it is being absorbed. Each player can change this for themselves in game by typing /cnutrition display.",
+	"worldattribute-complexnutritionMeatInPots": "All poultry and bushmeat in pots",
+	"worldattribute-complexnutritionMeatInPots-desc": "Lets raw, cooked and cured poultry and bushmeat go into meat stews and soups as regular ingredients. Changing it takes effect the next time the world is loaded."
 }
