@@ -16,6 +16,8 @@ namespace ComplexNutrition.Core
 
         // A number with its unit right after it: "94g", "1,920kcal", "7.0mg", "4mcg". Not part of a longer word.
         private static readonly Regex Amount = new(@"(?<![\w.#])\d[\d,]*(?:\.\d+)?(kcal|mcg|mg|g)(?!\w)", RegexOptions.Compiled);
+        // A unit named on its own in brackets, as in "4kcal per gram (g)".
+        private static readonly Regex BareUnit = new(@"(?<=\()(kcal|mcg|mg|g)(?=\))", RegexOptions.Compiled);
 
         /// <summary>The colour for a unit, or null for one we don't colour.</summary>
         public static string For(string unit) => unit switch
@@ -40,8 +42,10 @@ namespace ComplexNutrition.Core
             return string.Concat(parts);
         }
 
-        /// <summary>Wraps every amount in <paramref name="text"/> (plain or VTML-safe text, no tags) in its unit's colour.</summary>
+        /// <summary>Wraps every amount (and every unit named alone in brackets, like "(g)") in <paramref name="text"/> (plain or VTML-safe text, no tags) in its unit's colour.</summary>
         public static string Paint(string text) =>
-            string.IsNullOrEmpty(text) ? text : Amount.Replace(text, m => "<font color=\"" + For(m.Groups[1].Value) + "\">" + m.Value + "</font>");
+            string.IsNullOrEmpty(text) ? text : BareUnit.Replace(
+                Amount.Replace(text, m => "<font color=\"" + For(m.Groups[1].Value) + "\">" + m.Value + "</font>"),
+                m => "<font color=\"" + For(m.Value) + "\">" + m.Value + "</font>");
     }
 }
