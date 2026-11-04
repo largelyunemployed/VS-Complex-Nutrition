@@ -345,6 +345,29 @@ namespace ComplexNutrition.Core
             return kcal;
         }
 
+        /// <summary>
+        /// What the gut holds, in calories: about how many it will still give once everything is digested (each pool's
+        /// contents after diminishing returns, against the totals so far), and how many of the food in it are lost to them.
+        /// </summary>
+        public static (float coming, float lost) GutOutlook(DigestionSettings s, NutritionState state, NutrientRegistry nutrients)
+        {
+            float coming = 0f, lost = 0f;
+            if (s == null || state == null || nutrients == null) return (0f, 0f);
+            foreach (var kv in s.Pools)
+            {
+                var def = nutrients.Get(kv.Key);
+                var pool = kv.Value;
+                if (def == null) continue;
+                float grams = def.FromPercent(state.GetReserve(def.Code));
+                if (grams <= DigestionPool.EmptyGrams) continue;
+                float full = grams * pool.KcalPerGram;
+                float got = pool.Effective(WindowGrams(state, kv.Key, pool), grams) * pool.KcalPerGram;
+                coming += got;
+                lost += Math.Max(0f, full - got);
+            }
+            return (coming, lost);
+        }
+
         public static float WindowGrams(NutritionState state, string code, DigestionPool pool)
         {
             var log = state.GetAbsorbedLog(code);

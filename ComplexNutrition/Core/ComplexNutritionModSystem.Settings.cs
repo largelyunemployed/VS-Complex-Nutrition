@@ -400,6 +400,7 @@ namespace ComplexNutrition.Core
             clientTracking ??= TrackingSettings.Load(capi);
             clientDigest ??= DigestionSettings.Load(capi);
             var hunger = entity?.WatchedAttributes.GetTreeAttribute("hunger");
+            var health = entity?.WatchedAttributes.GetTreeAttribute("health");
 
             var codes = (entity?.WatchedAttributes[NutritionState.HeldKey] as StringArrayAttribute)?.value;
             if (codes != knownCodes)
@@ -425,6 +426,8 @@ namespace ComplexNutrition.Core
                 State = state,
                 Fullness = hunger?.GetFloat("currentsaturation") ?? 0f,
                 MaxFullness = hunger?.GetFloat("maxsaturation") ?? 0f,
+                Health = health?.GetFloat("currenthealth") ?? 0f,
+                MaxHealth = health?.GetFloat("maxhealth") ?? 0f,
                 ShowPercent = ShowPercent,
                 Known = known,
                 History = state == null ? null : History,

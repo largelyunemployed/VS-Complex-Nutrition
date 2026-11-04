@@ -485,20 +485,23 @@ namespace ComplexNutrition.Modules.Tracking
                 float updated = Math.Max(old, Math.Min(cal.Cap, old + cal.ToPercent(kcal)));   // a full tank wastes the rest
                 state.SetReserve(cal.Code, updated);
                 state.AddAbsorbedToday(cal.Code, updated - old);
+                NutrientHistory.Of(player.Entity).AddFlow(now, Today, cal.FromPercent(updated - old), 0f);
                 Core.PublishReserveChanged(player, cal.Code, old, updated);
             }
         }
 
         /// <summary>Burns calories as vanilla burns satiety, so activity, cold and the hunger-rate stat all count.</summary>
-        internal void BurnSatiety(IServerPlayer player, float satiety)
+        internal void BurnSatiety(IServerPlayer player, float satiety) => BurnCalories(player, satiety * Digest.KcalPerSatiety);
+
+        internal void BurnCalories(IServerPlayer player, float kcal)
         {
             var state = StateOf(player.Entity);
             var def = Core.Nutrients.Get(NutrientCodes.Calories);
-            if (state == null || def == null || satiety <= 0f) return;
-            float kcal = satiety * Digest.KcalPerSatiety;
+            if (state == null || def == null || kcal <= 0f) return;
             float old = state.GetReserve(def.Code);
             float now = Math.Max(0f, old - def.ToPercent(kcal));
             state.SetReserve(def.Code, now);
+            NutrientHistory.Of(player.Entity).AddFlow(NowHours, Today, 0f, def.FromPercent(old - now));
             state.MarkDirty();
             Core.PublishReserveChanged(player, def.Code, old, now);
         }

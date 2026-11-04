@@ -13,6 +13,10 @@ namespace ComplexNutrition.Core
         /// <summary>Reserves in % of a day's need, at the end of the day (for today: now). Empty when nothing was recorded.</summary>
         public Dictionary<string, float> Reserves = new();
         public Dictionary<string, float> KcalByCategory = new();
+        /// <summary>Calories that went into the calorie tank from digestion that day (v0.3.3).</summary>
+        public float Gained;
+        /// <summary>Calories burned from the tank that day: activity and healing (v0.3.3).</summary>
+        public float Burned;
 
         public float TotalKcal => KcalByCategory.Values.Sum();
     }
@@ -26,6 +30,8 @@ namespace ComplexNutrition.Core
         public Dictionary<string, float> DayAgo;
         /// <summary>How many in-game hours ago <see cref="DayAgo"/> was taken.</summary>
         public float DayAgoHours;
+        /// <summary>Calories burned over the last in-game hour and the last 24 (v0.3.3).</summary>
+        public float BurnedHour, Burned24;
     }
 
     /// <summary>
@@ -65,6 +71,54 @@ namespace ComplexNutrition.Core
         public static NutrientHistory FromTree(ITreeAttribute tree) => new(tree);
 
         private ITreeAttribute Days => tree.GetOrAddTreeAttribute("days");
+        private ITreeAttribute Flow => tree.GetOrAddTreeAttribute("flow");
+        private ITreeAttribute FlowHours => tree.GetOrAddTreeAttribute("flowhours");
+
+        /// <summary>Adds calories gained (into the tank from digestion) or burned (out of it) at a game time.</summary>
+        public void AddFlow(double nowHours, int day, float gained, float burned)
+        {
+            if (gained <= 0f && burned <= 0f) return;
+            var dayTree = Flow.GetOrAddTreeAttribute("d" + day);
+            if (gained > 0f) dayTree.SetFloat("gained", dayTree.GetFloat("gained") + gained);
+            if (burned > 0f) dayTree.SetFloat("burned", dayTree.GetFloat("burned") + burned);
+
+            long hour = (long)Math.Floor(nowHours);
+            string key = "h" + (int)(((hour % 24) + 24) % 24);
+            var slot = FlowHours.GetTreeAttribute(key);
+            if (slot == null || slot.GetLong("hour", long.MinValue) != hour)
+            {
+                slot = new TreeAttribute();
+                slot.SetLong("hour", hour);
+                FlowHours[key] = slot;
+            }
+            if (burned > 0f) slot.SetFloat("burned", slot.GetFloat("burned") + burned);
+        }
+
+        public (float gained, float burned) DayFlow(int day)
+        {
+            var dayTree = Flow.GetTreeAttribute("d" + day);
+            return dayTree == null ? (0f, 0f) : (dayTree.GetFloat("gained"), dayTree.GetFloat("burned"));
+        }
+
+        /// <summary>
+        /// Calories burned over the last <paramref name="hours"/> in-game hours (1 to 24). The oldest hour counts only for the
+        /// part of it still inside the span.
+        /// </summary>
+        public float BurnedOver(double nowHours, int hours)
+        {
+            long now = (long)Math.Floor(nowHours);
+            float into = (float)(nowHours - now);   // how far into the current hour
+            float total = 0f;
+            foreach (var kv in FlowHours)
+            {
+                if (kv.Value is not ITreeAttribute slot) continue;
+                long h = slot.GetLong("hour", long.MinValue);
+                float b = slot.GetFloat("burned");
+                if (h > now - hours && h <= now) total += b;
+                else if (h == now - hours) total += b * (1f - into);
+            }
+            return total;
+        }
         private ITreeAttribute Hours => tree.GetOrAddTreeAttribute("hours");
 
         private static void Copy(ITreeAttribute into, IReadOnlyDictionary<string, float> reserves)
@@ -150,6 +204,12 @@ namespace ComplexNutrition.Core
                 if (!kv.Key.StartsWith("d") || !int.TryParse(kv.Key.Substring(1), out int day) || day <= today - keepDays || day > today) drop.Add(kv.Key);
             }
             foreach (var key in drop) Days.RemoveAttribute(key);
+            drop.Clear();
+            foreach (var kv in Flow)
+            {
+                if (!kv.Key.StartsWith("d") || !int.TryParse(kv.Key.Substring(1), out int day) || day <= today - keepDays || day > today) drop.Add(kv.Key);
+            }
+            foreach (var key in drop) Flow.RemoveAttribute(key);
         }
 
         /// <summary>
@@ -167,8 +227,11 @@ namespace ComplexNutrition.Core
                     Reserves = day == today ? new Dictionary<string, float>(current) : DayReserves(day),
                 };
                 if (ledger != null) entry.KcalByCategory = ledger.Get(day).KcalByCategory;
+                (entry.Gained, entry.Burned) = DayFlow(day);
                 data.Days.Add(entry);
             }
+            data.BurnedHour = BurnedOver(nowHours, 1);
+            data.Burned24 = BurnedOver(nowHours, 24);
             var ago = DayAgo(nowHours);
             if (ago != null)
             {

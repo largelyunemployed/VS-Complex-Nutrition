@@ -99,6 +99,8 @@ static class P
                 day.KcalByCategory["Vegetable"] = lean ? 0 : 250 + rnd.Next(0, 200);
                 day.KcalByCategory["Fruit"] = lean ? 80 : 150 + rnd.Next(0, 250);
                 day.KcalByCategory["Dairy"] = lean ? 0 : 300 + rnd.Next(0, 300);
+                day.Gained = day.TotalKcal * 0.85f;
+                day.Burned = 2000 + rnd.Next(0, 1200);
                 foreach (var n in reg.All)
                 {
                     float now = st.GetReserve(n.Code);
@@ -112,9 +114,11 @@ static class P
         history.Days[^1].Reserves = r.ToDictionary(kv => kv.Key, kv => kv.Value);
         history.DayAgo = r.ToDictionary(kv => kv.Key, kv => kv.Key == "vitaminC" ? kv.Value - 40 : kv.Key == "calcium" ? kv.Value + 60 : kv.Key == "vitaminA" ? kv.Value + 30 : kv.Value - 5);
         history.DayAgoHours = 24;
+        history.BurnedHour = 96;
+        history.Burned24 = 2410;
 
         bool percent = a.Length > 1 && a[1] == "percent";   // second argument "percent": amounts in % of a day
-        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 600, Known = known, ShowPercent = percent, History = history };
+        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 600, Health = 9, MaxHealth = 15, Known = known, ShowPercent = percent, History = history };
         Console.WriteLine("writing to " + System.IO.Path.GetFullPath(outDir));
         var tabs = new[] { ("overview", NutritionPages.Overview(data)), ("digestion", NutritionPages.DigestionPage(data)), ("vitamins", NutritionPages.Vitamins(data)), ("minerals", NutritionPages.Minerals(data)),
             ("history", NutritionPages.History(data, "calories")), ("history-vitaminA", NutritionPages.History(data, "vitaminA")) };

@@ -40,13 +40,12 @@ namespace ComplexNutrition.Modules.Tracking
         private static readonly AccessTools.FieldRef<EntityBehaviorHealth, float> SecondsRef =
             AccessTools.Field(typeof(EntityBehaviorHealth), "secondsSinceLastUpdate") == null ? null
             : AccessTools.FieldRefAccess<EntityBehaviorHealth, float>("secondsSinceLastUpdate");
-        private static readonly System.Reflection.MethodInfo SatPerHpGetter =
-            AccessTools.PropertyGetter(typeof(EntityBehaviorHealth), "SaturationPerHealthPoint");
 
         /// <summary>
         /// Vanilla heals at full speed only above 75% fullness, slower below, and pays for it in satiety. While
-        /// tracking runs, a player heals at full speed whenever there is anything in the calorie tank, and the
-        /// same cost comes out of the tank as calories. With an empty tank there is no healing.
+        /// tracking runs, a player heals at full speed whenever there is anything in the calorie tank, and since v0.3.3
+        /// recovery burns calories for as long as it lasts (<see cref="TrackingSettings.HealingKcalPerDay"/>, more the worse
+        /// the injury) in place of vanilla's cost per point healed. With an empty tank there is no healing.
         /// </summary>
         public static bool RegenPrefix(EntityBehaviorHealth __instance)
         {
@@ -66,8 +65,8 @@ namespace ComplexNutrition.Modules.Tracking
             float gameSeconds = SecondsRef(__instance) * cal.SpeedOfTime * cal.CalendarSpeedMul;
             float healed = Math.Min(gameSeconds * perSecond, max - health);
             if (healed <= 0f) return false;
-            float satPerHp = SatPerHpGetter?.Invoke(__instance, null) is float f ? f : 75f;
-            module.BurnSatiety(player, satPerHp * healed);
+            float kcal = module.Settings.HealingKcalPerDay((max - health) / max) * gameSeconds / (cal.HoursPerDay * 3600f);
+            module.BurnCalories(player, kcal);
             __instance.Health = health + healed;
             return false;
         }

@@ -1,3 +1,4 @@
+using System;
 using Newtonsoft.Json;
 using Vintagestory.API.Common;
 
@@ -40,6 +41,23 @@ namespace ComplexNutrition.Core
 
         /// <summary>Real seconds between checks of what each player is holding, for the foods they know.</summary>
         [JsonProperty("heldScanSeconds")] public float HeldScanSeconds = 5f;
+
+        /// <summary>
+        /// The calorie cost of healing (v0.3.3). A recovering body needs <see cref="RecoveryKcalPerKgMin"/> to
+        /// <see cref="RecoveryKcalPerKgMax"/> kcal per kg a day (more the worse the injury), against <see cref="RestingKcalPerKg"/>
+        /// when well; the difference, for a body of <see cref="BodyKg"/>, is burned while health is below its maximum.
+        /// </summary>
+        [JsonProperty("bodyKg")] public float BodyKg = 80f;
+        [JsonProperty("restingKcalPerKg")] public float RestingKcalPerKg = 25f;
+        [JsonProperty("recoveryKcalPerKgMin")] public float RecoveryKcalPerKgMin = 33f;
+        [JsonProperty("recoveryKcalPerKgMax")] public float RecoveryKcalPerKgMax = 44f;
+
+        /// <summary>Extra calories a day while healing, with <paramref name="missing"/> (0 to 1) of max health missing.</summary>
+        public float HealingKcalPerDay(float missing)
+        {
+            float perKg = RecoveryKcalPerKgMin + (RecoveryKcalPerKgMax - RecoveryKcalPerKgMin) * Math.Clamp(missing, 0f, 1f);
+            return Math.Max(0f, perKg - RestingKcalPerKg) * BodyKg;
+        }
 
         public static TrackingSettings Load(ICoreAPI api) => ConfigAsset.Load<TrackingSettings>(api, AssetPath);
     }

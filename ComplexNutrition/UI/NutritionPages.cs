@@ -25,6 +25,8 @@ namespace ComplexNutrition.UI
         public NutritionState State;
         public float Fullness;
         public float MaxFullness;
+        public float Health;
+        public float MaxHealth;
         public bool ShowPercent;
         public IReadOnlyList<KnownFood> Known = new List<KnownFood>();
         /// <summary>The last history the server sent, or null (not yet).</summary>
@@ -59,6 +61,16 @@ namespace ComplexNutrition.UI
             return kcal < 0.05f
                 ? StatsHover.Text(L("fiber-boost-none"))
                 : StatsHover.Vtml("complexnutrition:fiber-boost", StatsHover.Paint(Kcal(d, kcal), UnitColors.Rate));
+        }
+
+        /// <summary>The calories still to come from the gut, and how many are lost to diminishing returns.</summary>
+        private static string GutOutlookText(NutritionPageData d)
+        {
+            var (coming, lost) = Digestion.GutOutlook(d.Digest, d.State, d.Nutrients);
+            if (coming < 0.5f && lost < 0.5f) return StatsHover.Text(L("window-outlook-empty"));
+            string text = L("window-outlook", Kcal(d, coming));
+            text += " " + (lost < 0.5f ? L("window-outlook-nolost") : L("window-outlook-lost", Kcal(d, lost)));
+            return StatsHover.Text(text);
         }
 
         private static List<PageBlock> Off() => new()
@@ -167,6 +179,17 @@ namespace ComplexNutrition.UI
                 blocks.Add(bar);
             }
             blocks.Add(FullnessBar(d));
+            blocks.Add(new TextBlock(GutOutlookText(d), true));
+            if (d.History != null)
+            {
+                float week = d.History.Days.Skip(Math.Max(0, d.History.Days.Count - 7)).Sum(day => day.Burned);
+                blocks.Add(new TextBlock(StatsHover.Text(L("window-burned", Kcal(d, d.History.BurnedHour), Kcal(d, d.History.Burned24), Kcal(d, week))), true));
+            }
+            if (d.MaxHealth > 0 && d.Health < d.MaxHealth - 0.01f && d.Tracking != null)
+            {
+                float perHour = d.Tracking.HealingKcalPerDay((d.MaxHealth - d.Health) / d.MaxHealth) / 24f;
+                blocks.Add(new TextBlock(StatsHover.Vtml("complexnutrition:window-healing", StatsHover.Paint(Kcal(d, perHour), UnitColors.Rate)), true));
+            }
 
             // How close the rolling totals are to where calories start falling off.
             var s = d.Digest;
@@ -392,6 +415,8 @@ namespace ComplexNutrition.UI
 
         /// <summary>The History tab's line, white so it stands apart from every food group's colour.</summary>
         public static readonly double[] LineColor = { 0.95, 0.95, 0.95, 1.0 };
+        public static readonly double[] GainedColor = { 0.45, 0.78, 0.40, 1.0 };
+        public static readonly double[] BurnedColor = { 0.93, 0.42, 0.37, 1.0 };
 
         /// <summary>The History tab: the last weeks of calories eaten (bars, by food category) and one nutrient's store (the line).</summary>
         public static List<PageBlock> History(NutritionPageData d, string code)
@@ -447,6 +472,27 @@ namespace ComplexNutrition.UI
             chart.Legend.Add((chart.LineColor, StatsHover.Esc(n.IsCalories ? L("history-line-legend-calories") : L("history-line-legend", name))));
             blocks.Add(chart);
 
+            // Calories into and out of the tank.
+            var gained = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Gained : null).ToArray();
+            var burned = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Burned : null).ToArray();
+            float flowTop = h.Days.Select(day => Math.Max(day.Gained, day.Burned)).DefaultIfEmpty(0).Max();
+            float flowMax = d.ShowPercent ? NiceCeiling(cal.ToPercent(Math.Max(flowTop, cal.DailyTarget * 1.25f))) / 100f * cal.DailyTarget : NiceCeiling(Math.Max(flowTop, cal.DailyTarget * 1.25f));
+            blocks.Add(new HeadingBlock(L("history-heading-flow")));
+            blocks.Add(new TextBlock(StatsHover.Text(L("history-flow-intro", Kcal(d, flowMax))), true));
+            blocks.Add(new GapBlock(4));
+            blocks.Add(new ChartBlock
+            {
+                BarMax = flowMax,
+                BarMark = cal.DailyTarget,
+                Line = gained,
+                LineMax = flowMax,
+                LineColor = GainedColor,
+                ExtraLines = { (burned, BurnedColor) },
+                BottomLeft = StatsHover.Text(L("history-days-ago", h.Days.Count - 1)),
+                BottomRight = StatsHover.Text(L("history-today")),
+                Legend = { (GainedColor, StatsHover.Esc(L("history-gained"))), (BurnedColor, StatsHover.Esc(L("history-burned"))) },
+            });
+
             // The last week in words.
             blocks.Add(new HeadingBlock(L("history-heading-week")));
             var week = h.Days.Skip(Math.Max(0, h.Days.Count - 8)).Take(Math.Min(7, Math.Max(0, h.Days.Count - 1))).ToList();
@@ -468,6 +514,12 @@ namespace ComplexNutrition.UI
                 float share = totals.Sum() > 0 ? totals[top] / totals.Sum() * 100f : 0f;
                 blocks.Add(new TextBlock(StatsHover.Text(L("history-week-eaten", Kcal(d, avg), week.Count,
                     Math.Round(share).ToString("0", CultureInfo.InvariantCulture), L("history-from-" + Categories[top].ToLowerInvariant())))));
+            }
+
+            var flowWeek = week.Where(day => day.Gained > 0 || day.Burned > 0).ToList();
+            if (flowWeek.Count > 0)
+            {
+                blocks.Add(new TextBlock(StatsHover.Text(L("history-week-flow", Kcal(d, flowWeek.Average(day => day.Gained)), Kcal(d, flowWeek.Average(day => day.Burned)), flowWeek.Count))));
             }
 
             float now = d.State.GetReserve(n.Code);
