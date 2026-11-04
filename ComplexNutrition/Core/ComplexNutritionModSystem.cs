@@ -97,6 +97,15 @@ namespace ComplexNutrition.Core
                     var ours = pages.Where(p => p.PageCode != null && p.PageCode.StartsWith(ModId + "-")).ToList();
                     pages.RemoveAll(ours.Contains);
                     pages.AddRange(ours);
+                    // Amounts on our pages in their unit colours, as in the hovers and food tooltips. The pages are
+                    // already initialised (text looked up and laid out), so they are laid out again with the new text.
+                    foreach (var page in ours.OfType<Vintagestory.GameContent.GuiHandbookTextPage>())
+                    {
+                        string painted = UnitColors.PaintVtml(page.Text);
+                        if (painted == page.Text) continue;
+                        page.Text = painted;
+                        page.Init(capi);
+                    }
                 };
             }
         }
