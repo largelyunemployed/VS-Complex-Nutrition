@@ -1,0 +1,10 @@
+{
+	"worldconfig-category-complexnutrition": "Complex Nutrition",
+	"worldattribute-complexnutritionStart": "Starting calories",
+	"worldattribute-complexnutritionStart-desc": "How much is in a new character's calorie tank when they first spawn. It only applies the first time a character joins the world, never when they respawn.",
+	"worldconfig-complexnutritionStart-Easy": "Easy: a full tank (7 days)",
+	"worldconfig-complexnutritionStart-Normal": "Normal: 5 days",
+	"worldconfig-complexnutritionStart-Hard": "Hard: 3 days",
+	"worldconfig-complexnutritionStart-Brutal": "Brutal: 1 day",
+	"worldconfig-complexnutritionStart-RockBottom": "Rock Bottom: almost empty (1% of a day)"
+}
