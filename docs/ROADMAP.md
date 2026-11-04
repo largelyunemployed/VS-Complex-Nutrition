@@ -26,7 +26,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - Fats, protein and carbohydrate are digested over hours, and only digestion fills the calorie tank (7 active days). An empty tank starves you.
 - Fiber speeds up digestion.
 
-### v0.2.3: Start conditions
+### v0.2.4: Start conditions
 
 - A world setting for how full the calorie tank is at spawn: Easy (full), Normal (5 days), Hard (3 days), Brutal (1 day) or Rock Bottom (1%).
 

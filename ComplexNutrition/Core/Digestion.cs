@@ -29,6 +29,13 @@ namespace ComplexNutrition.Core
         /// <summary>How fast the yield falls above the line: an extra x grams count as scale * ln(1 + x / scale).</summary>
         [JsonProperty("diminishingScaleGrams")] public float DiminishingScaleGrams = 50;
 
+        /// <summary>
+        /// Optional hard limit, in grams within <see cref="WindowHours"/>. When set above <see cref="DiminishingAboveGrams"/>,
+        /// the yield per gram falls in a straight line from full at the diminishing line to nothing here, and grams
+        /// past it give nothing (the log curve and its scale are not used). 0 = no limit.
+        /// </summary>
+        [JsonProperty("zeroAtGrams")] public float ZeroAtGrams;
+
         /// <summary>How much faster this pool digests with a full fibre reserve (0.3 = 30% faster).</summary>
         [JsonProperty("fiberSpeedBonus")] public float FiberSpeedBonus;
 
@@ -41,6 +48,12 @@ namespace ComplexNutrition.Core
         private float Curve(float total)
         {
             if (total <= DiminishingAboveGrams) return total;
+            if (ZeroAtGrams > DiminishingAboveGrams)
+            {
+                float span = ZeroAtGrams - DiminishingAboveGrams;
+                float over = Math.Min(total, ZeroAtGrams) - DiminishingAboveGrams;
+                return DiminishingAboveGrams + over - over * over / (2f * span);
+            }
             float scale = Math.Max(1f, DiminishingScaleGrams);
             return DiminishingAboveGrams + scale * (float)Math.Log(1.0 + (total - DiminishingAboveGrams) / scale);
         }
@@ -72,9 +85,6 @@ namespace ComplexNutrition.Core
         /// <summary>Fullness multiplier for drinks and other liquids.</summary>
         [JsonProperty("liquidFullness")] public float LiquidFullness = 0.5f;
 
-        /// <summary>Grain in porridge also counts its cooking water: this many times its own weight.</summary>
-        [JsonProperty("porridgeWater")] public float PorridgeWater = 3f;
-
         /// <summary>Words in an item code that mark it as cooked for <see cref="CookedFullness"/>.</summary>
         [JsonProperty("cookedWords")] public string[] CookedWords = { "cooked", "smoked", "cured", "bread", "baked", "roasted", "charred" };
 
@@ -90,8 +100,11 @@ namespace ComplexNutrition.Core
         /// <summary>Most batches kept per pool; past this the two oldest are merged.</summary>
         [JsonProperty("maxBatches")] public int MaxBatches = 24;
 
-        /// <summary>Protein absorbed over the last 24 hours is measured against this many grams.</summary>
-        [JsonProperty("proteinNeedGrams")] public float ProteinNeedGrams = 128;
+        /// <summary>Protein the body needs over any 24 hours, at least. The protein bar's line marks it.</summary>
+        [JsonProperty("proteinNeedGrams")] public float ProteinNeedGrams = 64;
+
+        /// <summary>The most protein that counts over 24 hours; past it protein gives no calories and no benefit.</summary>
+        [JsonProperty("proteinMaxGrams")] public float ProteinMaxGrams = 128;
 
         /// <summary>Damage dealt every <see cref="StarvationSeconds"/> while the calorie tank is empty (vanilla: 0.125 HP every 6 s).</summary>
         [JsonProperty("starvationDamage")] public float StarvationDamage = 0.125f;
@@ -122,8 +135,8 @@ namespace ComplexNutrition.Core
                 s.Pools = new Dictionary<string, DigestionPool>
                 {
                     [NutrientCodes.Carbohydrate] = new() { MaxGrams = 500, AbsorbHours = 3, KcalPerGram = 4, DiminishingAboveGrams = 300, WindowHours = 12, DiminishingScaleGrams = 150, FiberSpeedBonus = 0.1f },
-                    [NutrientCodes.Protein] = new() { MaxGrams = 200, AbsorbHours = 6, KcalPerGram = 4, DiminishingAboveGrams = 130, WindowHours = 24, DiminishingScaleGrams = 65, FiberSpeedBonus = 0.2f },
-                    [NutrientCodes.Fat] = new() { MaxGrams = 100, AbsorbHours = 24, KcalPerGram = 9, DiminishingAboveGrams = 70, WindowHours = 24, DiminishingScaleGrams = 35, FiberSpeedBonus = 0.3f },
+                    [NutrientCodes.Protein] = new() { MaxGrams = 200, AbsorbHours = 6, KcalPerGram = 4, DiminishingAboveGrams = 65, ZeroAtGrams = 128, WindowHours = 24, FiberSpeedBonus = 0.2f },
+                    [NutrientCodes.Fat] = new() { MaxGrams = 240, AbsorbHours = 24, KcalPerGram = 9, DiminishingAboveGrams = 70, WindowHours = 24, DiminishingScaleGrams = 35, FiberSpeedBonus = 0.3f },
                 };
             }
             return s;
@@ -195,7 +208,6 @@ namespace ComplexNutrition.Core
             string recipe = dish?.Attributes?.GetString("recipeCode");
             bool isPie = dish?.Collectible is BlockPie;
             bool cookedDish = isPie || !string.IsNullOrEmpty(recipe);
-            bool porridge = recipe != null && recipe.Contains("porridge");
             bool frozen = dish?.Attributes?.GetBool("timeFrozen") == true;
 
             float total = 0f;
@@ -222,7 +234,6 @@ namespace ComplexNutrition.Core
                     {
                         grams = stack.StackSize * food.PortionGrams;
                     }
-                    if (porridge && FoodDatabase.ReadVanilla(stack.Collectible).Category == "Grain") grams *= 1f + s.PorridgeWater;
                     f = grams * s.FullnessPerGram;
                     if (food.IsLiquid) f *= s.LiquidFullness;
                     if (!cookedDish && s.IsCookedCode(stack.Collectible.Code)) f *= s.CookedFullness;
@@ -246,38 +257,70 @@ namespace ComplexNutrition.Core
         }
 
         private const string ScaledKey = "fullnessScaled";
+        private const string SavedFullnessKey = "savedFullness";
 
-        /// <summary>Puts a player on our fullness scale (max 300), scaling what is in the stomach to match. Safe to call again.</summary>
+        /// <summary>
+        /// Puts a player on our fullness scale (max 300). A player coming back from vanilla gets back the fullness
+        /// they had when tracking was switched off, whatever they ate since; anyone else has their stomach scaled
+        /// to match. Safe to call again.
+        /// </summary>
         public static void UseOurScale(Entity entity, DigestionSettings s)
         {
             var hunger = entity?.GetBehavior<EntityBehaviorHunger>();
             var tree = entity?.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
             if (hunger == null || tree == null || s == null) return;
-            float max = hunger.MaxSaturation;
-            if (Math.Abs(max - s.FullnessMax) > 0.01f && max > 0f)
+            if (tree.HasAttribute(SavedFullnessKey))
             {
-                float cur = hunger.Saturation * s.FullnessMax / max;
                 hunger.MaxSaturation = s.FullnessMax;
-                hunger.Saturation = Math.Min(s.FullnessMax, cur);
+                hunger.Saturation = Math.Clamp(tree.GetFloat(SavedFullnessKey), 0f, s.FullnessMax);
+                tree.RemoveAttribute(SavedFullnessKey);
+            }
+            else
+            {
+                float max = hunger.MaxSaturation;
+                if (Math.Abs(max - s.FullnessMax) > 0.01f && max > 0f)
+                {
+                    float cur = hunger.Saturation * s.FullnessMax / max;
+                    hunger.MaxSaturation = s.FullnessMax;
+                    hunger.Saturation = Math.Min(s.FullnessMax, cur);
+                }
             }
             tree.SetBool(ScaledKey, true);
         }
 
-        /// <summary>Puts a player back on vanilla's scale if we changed it. Safe to call when we did not.</summary>
-        public static void UseVanillaScale(Entity entity, float vanillaMax)
+        /// <summary>
+        /// Tracking was switched off: puts a player back on vanilla's scale with vanilla values worked out from ours,
+        /// so switching off cannot be used to dodge starvation. Satiety comes from the calorie reserve (at the
+        /// fallback kcal per satiety, so an empty reserve means an empty stomach), and the five food group bars
+        /// from the reserves closest to them. Our own state is left as it is, and our fullness is kept, so
+        /// switching tracking back on restores the player exactly as they were. Does nothing if we never changed the player.
+        /// </summary>
+        public static void ConvertToVanilla(Entity entity, NutrientRegistry nutrients, float kcalPerSatiety, DigestionSettings s)
         {
             var hunger = entity?.GetBehavior<EntityBehaviorHunger>();
             var tree = entity?.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
-            if (hunger == null || tree == null || !tree.GetBool(ScaledKey)) return;
-            float max = hunger.MaxSaturation;
-            if (max > 0f && Math.Abs(max - vanillaMax) > 0.01f)
-            {
-                float cur = hunger.Saturation * vanillaMax / max;
-                hunger.MaxSaturation = vanillaMax;
-                hunger.Saturation = Math.Min(vanillaMax, cur);
-            }
+            if (hunger == null || tree == null || s == null || !tree.GetBool(ScaledKey)) return;
+            var state = NutritionState.Of(entity);
+            float vmax = s.VanillaFullnessMax;
+
+            tree.SetFloat(SavedFullnessKey, hunger.Saturation);
+            hunger.MaxSaturation = vmax;
+            var cal = nutrients.Get(NutrientCodes.Calories);
+            float kcal = cal == null ? 0f : state.GetReserve(cal.Code) / 100f * cal.DailyTarget;
+            hunger.Saturation = Math.Clamp(kcal / Math.Max(0.01f, kcalPerSatiety), 0f, vmax);
+
+            float Bar(float percentOfDay) => Math.Clamp(percentOfDay / 100f, 0f, 1f) * vmax;
+            float need = Math.Max(1f, s.ProteinNeedGrams);
+            hunger.FruitLevel = Bar(state.GetReserve("vitaminC"));
+            hunger.VegetableLevel = Bar(state.GetReserve("vitaminK"));
+            hunger.GrainLevel = Bar(state.GetReserve("vitaminB"));
+            hunger.ProteinLevel = Bar(state.Protein24 / need * 100f);
+            hunger.DairyLevel = Bar(state.GetReserve("calcium"));
+
             tree.SetBool(ScaledKey, false);
+            tree.SetBool("tracking", false);
             entity.WatchedAttributes.MarkPathDirty(NutritionState.TreeKey);
+            hunger.UpdateNutrientHealthBoost();
         }
     }
 }

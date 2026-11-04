@@ -92,8 +92,8 @@ namespace ComplexNutrition.Modules.Tracking
                 {
                     var state = NutritionState.Of(player.Entity);
                     if (state == null) continue;
+                    // Only the flag: if tracking stays off, the player is converted to vanilla values when they next join.
                     state.TrackingOn = false;
-                    Digestion.UseVanillaScale(player.Entity, Digest.VanillaFullnessMax);
                     state.MarkDirty();
                     RefreshVanillaHealthBonus(player);
                 }
@@ -292,7 +292,7 @@ namespace ComplexNutrition.Modules.Tracking
                 {
                     float total = 0f;
                     foreach (var g in log) total += g;
-                    state.Protein24 = total;
+                    state.Protein24 = Math.Min(total, Digest.ProteinMaxGrams);   // past the daily most, protein gives no benefit
                 }
 
                 var def = Core.Nutrients.Get(code);
@@ -489,7 +489,7 @@ namespace ComplexNutrition.Modules.Tracking
                     : Lang.Get("complexnutrition:cmd-reserve-line", Lang.Get(n.LangKey), n.Format(r, Core.Nutrients.ShowPercent), DaysText(r));
                 if (withToday) line += $" (today +{Math.Round(state.GetAbsorbedToday(n.Code))}%, cap {Math.Round(n.Cap)}%)";
                 sb.AppendLine(line);
-                if (n.Code == NutrientCodes.Protein) sb.AppendLine(Lang.Get("complexnutrition:protein24-hover", Math.Round(state.Protein24), Math.Round(Digest.ProteinNeedGrams)));
+                if (n.Code == NutrientCodes.Protein) sb.AppendLine(Lang.Get("complexnutrition:protein24-hover", Math.Round(state.Protein24), Math.Round(Digest.ProteinNeedGrams), Math.Round(Digest.ProteinMaxGrams)));
             }
             return sb.ToString().TrimEnd();
         }

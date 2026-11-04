@@ -222,14 +222,26 @@ namespace ComplexNutrition.Modules.Tracking
             var protein = composer.GetStatbar(Protein24Bar);
             if (protein != null)
             {
-                float need = Digestion.Settings?.ProteinNeedGrams ?? 128f;
+                float need = Digestion.Settings?.ProteinNeedGrams ?? 64f;
+                float most = Digestion.Settings?.ProteinMaxGrams ?? 128f;
                 float pct = need > 0f ? state.Protein24 / need * 100f : 0f;
-                protein.SetLineInterval(100);   // the line marks a day's need
-                protein.SetValues(pct, 0, Math.Max(150f, pct));
+                protein.SetLineInterval(100);   // a line at the day's need, the end of the bar at the most the body uses
+                protein.SetValues(pct, 0, Math.Max(most / Math.Max(1f, need) * 100f, pct));
             }
         }
 
         private const string Protein24Bar = "cn-protein24";
+
+        /// <summary>
+        /// The hover's last line: a nutrient's own "-effect" text when it has one (empty = none, for nutrients whose
+        /// description already says what they do), otherwise the "planned" note.
+        /// </summary>
+        private static string EffectLine(string code)
+        {
+            string key = "complexnutrition:nutrient-" + code + "-effect";
+            string text = Lang.HasTranslation(key) ? Lang.Get(key) : Lang.Get("complexnutrition:effect-placeholder");
+            return string.IsNullOrEmpty(text) ? "" : "\n" + text;
+        }
 
         private static bool IsGutPool(string code) => Digestion.Settings?.Pool(code) != null;
 
@@ -253,7 +265,7 @@ namespace ComplexNutrition.Modules.Tracking
             // usually fit in that; grow the panel only if they don't (header, rows, Physical block of up to 10 lines).
             double envHeight = envBounds.InnerHeight / RuntimeEnv.GUIScale + 10.0;
             double vanillaHeight = bounds.InnerHeight / RuntimeEnv.GUIScale - GuiStyle.ElementToDialogPadding - 20.0 + envHeight;
-            double neededHeight = 45.0 + (nutrients.Count + 1) * RowHeight + 28.0 + 10 * 20.0 + 10.0;
+            double neededHeight = 45.0 + nutrients.Count * RowHeight + 28.0 + 10 * 20.0 + 10.0;
             ElementBounds bgBounds = ElementBounds.Fixed(0.0, 0.0, 235.0, Math.Max(vanillaHeight, neededHeight))
                 .WithFixedPadding(GuiStyle.ElementToDialogPadding);
             ElementBounds dialogBounds = bgBounds.ForkBoundingParent().WithAlignment(EnumDialogArea.LeftMiddle)
@@ -277,9 +289,7 @@ namespace ComplexNutrition.Modules.Tracking
             ElementBounds labelBounds = ElementBounds.Fixed(0.0, 25.0, 200.0, 20.0);
             compo.AddStaticText(Lang.Get("complexnutrition:stats-heading"), CairoFont.WhiteSmallText().WithWeight(FontWeight.Bold), labelBounds);
             labelBounds = labelBounds.BelowCopy().WithFixedWidth(118.0).WithFixedHeight(RowHeight);
-            // Calories, then the three gut pools and the 24-hour protein bar, then the stored nutrients.
-            int lastGut = -1;
-            for (int i = 0; i < nutrients.Count; i++) if (IsGutPool(nutrients[i].Code)) lastGut = i;
+            // Calories, carbs and fats (in the gut), protein (in the gut and over the last 24 hours), then the stored nutrients.
             bool firstRow = true;
             void Row(string label, string barCode, double[] color, System.Func<string> hover)
             {
@@ -297,14 +307,28 @@ namespace ComplexNutrition.Modules.Tracking
                 var color = GroupColors.TryGetValue(n.Group ?? "", out var c) ? c : GuiStyle.FoodBarColor;
                 var code = n.Code;
                 var def = n;
-                if (IsGutPool(code))
+                if (code == NutrientCodes.Protein && IsGutPool(code))
+                {
+                    Row(Lang.Get(n.LangKey), Protein24Bar, color, () =>
+                    {
+                        var st = NutritionState.Of(capi?.World?.Player?.Entity);
+                        float r = st?.GetReserve(code) ?? 0f;
+                        return Lang.Get("complexnutrition:gut-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, r))
+                            + "\n" + Lang.Get("complexnutrition:protein24-hover", Math.Round(st?.Protein24 ?? 0f),
+                                Math.Round(Digestion.Settings?.ProteinNeedGrams ?? 64f), Math.Round(Digestion.Settings?.ProteinMaxGrams ?? 128f))
+                            + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
+                            + EffectLine(code);
+                    });
+                }
+                else if (IsGutPool(code))
                 {
                     Row(Lang.Get("complexnutrition:stats-gut-" + code), "cn-" + code, color, () =>
                     {
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
                         float r = st?.GetReserve(code) ?? 0f;
                         return Lang.Get("complexnutrition:gut-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, r))
-                            + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role");
+                            + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
+                            + EffectLine(code);
                     });
                 }
                 else
@@ -312,19 +336,9 @@ namespace ComplexNutrition.Modules.Tracking
                     Row(Lang.Get(n.LangKey), "cn-" + code, color, () =>
                     {
                         float r = NutritionState.Of(capi?.World?.Player?.Entity)?.GetReserve(code) ?? 0f;
-                        string effect = "complexnutrition:nutrient-" + code + "-effect";
                         return Lang.Get("complexnutrition:reserve-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.DaysText(r))
                             + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
-                            + "\n" + (Lang.HasTranslation(effect) ? Lang.Get(effect) : Lang.Get("complexnutrition:effect-placeholder"));
-                    });
-                }
-                if (i == lastGut)
-                {
-                    Row(Lang.Get("complexnutrition:stats-protein24"), Protein24Bar, color, () =>
-                    {
-                        float g = NutritionState.Of(capi?.World?.Player?.Entity)?.Protein24 ?? 0f;
-                        return Lang.Get("complexnutrition:protein24-hover", Math.Round(g), Math.Round(Digestion.Settings?.ProteinNeedGrams ?? 128f))
-                            + "\n" + Lang.Get("complexnutrition:effect-placeholder");
+                            + EffectLine(code);
                     });
                 }
             }
