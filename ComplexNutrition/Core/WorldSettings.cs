@@ -16,8 +16,8 @@ namespace ComplexNutrition.Core
             Name = name;
         }
 
-        /// <summary>Its name in the player's language.</summary>
-        public string LangKey => "worldconfig-" + WorldSettings.StartConditionKey + "-" + Name;
+        /// <summary>Its name in the player's language, for the world setting with this key (start or respawn).</summary>
+        public string LangKey(string settingKey) => "worldconfig-" + settingKey + "-" + Name;
     }
 
     /// <summary>
@@ -30,13 +30,20 @@ namespace ComplexNutrition.Core
         /// <summary>The calorie tank of a new character, in % of a day.</summary>
         public const string StartConditionKey = "complexnutritionStart";
 
+        /// <summary>The calorie tank a character respawns with, in % of a day, from the same options (since v0.3.2).</summary>
+        public const string RespawnConditionKey = "complexnutritionRespawn";
+
         /// <summary>Show the advanced nutrition display by default.</summary>
         public const string AdvancedDisplayKey = "complexnutritionAdvancedDisplay";
 
         /// <summary>Poultry and bushmeat in pots. Read by the recipe patches in patches/meat-in-pots.json when the world loads.</summary>
         public const string MeatInPotsKey = "complexnutritionMeatInPots";
 
-        /// <summary>The start conditions, best first. worldconfig.json lists the same values and names (a test checks).</summary>
+        /// <summary>
+        /// The start conditions, best first, also used for respawning. Each is the calorie tank in % of a day; vitamins and
+        /// minerals start at the same share of their own stores (Full 100%, Easy 70%, ... Rock Bottom 0.1%).
+        /// worldconfig.json lists the same values and names for both settings (a test checks).
+        /// </summary>
         public static readonly StartOption[] StartOptions =
         {
             new("1000", "Full"),
@@ -50,6 +57,12 @@ namespace ComplexNutrition.Core
         /// <summary>The start condition a new world gets.</summary>
         public const string DefaultStart = "500";
 
+        /// <summary>The respawn condition a world gets when it has none (Brutal).</summary>
+        public const string DefaultRespawn = "100";
+
+        /// <summary>The calorie value of the Full option: a full tank. Other options are this share of every store.</summary>
+        public const float FullValue = 1000f;
+
         public static bool IsStartOption(string value) => Array.Exists(StartOptions, o => o.Value == value);
 
         /// <summary>A world setting as text (invariant culture), or null when the world does not have it.</summary>
@@ -61,7 +74,15 @@ namespace ComplexNutrition.Core
             string.Equals(Text(world, key), "true", StringComparison.OrdinalIgnoreCase);
 
         /// <summary>The world's start condition in % of a day, or null when the world has none (the nutrient's startReserve applies).</summary>
-        public static float? StartCalories(IWorldAccessor world) =>
-            float.TryParse(Text(world, StartConditionKey), NumberStyles.Float, CultureInfo.InvariantCulture, out float start) ? start : null;
+        public static float? StartCalories(IWorldAccessor world) => Number(Text(world, StartConditionKey));
+
+        /// <summary>The world's respawn condition in % of a day; Brutal (1 day) for worlds without one.</summary>
+        public static float RespawnCalories(IWorldAccessor world) => Number(Text(world, RespawnConditionKey)) ?? Number(DefaultRespawn).Value;
+
+        /// <summary>The share of each vitamin and mineral store that goes with a start or respawn option (Full 1, Easy 0.7, ...).</summary>
+        public static float StoreShare(float optionValue) => Math.Clamp(optionValue / FullValue, 0f, 1f);
+
+        private static float? Number(string text) =>
+            float.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : null;
     }
 }

@@ -1,13 +1,13 @@
 {
-	"_comment": "Complex Nutrition food profiles. Every config/foodprofiles/*.json in any mod is read. Values are per 100 g (per 100 g of liquid for portionUnit litre); macros in g, calories in kcal, vitamins and minerals in % of the US FDA Daily Value. Replace the example codes below with your mod's item codes; codes that match nothing are ignored. Full guide: https://github.com/largelyunemployed/VS-Complex-Nutrition/blob/main/docs/COMPATIBILITY.md",
+	"_comment": "Complex Nutrition food profiles. Every config/foodprofiles/*.json in any mod is read. Values are per 100 g (per 100 g of liquid for portionUnit litre); calories in kcal, macros and fiber in g, vitamins and minerals in mg or mcg as USDA lists them (A, D and K in mcg; C, E, calcium, iron and potassium in mg), and vitaminB in % of the daily value. A source that lists % of the daily value can use per100gDV instead (see example 6). Replace the example codes below with your mod's item codes; codes that match nothing are ignored. Full guide: https://github.com/largelyunemployed/VS-Complex-Nutrition/blob/main/docs/COMPATIBILITY.md",
 	"profiles": [
 		{
 			"code": "yourfoodmod:fruit-gooseberry",
 			"portionGrams": 50,
 			"per100g": {
 				"calories": 44.0, "protein": 0.88, "carbohydrate": 10.18, "fat": 0.58, "fiber": 4.3,
-				"vitaminA": 1.67, "vitaminD": 0.0, "vitaminE": 2.47, "vitaminK": 0.0, "vitaminC": 30.78, "vitaminB": 2.29,
-				"calcium": 1.92, "iron": 1.72, "potassium": 4.21
+				"vitaminA": 15.0, "vitaminD": 0.0, "vitaminE": 0.37, "vitaminK": 0.0, "vitaminC": 27.7, "vitaminB": 2.29,
+				"calcium": 25.0, "iron": 0.31, "potassium": 198.0
 			},
 			"source": { "fdcId": 173030, "description": "Gooseberries, raw", "dataset": "SR Legacy" },
 			"notes": "Example 1: a full profile from USDA FoodData Central. One gooseberry item = a 50 g handful."
@@ -27,8 +27,8 @@
 		{
 			"code": "yourfoodmod:juiceportion-gooseberry",
 			"like": "game:juiceportion-apple",
-			"per100g": { "vitaminC": 15.0 },
-			"notes": "Example 4: a liquid. Copies apple juice (and its per-litre portion), then replaces one value."
+			"per100g": { "vitaminC": 13.5 },
+			"notes": "Example 4: a liquid. Copies apple juice (and its per-litre portion), then replaces one value (vitamin C in mg)."
 		},
 		{
 			"code": "yourfoodmod:pemmican",
@@ -36,6 +36,13 @@
 			"portionGrams": 100,
 			"per100g": { "fat": 30.0, "calories": 520.0 },
 			"notes": "Example 5: a food with no close match, built from the nearest one and corrected."
+		},
+		{
+			"code": "yourfoodmod:vegetable-samphire",
+			"like": "game:vegetable-cabbage",
+			"portionGrams": 40,
+			"per100gDV": { "vitaminC": 20, "iron": 10, "calcium": 3 },
+			"notes": "Example 6: values from a label in % of the daily value go in per100gDV; the game turns them into mg and mcg."
 		}
 	]
 }

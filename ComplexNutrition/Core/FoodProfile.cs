@@ -52,6 +52,12 @@ namespace ComplexNutrition.Core
         /// <summary>Nutrient code to amount per 100 g, in the unit the registry gives for that nutrient.</summary>
         [JsonProperty("per100g")] public Dictionary<string, float> Per100g = new();
 
+        /// <summary>
+        /// Optional: nutrient code to amount per 100 g in % of its daily value, for sources that list %DV (since v0.3.2).
+        /// Turned into <see cref="Per100g"/> amounts when the profiles load; a nutrient given in both uses <see cref="Per100g"/>.
+        /// </summary>
+        [JsonProperty("per100gDV")] public Dictionary<string, float> Per100gDV;
+
         [JsonProperty("source")] public FoodProfileSource Source;
 
         /// <summary>Free-text notes on how the match was chosen (substitutes, cooking state, and so on).</summary>

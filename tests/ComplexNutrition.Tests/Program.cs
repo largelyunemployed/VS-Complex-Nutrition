@@ -260,15 +260,21 @@ namespace ComplexNutrition.Tests
         public static void WorldConfigMatchesStartOptions()
         {
             var attrs = (JArray)Repo.Json(Repo.Mod("worldconfig.json"))["worldConfigAttributes"];
-            var start = attrs.First(a => (string)a["code"] == WorldSettings.StartConditionKey);
-            Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Value)), string.Join(",", start["values"].Select(v => (string)v)), "start values");
-            Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Name)), string.Join(",", start["names"].Select(v => (string)v)), "start names");
-            Assert.Equal(WorldSettings.DefaultStart, (string)start["default"], "start default");
+            var lang = Repo.Json(Repo.Mod("assets", "game", "lang", "worldconfig-en.json"));
+            foreach (var (key, def) in new[] { (WorldSettings.StartConditionKey, WorldSettings.DefaultStart), (WorldSettings.RespawnConditionKey, WorldSettings.DefaultRespawn) })
+            {
+                var attr = attrs.First(a => (string)a["code"] == key);
+                Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Value)), string.Join(",", attr["values"].Select(v => (string)v)), key + " values");
+                Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Name)), string.Join(",", attr["names"].Select(v => (string)v)), key + " names");
+                Assert.Equal(def, (string)attr["default"], key + " default");
+                foreach (var o in WorldSettings.StartOptions) Assert.True(lang[o.LangKey(key)] != null, "worldconfig-en.json has " + o.LangKey(key));
+                Assert.True(lang["worldattribute-" + key] != null && lang["worldattribute-" + key + "-desc"] != null, "worldconfig-en.json names and describes " + key);
+            }
+            Assert.Near(0.7, WorldSettings.StoreShare(700f), 1e-6, "Easy keeps 70% of each store");
+            Assert.Near(0.001, WorldSettings.StoreShare(1f), 1e-6, "Rock Bottom keeps 0.1%");
             foreach (var key in new[] { WorldSettings.AdvancedDisplayKey, WorldSettings.MeatInPotsKey })
                 Assert.True(attrs.Any(a => (string)a["code"] == key), "worldconfig.json has " + key);
 
-            var lang = Repo.Json(Repo.Mod("assets", "game", "lang", "worldconfig-en.json"));
-            foreach (var o in WorldSettings.StartOptions) Assert.True(lang[o.LangKey] != null, "worldconfig-en.json has " + o.LangKey);
         }
 
         [Test]
@@ -286,6 +292,53 @@ namespace ComplexNutrition.Tests
             Assert.Equal((float?)null, state.TakeOldGutBatches("fat"), "nothing to move the second time");
         }
 
+        // ---- History (v0.3.2) ----
+
+        [Test]
+        public static void HistoryKeepsDaysAndBuildsFourWeeks()
+        {
+            var history = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            for (int day = 1; day <= 40; day++) history.RecordDay(day, new Dictionary<string, float> { ["vitaminC"] = day });
+            history.Prune(41, 28);
+            Assert.Equal(0, history.DayReserves(13).Count, "day 13 pruned");
+            Assert.Near(14, history.DayReserves(14)["vitaminC"], 1e-6, "day 14 kept");
+
+            var data = history.Build(null, new Dictionary<string, float> { ["vitaminC"] = 99 }, 41, 41 * 24 + 5, 28);
+            Assert.Equal(28, data.Days.Count, "28 days");
+            Assert.Equal(14, data.Days[0].Day, "oldest first");
+            Assert.Near(99, data.Days[^1].Reserves["vitaminC"], 1e-6, "today is now");
+            Assert.True(data.DayAgo == null, "no hourly readings, no trend");
+        }
+
+        [Test]
+        public static void HistoryTrendsUseTheOldestReadingOfTheLastDay()
+        {
+            var history = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            for (long hour = 100; hour <= 160; hour++) history.RecordHour(hour, new Dictionary<string, float> { ["iron"] = hour });
+            var ago = history.DayAgo(160.5);
+            Assert.True(ago != null, "a reading a day old");
+            Assert.Near(136, ago.Value.reserves["iron"], 1e-6, "24 hours back");
+            Assert.Near(24.5, ago.Value.hoursAgo, 1e-4, "hours ago");
+
+            history.ClearHours();
+            history.RecordHour(161, new Dictionary<string, float> { ["iron"] = 1 });
+            Assert.True(history.DayAgo(163) == null, "too recent for a trend");
+
+            Assert.Equal(1, NutrientHistory.Trend(100, 130, 24), "rising");
+            Assert.Equal(0, NutrientHistory.Trend(100, 95, 24), "steady");
+            Assert.Equal(-1, NutrientHistory.Trend(100, 60, 24), "falling");
+            Assert.Equal(-1, NutrientHistory.Trend(100, 90, 6), "10 in 6 hours is 40 a day");
+        }
+
+        [Test]
+        public static void HistoryScaleRoundsUp()
+        {
+            Assert.Near(5000, ComplexNutrition.UI.NutritionPages.NiceCeiling(3500), 1e-3, "3,500 to 5,000");
+            Assert.Near(200, ComplexNutrition.UI.NutritionPages.NiceCeiling(179), 1e-3, "179 to 200");
+            Assert.Near(250, ComplexNutrition.UI.NutritionPages.NiceCeiling(201), 1e-3, "201 to 250");
+            Assert.Near(1000, ComplexNutrition.UI.NutritionPages.NiceCeiling(1000), 1e-3, "exact stays");
+        }
+
         // ---- Text ----
 
         [Test]
@@ -301,14 +354,44 @@ namespace ComplexNutrition.Tests
         [Test]
         public static void NutrientAmountsFormat()
         {
-            var g = new NutrientDefinition { Code = "protein", Unit = "g", DailyTarget = 64, DisplayUnit = "g" };
-            var mg = new NutrientDefinition { Code = "vitaminC", Unit = "%DV", DailyTarget = 100, DisplayUnit = "mg", DvAmount = 90 };
+            var g = new NutrientDefinition { Code = "protein", Unit = "g", DailyTarget = 64 };
+            var mg = new NutrientDefinition { Code = "vitaminC", Unit = "mg", DailyTarget = 90, Group = "WaterSolubleVitamin" };
             var b = new NutrientDefinition { Code = "vitaminB", Unit = "%DV", DailyTarget = 100 };
             Assert.Equal("32g", g.Format(50f, false), "grams");
             Assert.Equal("50%", g.Format(50f, true), "percent");
-            Assert.Equal("45mg", mg.Format(50f, false), "mg from %DV");
+            Assert.Equal("45mg", mg.Format(50f, false), "mg");
             Assert.Equal("50% DV", b.Format(50f, false), "no unit to show");
             Assert.Near(32f, g.FromPercent(50f), 1e-4, "FromPercent");
+        }
+
+        [Test]
+        public static void DailyValuesTurnIntoAmounts()
+        {
+            var reg = new NutrientRegistry();
+            reg.Set(Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")));
+            var p = new FoodProfile { Code = "x:food", PortionGrams = 100, Per100g = new() { ["iron"] = 2f }, Per100gDV = new() { ["vitaminC"] = 50f, ["iron"] = 100f, ["vitaminB"] = 30f } };
+            FoodDatabase.ApplyDailyValues(null, reg, p, "test");
+            Assert.Near(45f, p.Per100("vitaminC"), 1e-4, "50% DV of vitamin C is 45mg");
+            Assert.Equal(2f, p.Per100("iron"), "per100g wins over per100gDV");
+            Assert.Near(30f, p.Per100("vitaminB"), 1e-4, "the B vitamins stay in %DV");
+            Assert.True(p.Per100gDV == null, "per100gDV is used up");
+        }
+
+        [Test]
+        public static void VitaminsAndMineralsUseRealUnits()
+        {
+            var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients;
+            foreach (var n in nutrients.Where(n => n.IsMicronutrient))
+            {
+                if (n.Code == NutrientCodes.VitaminB) Assert.Equal("%DV", n.Unit, "vitamin B unit");
+                else Assert.True(n.Unit == "mg" || n.Unit == "mcg", n.Code + " is in mg or mcg, not " + n.Unit);
+            }
+            // Our profiles store real units: no shipped profile uses per100gDV, and a sample matches USDA.
+            foreach (var file in Directory.EnumerateFiles(Repo.Mod("assets", "complexnutrition", "config", "foodprofiles"), "*.json"))
+                Assert.True(!File.ReadAllText(file).Contains("per100gDV"), Path.GetFileName(file) + " uses real units");
+            var dairy = Repo.Load<FoodProfileFile>(Repo.Config("foodprofiles/dairy.json"));
+            var butter = dairy.Profiles.First(p => p.Code == "game:butter-salted");
+            Assert.Near(684f, butter.Per100("vitaminA"), 0.5, "salted butter has 684mcg vitamin A per 100g (USDA 173410)");
         }
 
         [Test]

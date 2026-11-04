@@ -81,6 +81,8 @@ namespace ComplexNutrition.Core
                 }
             }
 
+            foreach (var (p, fileName) in loaded) ApplyDailyValues(api, registry, p, fileName);
+
             // Higher priority first; equal priorities keep load order and the first one wins.
             var winners = new Dictionary<string, (int priority, string file)>();
             foreach (var (p, fileName) in loaded.OrderByDescending(x => x.profile.Priority))
@@ -118,6 +120,29 @@ namespace ComplexNutrition.Core
             Fallbacks = ConfigAsset.Load<FoodFallbackFile>(api, FallbackPath);
             Fallbacks.ByCategory ??= new Dictionary<string, FoodProfile>();
             foreach (var kv in Fallbacks.ByCategory) WarnUnknownNutrients(api, registry, kv.Value, FallbackPath);
+        }
+
+        /// <summary>Turns a profile's per100gDV (% of the daily value) into per100g amounts in each nutrient's unit.</summary>
+        public static void ApplyDailyValues(ICoreAPI api, NutrientRegistry registry, FoodProfile p, string fileName)
+        {
+            if (p.Per100gDV == null) return;
+            p.Per100g ??= new Dictionary<string, float>();
+            foreach (var kv in p.Per100gDV)
+            {
+                var def = registry.Get(kv.Key);
+                if (def == null)
+                {
+                    api?.Logger.Warning("[complexnutrition] {0}: profile {1} uses unknown nutrient '{2}' in per100gDV.", fileName, p.Code, kv.Key);
+                    continue;
+                }
+                if (p.Per100g.ContainsKey(kv.Key))
+                {
+                    api?.Logger.Warning("[complexnutrition] {0}: profile {1} gives {2} in both per100g and per100gDV; using per100g.", fileName, p.Code, kv.Key);
+                    continue;
+                }
+                p.Per100g[kv.Key] = def.FromPercent(kv.Value);
+            }
+            p.Per100gDV = null;
         }
 
         private static bool IsUsable(FoodProfile p) => p.PortionGrams > 0 && p.Per100g != null && p.Per100g.Count > 0;

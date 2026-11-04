@@ -86,6 +86,7 @@ namespace ComplexNutrition.Modules.Tracking
                 sapi.Event.PlayerJoin += InitPlayer;
                 sapi.Event.PlayerNowPlaying += InitPlayer;
                 sapi.Event.PlayerRespawn += OnRespawn;
+                core.HistoryProvider = BuildHistory;
                 tickListener = sapi.Event.RegisterGameTickListener(OnTick, (int)(Math.Max(0.5f, Settings.UpdateSeconds) * 1000));
                 foreach (IServerPlayer player in sapi.World.AllOnlinePlayers) InitPlayer(player);
             }
@@ -106,6 +107,7 @@ namespace ComplexNutrition.Modules.Tracking
                 sapi.Event.PlayerJoin -= InitPlayer;
                 sapi.Event.PlayerNowPlaying -= InitPlayer;
                 sapi.Event.PlayerRespawn -= OnRespawn;
+                if (Core.HistoryProvider == BuildHistory) Core.HistoryProvider = null;
                 sapi.Event.UnregisterGameTickListener(tickListener);
                 HungerPatches.Remove();
                 foreach (IServerPlayer player in sapi.World.AllOnlinePlayers)
@@ -180,16 +182,34 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// A character new to Complex Nutrition starts with the calorie tank the world's start condition picks:
-        /// Easy 7 days (full), Normal 5, Hard 3, Brutal 1, Rock Bottom 1% of a day. Only on first join, never on respawn.
+        /// A character new to Complex Nutrition starts with what the world's start condition picks: the calorie tank
+        /// (Full 10 days, Easy 7, Normal 5, Hard 3, Brutal 1, Rock Bottom 1% of a day) and the same share of every
+        /// vitamin and mineral store (Full 100%, Easy 70%, ...). Only on first join; respawning uses the respawn condition.
+        /// Worlds from before v0.2.4 have none, and the nutrients' startReserve applies.
         /// </summary>
         private void ApplyStartCondition(IServerPlayer player, NutritionState state)
         {
-            var def = Core.Nutrients.Get(NutrientCodes.Calories);
-            if (def == null) return;
             float? start = WorldSettings.StartCalories(sapi.World);
-            if (start == null) return;
-            state.SetReserve(def.Code, Math.Max(0f, Math.Min(def.Cap, start.Value)));
+            if (start != null) ApplyCondition(player, state, start.Value, publish: false);
+        }
+
+        /// <summary>
+        /// Sets the calorie tank to <paramref name="calories"/> (% of a day) and each vitamin and mineral to the same share
+        /// of its store (<see cref="WorldSettings.StoreShare"/>).
+        /// </summary>
+        private void ApplyCondition(IServerPlayer player, NutritionState state, float calories, bool publish)
+        {
+            float share = WorldSettings.StoreShare(calories);
+            foreach (var n in Core.Nutrients.All)
+            {
+                float value;
+                if (n.IsCalories) value = Math.Clamp(calories, 0f, n.Cap);
+                else if (n.IsMicronutrient) value = n.Cap * share;
+                else continue;
+                float old = state.GetReserve(n.Code);
+                state.SetReserve(n.Code, value);
+                if (publish && old != value) Core.PublishReserveChanged(player, n.Code, old, value);
+            }
         }
 
         /// <summary>Saves from v0.2.2 to v0.3.0 kept the gut as batches as well as in the reserves; since v0.3.1 the reserve is the one record.</summary>
@@ -204,17 +224,41 @@ namespace ComplexNutrition.Modules.Tracking
             }
         }
 
-        /// <summary>Vanilla gives half a stomach on revive; the calorie tank gets at least a day's worth, so a starved player can recover.</summary>
+        /// <summary>
+        /// A respawned character gets the world's respawn condition (Brutal unless set: 1 day of calories and 10% of each
+        /// vitamin and mineral store). The gut and the last 24 hours of digestion are cleared, so the new body starts fresh.
+        /// Fiber empties too: a new gut starts with none. Vanilla gives half a stomach of fullness.
+        /// </summary>
         private void OnRespawn(IServerPlayer player)
         {
             var state = player?.Entity == null ? null : StateOf(player.Entity);
-            var def = Core.Nutrients.Get(NutrientCodes.Calories);
-            if (state == null || def == null) return;
-            float old = state.GetReserve(def.Code);
-            if (old >= Digest.ReviveCalories) return;
-            state.SetReserve(def.Code, Digest.ReviveCalories);
+            if (state == null) return;
+            ApplyCondition(player, state, WorldSettings.RespawnCalories(sapi.World), publish: true);
+            foreach (var kv in Digest.Pools)
+            {
+                var def = Core.Nutrients.Get(kv.Key);
+                if (def != null)
+                {
+                    float old = state.GetReserve(def.Code);
+                    SetGut(state, def, 0f, kv.Value, 1f);
+                    if (old != 0f) Core.PublishReserveChanged(player, def.Code, old, 0f);
+                }
+                state.SetAbsorbedLog(kv.Key, new float[24]);
+            }
+            var fiber = Core.Nutrients.Get(NutrientCodes.Fiber);
+            if (fiber != null)
+            {
+                float old = state.GetReserve(fiber.Code);
+                state.SetReserve(fiber.Code, 0f);
+                if (old != 0f) Core.PublishReserveChanged(player, fiber.Code, old, 0f);
+            }
+            state.Protein24 = 0f;
+            state.ClearSitting();
             state.MarkDirty();
-            Core.PublishReserveChanged(player, def.Code, old, Digest.ReviveCalories);
+            // Trend arrows compare against the new body, not the old one.
+            var history = NutrientHistory.Of(player.Entity);
+            history.ClearHours();
+            history.RecordHour(CurrentHour, Reserves(state));
         }
 
         /// <summary>Lets vanilla recompute its nutrition HP bonus; our patch keeps it at zero while tracking is on.</summary>
@@ -236,13 +280,41 @@ namespace ComplexNutrition.Modules.Tracking
             int day = state.Day;
             if (day == today) return;
             var ledger = DietLedger.Of(player.Entity);
+            var history = NutrientHistory.Of(player.Entity);
             if (day != int.MinValue && day < today)
             {
+                history.RecordDay(day, Reserves(state));
                 Core.PublishDailyRollover(player, ledger.Get(day));
             }
             state.ClearToday();
             state.Day = today;
             ledger.Prune(today, Settings.LedgerDays);
+            history.Prune(today, Settings.LedgerDays);
+        }
+
+        private long CurrentHour => (long)Math.Floor(NowHours);
+
+        /// <summary>Every nutrient's reserve, for the history.</summary>
+        private Dictionary<string, float> Reserves(NutritionState state)
+        {
+            var result = new Dictionary<string, float>();
+            foreach (var n in Core.Nutrients.All) result[n.Code] = state.GetReserve(n.Code);
+            return result;
+        }
+
+        /// <summary>Once per game hour: the reserves, for the window's trend arrows.</summary>
+        private void RecordHourly(IServerPlayer player, NutritionState state)
+        {
+            var history = NutrientHistory.Of(player.Entity);
+            if (history.LastHour != CurrentHour) history.RecordHour(CurrentHour, Reserves(state));
+        }
+
+        /// <summary>The nutrition window's history for a player, or null when tracking is not running for them.</summary>
+        private HistoryData BuildHistory(IServerPlayer player)
+        {
+            var state = player?.Entity == null || sapi == null ? null : StateOf(player.Entity);
+            if (state == null) return null;
+            return NutrientHistory.Of(player.Entity).Build(DietLedger.Of(player.Entity), Reserves(state), Today, NowHours, Settings.LedgerDays);
         }
 
         private void OnTick(float dt)
@@ -264,6 +336,7 @@ namespace ComplexNutrition.Modules.Tracking
                     continue;
                 }
                 EnsureDay(player, state);
+                RecordHourly(player, state);
                 if (scanHeld) RecordHeld(player);
 
                 var mode = player.WorldData.CurrentGameMode;
