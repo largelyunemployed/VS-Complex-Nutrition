@@ -51,6 +51,15 @@ namespace ComplexNutrition.UI
 
         private static string Kcal(NutritionPageData d, float kcal) => Amt(d, NutrientCodes.Calories, kcal);
 
+        /// <summary>The calories per hour fiber adds right now, its rate in red like the gut lines.</summary>
+        private static string FiberBoost(NutritionPageData d)
+        {
+            float kcal = Digestion.FiberKcalPerHour(d.Digest, d.State, d.Nutrients);
+            return kcal < 0.05f
+                ? StatsHover.Text(L("fiber-boost-none"))
+                : StatsHover.Vtml("complexnutrition:fiber-boost", StatsHover.Paint(L("kcal-rate", Kcal(d, kcal)), UnitColors.Rate));
+        }
+
         private static List<PageBlock> Off() => new()
         {
             new GapBlock(6),
@@ -193,6 +202,7 @@ namespace ComplexNutrition.UI
                     });
                 }
                 blocks.Add(new TextBlock(StatsHover.Text(L("window-macros-note", Amt(d, NutrientCodes.Protein, s.ProteinMaxGrams))), true));
+                blocks.Add(new TextBlock(FiberBoost(d), true));
             }
 
             blocks.Add(new HeadingBlock(L("window-heading-low")));

@@ -440,6 +440,11 @@ namespace ComplexNutrition.Modules.Tracking
 
         private static string Num(float v) => Fmt.Number(v);
 
+        /// <summary>Fiber's hover line: the calories per hour it adds right now, its rate in red like the gut lines.</summary>
+        private static string FiberBoostLine(float kcalPerHour) => kcalPerHour < 0.05f
+            ? StatsHover.Text(Lang.Get("complexnutrition:fiber-boost-none"))
+            : StatsHover.Vtml("complexnutrition:fiber-boost", StatsHover.Paint(Lang.Get("complexnutrition:kcal-rate", Kcal(kcalPerHour)), UnitColors.Rate));
+
         /// <summary>Calories as text, as an amount or in % of a day's need, as the player chose.</summary>
         private static string Kcal(float kcal) => core.Nutrients.Get(NutrientCodes.Calories)?.FormatAmount(kcal, core.ShowPercent) ?? Num(kcal) + "kcal";
 
@@ -544,9 +549,12 @@ namespace ComplexNutrition.Modules.Tracking
                     string title = Lang.Get(n.LangKey);
                     Row(title, "cn-" + code, color, () =>
                     {
-                        float r = NutritionState.Of(capi?.World?.Player?.Entity)?.GetReserve(code) ?? 0f;
-                        return NutrientHover(title, color, code,
-                            StatsHover.Vtml("complexnutrition:reserve-hover", Amount(def, r), StatsHover.Text(NutrientDisplay.DaysText(r))));
+                        var st = NutritionState.Of(capi?.World?.Player?.Entity);
+                        float r = st?.GetReserve(code) ?? 0f;
+                        string line = StatsHover.Vtml("complexnutrition:reserve-hover", Amount(def, r), StatsHover.Text(NutrientDisplay.DaysText(r)));
+                        if (code == NutrientCodes.Fiber && Digestion.Settings != null && st != null)
+                            return NutrientHover(title, color, code, line, FiberBoostLine(Digestion.FiberKcalPerHour(Digestion.Settings, st, core.Nutrients)));
+                        return NutrientHover(title, color, code, line);
                     });
                 }
             }

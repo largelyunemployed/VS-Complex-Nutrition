@@ -322,6 +322,29 @@ namespace ComplexNutrition.Core
         }
 
         /// <summary>Grams of a pool absorbed within its diminishing-returns window, up to the last digestion step.</summary>
+        /// <summary>
+        /// The extra calories per in-game hour that fiber is adding right now: for each gut pool, what it yields at its
+        /// current rate with the fiber speed-up, less what it would yield without, after diminishing returns.
+        /// </summary>
+        public static float FiberKcalPerHour(DigestionSettings s, NutritionState state, NutrientRegistry nutrients)
+        {
+            if (s == null || state == null || nutrients == null) return 0f;
+            float kcal = 0f;
+            foreach (var kv in s.Pools)
+            {
+                var def = nutrients.Get(kv.Key);
+                var pool = kv.Value;
+                if (def == null) continue;
+                float grams = def.FromPercent(state.GetReserve(def.Code));
+                if (grams <= DigestionPool.EmptyGrams) continue;
+                float window = WindowGrams(state, kv.Key, pool);
+                float fast = pool.Effective(window, pool.Rate(grams, FiberSpeed(s, state, pool)));
+                float plain = pool.Effective(window, pool.Rate(grams, 1f));
+                kcal += Math.Max(0f, fast - plain) * pool.KcalPerGram;
+            }
+            return kcal;
+        }
+
         public static float WindowGrams(NutritionState state, string code, DigestionPool pool)
         {
             var log = state.GetAbsorbedLog(code);
