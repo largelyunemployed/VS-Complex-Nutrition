@@ -27,6 +27,21 @@ namespace ComplexNutrition.Modules.Tracking
         /// <summary>Reserves drain once at least this many in-game hours have passed since the last drain.</summary>
         [JsonProperty("minDrainHours")] public float MinDrainHours = 0.1f;
 
+        /// <summary>The nutrition window lists the calorie tank as running low below this many days.</summary>
+        [JsonProperty("lowCaloriesDays")] public float LowCaloriesDays = 1f;
+
+        /// <summary>The nutrition window lists a nutrient of a <see cref="LowGroups"/> group as running low below this many days.</summary>
+        [JsonProperty("lowDays")] public float LowDays = 2f;
+
+        /// <summary>
+        /// Nutrient groups that can run low. Carbs, fats, protein, fiber, vitamin C and the B vitamins refresh within a day or two,
+        /// so they get no warning.
+        /// </summary>
+        [JsonProperty("lowGroups")] public string[] LowGroups = { "FatSolubleVitamin", "Mineral" };
+
+        /// <summary>Real seconds between checks of what each player is holding, for the foods they know.</summary>
+        [JsonProperty("heldScanSeconds")] public float HeldScanSeconds = 5f;
+
         public static TrackingSettings Load(ICoreAPI api)
         {
             var asset = api.Assets.TryGet(new AssetLocation(ComplexNutritionModSystem.ModId, AssetPath));

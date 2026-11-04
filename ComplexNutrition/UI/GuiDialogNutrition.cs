@@ -1,0 +1,137 @@
+using System;
+using System.Collections.Generic;
+using ComplexNutrition.Core;
+using Vintagestory.API.Client;
+using Vintagestory.API.Config;
+
+namespace ComplexNutrition.UI
+{
+    /// <summary>
+    /// The nutrition window (Left Alt + N, or the button on the Stats panel): the same size as the handbook and
+    /// placed like it, with tabs along the top and a Settings button. The open page refreshes every second.
+    /// </summary>
+    public sealed class GuiDialogNutrition : GuiDialog
+    {
+        public const double ContentWidth = 500;
+        public const double ContentHeight = 500;
+
+        private readonly ComplexNutritionModSystem core;
+        private GuiElementNutritionPage page;
+        private int tab;
+        private long ticker;
+
+        private static readonly string[] TabKeys = { "window-tab-overview", "window-tab-digestion", "window-tab-vitamins", "window-tab-minerals" };
+
+        public GuiDialogNutrition(ICoreClientAPI capi, ComplexNutritionModSystem core) : base(capi)
+        {
+            this.core = core;
+        }
+
+        public override string ToggleKeyCombinationCode => null;
+
+        public override bool PrefersUngrabbedMouse => true;
+
+        private void Compose()
+        {
+            var tabs = new GuiTab[TabKeys.Length];
+            for (int i = 0; i < tabs.Length; i++) tabs[i] = new GuiTab { Name = Lang.Get("complexnutrition:" + TabKeys[i]), DataInt = i, Active = i == tab };
+
+            ElementBounds tabBounds = ElementBounds.Fixed(0.0, 35.0, 390.0, 25.0);
+            ElementBounds settingsBounds = ElementBounds.Fixed(ContentWidth - 82.0, 36.0, 0.0, 0.0).WithFixedPadding(8.0, 3.0);
+            ElementBounds pageBounds = ElementBounds.Fixed(3.0, 75.0, ContentWidth, ContentHeight);
+            ElementBounds clipBounds = pageBounds.ForkBoundingParent();
+            ElementBounds insetBounds = pageBounds.FlatCopy().FixedGrow(6.0).WithFixedOffset(-3.0, -3.0);
+            ElementBounds scrollBounds = insetBounds.CopyOffsetedSibling(3.0 + ContentWidth + 7.0).WithFixedWidth(20.0);
+            ElementBounds closeBounds = ElementBounds.FixedSize(0.0, 0.0).FixedUnder(clipBounds, 15.0)
+                .WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(20.0, 4.0).WithFixedAlignmentOffset(-6.0, 0.0);
+
+            ElementBounds bgBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);
+            bgBounds.BothSizing = ElementSizing.FitToChildren;
+            bgBounds.WithChildren(tabBounds, settingsBounds, insetBounds, clipBounds, scrollBounds, closeBounds);
+
+            ElementBounds dialogBounds = ElementStdBounds.AutosizedMainDialog
+                .WithAlignment(EnumDialogArea.CenterFixed).WithFixedPosition(0.0, 70.0);
+
+            page = new GuiElementNutritionPage(capi, pageBounds, ContentWidth - 4.0);
+            var font = CairoFont.WhiteSmallText().WithFontSize(17);
+            var selected = CairoFont.WhiteSmallText().WithFontSize(17).WithColor(GuiStyle.ActiveButtonTextColor);
+
+            SingleComposer = capi.Gui.CreateCompo("complexnutrition-window", dialogBounds)
+                .AddShadedDialogBG(bgBounds, true, 5.0, 0.75f)
+                .AddDialogTitleBar(Lang.Get("complexnutrition:window-title"), OnTitleBarClose)
+                .BeginChildElements(bgBounds)
+                    .AddHorizontalTabs(tabs, tabBounds, OnTab, font, selected, "tabs")
+                    .AddSmallButton(Lang.Get("complexnutrition:window-settings"), OnSettings, settingsBounds, EnumButtonStyle.Small, "settings")
+                    .AddInset(insetBounds, 3, 0.85f)
+                    .BeginClip(clipBounds)
+                        .AddInteractiveElement(page, "page")
+                    .EndClip()
+                    .AddVerticalScrollbar(OnScroll, scrollBounds, "scrollbar")
+                    .AddSmallButton(Lang.Get("complexnutrition:window-close"), () => { TryClose(); return true; }, closeBounds, EnumButtonStyle.Normal)
+                .EndChildElements()
+                .Compose();
+            SingleComposer.GetHorizontalTabs("tabs").activeElement = tab;
+            Refresh(true);
+        }
+
+        private void OnTab(int index)
+        {
+            tab = index;
+            if (page != null) page.ScrollOffset = 0;
+            var bar = SingleComposer?.GetScrollbar("scrollbar");
+            if (bar != null) bar.CurrentYPosition = 0;
+            Refresh(true);
+        }
+
+        private bool OnSettings()
+        {
+            core.OpenSettings();
+            return true;
+        }
+
+        private void OnScroll(float value)
+        {
+            if (page != null) page.ScrollOffset = value;
+        }
+
+        /// <summary>Rebuilds the open page from the player's current state; redraws only if something changed.</summary>
+        public void Refresh(bool force = false)
+        {
+            if (page == null || SingleComposer == null) return;
+            var data = core.BuildPageData();
+            List<PageBlock> blocks = tab switch
+            {
+                1 => NutritionPages.DigestionPage(data),
+                2 => NutritionPages.Vitamins(data),
+                3 => NutritionPages.Minerals(data),
+                _ => NutritionPages.Overview(data),
+            };
+            if (page.SetBlocks(blocks) || force)
+            {
+                var bar = SingleComposer.GetScrollbar("scrollbar");
+                bar?.SetHeights((float)ContentHeight, (float)Math.Max(ContentHeight, page.ContentHeight));
+                if (bar != null && page.ScrollOffset > Math.Max(0, page.ContentHeight - ContentHeight))
+                {
+                    page.ScrollOffset = Math.Max(0, page.ContentHeight - ContentHeight);
+                    bar.CurrentYPosition = (float)page.ScrollOffset;
+                }
+            }
+        }
+
+        public override void OnGuiOpened()
+        {
+            base.OnGuiOpened();
+            Compose();
+            ticker = capi.Event.RegisterGameTickListener(_ => Refresh(), 1000);
+        }
+
+        public override void OnGuiClosed()
+        {
+            base.OnGuiClosed();
+            if (ticker != 0) capi.Event.UnregisterGameTickListener(ticker);
+            ticker = 0;
+        }
+
+        private void OnTitleBarClose() => TryClose();
+    }
+}

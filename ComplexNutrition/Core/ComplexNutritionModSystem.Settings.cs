@@ -1,0 +1,396 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using ComplexNutrition.Modules.Tracking;
+using ComplexNutrition.UI;
+using Newtonsoft.Json;
+using Vintagestory.API.Client;
+using Vintagestory.API.Common;
+using Vintagestory.API.Config;
+using Vintagestory.API.Datastructures;
+using Vintagestory.API.Server;
+
+namespace ComplexNutrition.Core
+{
+    /// <summary>
+    /// v0.3.0: the settings menu's plumbing and the nutrition window. Settings live where they belong: the client
+    /// file for what only changes your own screen, the player's data for their display choice, the server's
+    /// config file for what the admin decides, and the world config for world settings. The client asks the
+    /// server for each change over our network channel; the server checks the player may make it, applies it,
+    /// saves it and sends every client the new settings.
+    /// </summary>
+    public partial class ComplexNutritionModSystem
+    {
+        public const string ChannelName = ModId;
+        public const string HotkeyCode = "complexnutrition-window";
+
+        /// <summary>Client: the server's settings as last sent, or null before the first.</summary>
+        public SettingsSnapshot ServerSettings { get; private set; }
+
+        /// <summary>Client: this computer's own settings.</summary>
+        public ClientSettings Client { get; private set; } = new();
+
+        private ICoreServerAPI sapi;
+        private ICoreClientAPI capi;
+        private IServerNetworkChannel serverChannel;
+        private IClientNetworkChannel clientChannel;
+        private GuiDialogNutrition window;
+        private GuiDialogNutritionSettings settingsDialog;
+        private TrackingSettings clientTracking;
+        private DigestionSettings clientDigest;
+
+        /// <summary>Whether food tooltips show the nutrient block. The admin decides; clients follow the server.</summary>
+        public bool ShowTooltip => api?.Side == EnumAppSide.Client && ServerSettings != null ? ServerSettings.ShowTooltip : Config.ShowTooltip;
+
+        /// <summary>Client: amounts in % of a day's need? The player's own choice, or the server's default.</summary>
+        private bool ClientShowPercent
+        {
+            get
+            {
+                string own = Client?.DisplayUnits ?? "server";
+                if (own == "percent") return true;
+                if (own == "amount") return false;
+                return ServerSettings?.ShowPercent ?? Config.ShowPercent;
+            }
+        }
+
+        public override void Start(ICoreAPI api)
+        {
+            api.Network.RegisterChannel(ChannelName)
+                .RegisterMessageType<SettingsSnapshotPacket>()
+                .RegisterMessageType<SettingsChangePacket>()
+                .RegisterMessageType<OpenSettingsPacket>();
+        }
+
+        // ---- Server ----
+
+        private void StartServerSettings(ICoreServerAPI api)
+        {
+            sapi = api;
+            serverChannel = api.Network.GetChannel(ChannelName);
+            serverChannel.SetMessageHandler<SettingsChangePacket>(OnSettingsChange);
+            api.Event.PlayerNowPlaying += SendSettings;
+
+            api.ChatCommands.GetOrCreate("nutrition")
+                .WithDescription("Show your nutrient reserves")
+                .RequiresPrivilege(Privilege.chat)
+                .BeginSubCommand("settings")
+                    .WithDescription("Open the Complex Nutrition settings menu")
+                    .RequiresPlayer()
+                    .RequiresPrivilege(Privilege.chat)
+                    .HandleWith(args =>
+                    {
+                        if (args.Caller.Player is IServerPlayer p) serverChannel.SendPacket(new OpenSettingsPacket(), p);
+                        return TextCommandResult.Success();
+                    })
+                .EndSubCommand();
+
+            // The same switch from the server console, for dedicated servers.
+            api.ChatCommands.GetOrCreate("cnutrition")
+                .BeginSubCommand("module")
+                    .WithDescription("Switch a module on or off while the server runs: /cnutrition module <fooddata|tracking> <on|off>")
+                    .RequiresPrivilege(Privilege.controlserver)
+                    .WithArgs(api.ChatCommands.Parsers.Word("module"), api.ChatCommands.Parsers.WordRange("state", "on", "off"))
+                    .HandleWith(args =>
+                    {
+                        var module = modules.FirstOrDefault(m => m.Id == (string)args[0]);
+                        if (module == null) return TextCommandResult.Error("Unknown module. Use one of: " + string.Join(", ", modules.Select(m => m.Id)));
+                        bool on = (string)args[1] == "on";
+                        Config.Modules[module.Id] = on;
+                        SetModuleRunning(module, on);
+                        sapi.StoreModConfig(Config, ComplexNutritionConfig.FileName);
+                        SendSettingsToAll();
+                        return TextCommandResult.Success($"Module {module.Id} is {(module.IsEnabled ? "on" : "off")}.");
+                    })
+                .EndSubCommand();
+        }
+
+        private static bool IsAdmin(IServerPlayer player) => player != null && player.HasPrivilege(Privilege.controlserver);
+
+        private SettingsSnapshot SnapshotFor(IServerPlayer player) => new()
+        {
+            IsAdmin = IsAdmin(player),
+            ShowTooltip = Config.ShowTooltip,
+            LogFallbacks = Config.LogFallbacks,
+            DisplayUnits = Config.ShowPercent ? "percent" : "amount",
+            Modules = modules.ToDictionary(m => m.Id, m => m.IsEnabled),
+            StartCalories = TrackingModule.StartCalories(sapi)?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            AdvancedDefault = Digestion.WorldAdvancedDefault(sapi.World),
+            MeatInPots = WorldBool(sapi.World, MeatInPotsKey),
+        };
+
+        /// <summary>World setting (worldconfig.json): poultry and bushmeat in pots. Read by the recipe patches in patches/meat-in-pots.json when the world loads.</summary>
+        public const string MeatInPotsKey = "complexnutritionMeatInPots";
+
+        private static bool WorldBool(IWorldAccessor world, string key) =>
+            string.Equals(Convert.ToString(world?.Config?[key]?.GetValue(), System.Globalization.CultureInfo.InvariantCulture), "true", StringComparison.OrdinalIgnoreCase);
+
+        private void SendSettings(IServerPlayer player)
+        {
+            if (player == null || serverChannel == null) return;
+            serverChannel.SendPacket(new SettingsSnapshotPacket { Json = JsonConvert.SerializeObject(SnapshotFor(player)) }, player);
+        }
+
+        private void SendSettingsToAll()
+        {
+            foreach (IServerPlayer p in sapi.World.AllOnlinePlayers)
+            {
+                if (p.ConnectionState == EnumClientState.Playing) SendSettings(p);
+            }
+        }
+
+        private void OnSettingsChange(IServerPlayer from, SettingsChangePacket packet)
+        {
+            string key = packet?.Key ?? "";
+            string value = packet?.Value ?? "";
+            bool on = string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+
+            if (key == SettingKeys.Display)
+            {
+                var state = NutritionState.Of(from.Entity);
+                if (state != null && int.TryParse(value, out int choice) && choice >= 0 && choice <= 2)
+                {
+                    state.DisplayChoice = choice;
+                    state.MarkDirty();
+                }
+                SendSettings(from);
+                return;
+            }
+
+            if (!IsAdmin(from))
+            {
+                api.Logger.Notification("[complexnutrition] {0} tried to change {1} without admin rights.", from.PlayerName, key);
+                SendSettings(from);
+                return;
+            }
+
+            bool saveConfig = true;
+            switch (key)
+            {
+                case SettingKeys.ShowTooltip: Config.ShowTooltip = on; break;
+                case SettingKeys.LogFallbacks: Config.LogFallbacks = on; break;
+                case SettingKeys.DisplayUnits:
+                    if (value != "amount" && value != "percent") return;
+                    Config.DisplayUnits = value;
+                    Nutrients.ShowPercent = Config.ShowPercent;
+                    break;
+                case SettingKeys.StartCalories:
+                    if (!new[] { "1000", "700", "500", "300", "100", "1" }.Contains(value)) return;
+                    sapi.World.Config.SetString(TrackingModule.StartConditionKey, value);
+                    saveConfig = false;
+                    break;
+                case SettingKeys.MeatInPots:
+                    // Recipes are patched when the world loads, so this takes effect after a restart.
+                    sapi.World.Config.SetString(MeatInPotsKey, on ? "true" : "false");
+                    saveConfig = false;
+                    break;
+                case SettingKeys.AdvancedDefault:
+                    sapi.World.Config.SetBool(Digestion.AdvancedDisplayKey, on);
+                    saveConfig = false;
+                    break;
+                default:
+                    if (!key.StartsWith(SettingKeys.ModulePrefix)) return;
+                    var module = modules.FirstOrDefault(m => m.Id == key.Substring(SettingKeys.ModulePrefix.Length));
+                    if (module == null) return;
+                    Config.Modules[module.Id] = on;
+                    SetModuleRunning(module, on);
+                    break;
+            }
+            if (saveConfig) sapi.StoreModConfig(Config, ComplexNutritionConfig.FileName);
+            api.Logger.Notification("[complexnutrition] {0} set {1} to {2}.", from.PlayerName, key, value);
+            SendSettingsToAll();
+        }
+
+        /// <summary>
+        /// Starts or stops a module while the game runs, on this side. On the server, stopping tracking also converts every
+        /// online player to vanilla values (their own are saved), as joining a world with tracking off does; starting it
+        /// again puts them back exactly where they were.
+        /// </summary>
+        internal void SetModuleRunning(INutritionModule module, bool on)
+        {
+            if (module == null || module.IsEnabled == on) return;
+            if (on)
+            {
+                var missing = module.Requires.Where(r => !modules.Any(m => m.Id == r && m.IsEnabled)).ToArray();
+                if (missing.Length > 0)
+                {
+                    api.Logger.Notification("[complexnutrition] Module {0} stays off: needs {1}.", module.Id, string.Join(", ", missing));
+                    return;
+                }
+                module.Enable(api, this);
+                api.Logger.Notification("[complexnutrition] Module {0} switched on.", module.Id);
+                return;
+            }
+
+            foreach (var dependent in modules.Where(m => m.IsEnabled && m.Requires.Contains(module.Id)).ToList()) SetModuleRunning(dependent, false);
+            module.Disable(api);
+            api.Logger.Notification("[complexnutrition] Module {0} switched off.", module.Id);
+            if (sapi != null && module.Id == TrackingModule.ModuleId)
+            {
+                var digest = DigestionSettings.Load(sapi);
+                foreach (IServerPlayer p in sapi.World.AllOnlinePlayers) ConvertToVanilla(p, digest);
+            }
+        }
+
+        /// <summary>Server: puts a player on vanilla values worked out from ours, keeping ours for later.</summary>
+        private void ConvertToVanilla(IServerPlayer player, DigestionSettings digest)
+        {
+            var tree = player?.Entity?.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
+            if (tree == null) return;
+            tree.SetBool("tracking", false);
+            Digestion.ConvertToVanilla(player.Entity, Nutrients, Foods.Fallbacks.KcalPerSatiety, digest);
+            player.Entity.WatchedAttributes.MarkPathDirty(NutritionState.TreeKey);
+        }
+
+        // ---- Client ----
+
+        private void StartClientSettings(ICoreClientAPI api)
+        {
+            capi = api;
+            try
+            {
+                Client = api.LoadModConfig<ClientSettings>(ClientSettings.FileName);
+            }
+            catch (Exception e)
+            {
+                api.Logger.Error("[complexnutrition] Could not read {0}, using defaults: {1}", ClientSettings.FileName, e.Message);
+            }
+            if (Client == null)
+            {
+                // First run: keep what this computer's own config file chose before v0.3, if it chose percent.
+                Client = new ClientSettings { DisplayUnits = Config.ShowPercent ? "percent" : "server" };
+            }
+            api.StoreModConfig(Client, ClientSettings.FileName);
+            Nutrients.ShowPercent = ClientShowPercent;
+
+            clientChannel = api.Network.GetChannel(ChannelName);
+            clientChannel.SetMessageHandler<SettingsSnapshotPacket>(OnSettingsSnapshot);
+            clientChannel.SetMessageHandler<OpenSettingsPacket>(_ => OpenSettings());
+
+            api.Input.RegisterHotKey(HotkeyCode, Lang.Get("complexnutrition:hotkey-window"), GlKeys.N, HotkeyType.GUIOrOtherControls, altPressed: true);
+            api.Input.SetHotKeyHandler(HotkeyCode, _ => { ToggleWindow(); return true; });
+        }
+
+        private void OnSettingsSnapshot(SettingsSnapshotPacket packet)
+        {
+            SettingsSnapshot snap;
+            try
+            {
+                snap = JsonConvert.DeserializeObject<SettingsSnapshot>(packet?.Json ?? "");
+            }
+            catch (Exception e)
+            {
+                capi.Logger.Error("[complexnutrition] Could not read the server's settings: {0}", e.Message);
+                return;
+            }
+            if (snap == null) return;
+            ServerSettings = snap;
+            Nutrients.ShowPercent = ClientShowPercent;
+
+            // The client follows the server's module switches, so a module switched on or off in the menu takes effect here too.
+            foreach (var module in OrderByDependencies(modules).ToList())
+            {
+                if (snap.Modules != null && snap.Modules.TryGetValue(module.Id, out bool on)) SetModuleRunning(module, on);
+            }
+
+            // Keep the client's copy of the world settings in step, so its hovers follow a change made in the menu.
+            var cfg = capi.World?.Config;
+            if (cfg != null)
+            {
+                cfg.SetBool(Digestion.AdvancedDisplayKey, snap.AdvancedDefault);
+                if (snap.StartCalories != null) cfg.SetString(TrackingModule.StartConditionKey, snap.StartCalories);
+            }
+
+            settingsDialog?.Refresh();
+            if (window?.IsOpened() == true) window.Refresh(true);
+        }
+
+        /// <summary>Client: asks the server to change a setting.</summary>
+        public void SendSetting(string key, string value)
+        {
+            clientChannel?.SendPacket(new SettingsChangePacket { Key = key, Value = value });
+        }
+
+        /// <summary>Client: the player's own amounts-or-percent choice ("server", "amount" or "percent"), saved on this computer.</summary>
+        public void SetClientDisplayUnits(string value)
+        {
+            if (value != "server" && value != "amount" && value != "percent") return;
+            Client.DisplayUnits = value;
+            capi.StoreModConfig(Client, ClientSettings.FileName);
+            Nutrients.ShowPercent = ClientShowPercent;
+            if (window?.IsOpened() == true) window.Refresh(true);
+        }
+
+        public void ToggleWindow()
+        {
+            if (capi == null) return;
+            window ??= new GuiDialogNutrition(capi, this);
+            if (window.IsOpened()) window.TryClose();
+            else window.TryOpen();
+        }
+
+        public void OpenSettings()
+        {
+            if (capi == null) return;
+            settingsDialog ??= new GuiDialogNutritionSettings(capi, this);
+            if (!settingsDialog.IsOpened()) settingsDialog.TryOpen();
+            else settingsDialog.Refresh();
+        }
+
+        // ---- Nutrition window data ----
+
+        public const string HeldKey = "complexnutritionHeld";
+
+        private string[] knownCodes;
+        private List<KnownFood> known = new();
+
+        /// <summary>Client: what the nutrition window shows, read from the player's synced data.</summary>
+        public NutritionPageData BuildPageData()
+        {
+            var entity = capi?.World?.Player?.Entity;
+            var state = NutritionState.Of(entity);
+            if (state != null && !state.TrackingOn) state = null;
+            clientTracking ??= TrackingSettings.Load(capi);
+            clientDigest ??= DigestionSettings.Load(capi);
+            var hunger = entity?.WatchedAttributes.GetTreeAttribute("hunger");
+
+            var codes = (entity?.WatchedAttributes[HeldKey] as StringArrayAttribute)?.value;
+            if (codes != knownCodes)
+            {
+                knownCodes = codes;
+                known = new List<KnownFood>();
+                foreach (var code in codes ?? new string[0])
+                {
+                    var loc = new AssetLocation(code);
+                    CollectibleObject coll = (CollectibleObject)capi.World.GetItem(loc) ?? capi.World.GetBlock(loc);
+                    if (coll == null || coll.Id == 0) continue;
+                    var food = Foods.Resolve(coll);
+                    if (food == null) continue;
+                    known.Add(new KnownFood { Name = coll.GetHeldItemName(new ItemStack(coll)), Food = food });
+                }
+            }
+
+            return new NutritionPageData
+            {
+                Nutrients = Nutrients,
+                Digest = Digestion.Settings ?? clientDigest,
+                Tracking = clientTracking,
+                State = state,
+                Fullness = hunger?.GetFloat("currentsaturation") ?? 0f,
+                MaxFullness = hunger?.GetFloat("maxsaturation") ?? 0f,
+                ShowPercent = Nutrients.ShowPercent,
+                Known = known,
+            };
+        }
+
+        private void DisposeSettings()
+        {
+            window?.TryClose();
+            window?.Dispose();
+            settingsDialog?.TryClose();
+            settingsDialog?.Dispose();
+            window = null;
+            settingsDialog = null;
+        }
+    }
+}

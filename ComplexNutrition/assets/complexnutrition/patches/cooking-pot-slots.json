@@ -1,0 +1,14 @@
+[
+	{
+		"op": "replace",
+		"file": "game:blocktypes/clay/fired/pot.json",
+		"path": "/attributesByType/*-fired/maxContainerSlotStackSize",
+		"value": 10
+	},
+	{
+		"op": "replace",
+		"file": "game:blocktypes/clay/fired/dirtypot.json",
+		"path": "/attributesByType/*-empty/maxContainerSlotStackSize",
+		"value": 10
+	}
+]

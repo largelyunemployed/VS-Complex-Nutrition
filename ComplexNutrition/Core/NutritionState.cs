@@ -28,6 +28,9 @@ namespace ComplexNutrition.Core
             return tree == null ? null : new NutritionState(entity, tree);
         }
 
+        /// <summary>A read-only view of a state tree that belongs to no entity (UI previews). <see cref="MarkDirty"/> does nothing on it.</summary>
+        public static NutritionState FromTree(ITreeAttribute tree) => tree == null ? null : new NutritionState(null, tree);
+
         /// <summary>The state of this entity, creating it with every nutrient at its start reserve if missing.</summary>
         public static NutritionState GetOrCreate(Entity entity, NutrientRegistry nutrients, double nowHours, out bool created)
         {
@@ -163,6 +166,6 @@ namespace ComplexNutrition.Core
             set => tree.SetInt("day", value);
         }
 
-        public void MarkDirty() => entity.WatchedAttributes.MarkPathDirty(TreeKey);
+        public void MarkDirty() => entity?.WatchedAttributes.MarkPathDirty(TreeKey);
     }
 }

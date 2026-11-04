@@ -33,7 +33,7 @@ namespace ComplexNutrition.Modules.Tracking
             AccessTools.FieldRefAccess<CharacterExtraDialogs, GuiDialogCharacterBase>("dlg");
 
         /// <summary>Bar colours per nutrient group, in the game's muted palette.</summary>
-        private static readonly Dictionary<string, double[]> GroupColors = new()
+        internal static readonly Dictionary<string, double[]> GroupColors = new()
         {
             ["Energy"] = new[] { 0.80, 0.55, 0.22, 1.0 },
             ["Macro"] = GuiStyle.FoodBarColor,
@@ -74,6 +74,8 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 listening = true;
                 capi.Event.LevelFinalize += ListenForChanges;
+                // Switched on while the game runs (from the settings menu): the level is already loaded.
+                if (capi.World?.Player?.Entity != null) ListenForChanges();
                 hoverListener = capi.Event.RegisterGameTickListener(OnHoverTick, 100);
                 hoverBox = new StatsHover(capi, UpdateHover);
                 capi.Event.RegisterRenderer(hoverBox, EnumRenderStage.Ortho, "complexnutrition-statshover");
@@ -193,9 +195,14 @@ namespace ComplexNutrition.Modules.Tracking
             core = null;
         }
 
+        private static object listenedEntity;
+
         private static void ListenForChanges()
         {
-            capi?.World?.Player?.Entity?.WatchedAttributes.RegisterModifiedListener(NutritionState.TreeKey, () =>
+            var entity = capi?.World?.Player?.Entity;
+            if (entity == null || ReferenceEquals(entity, listenedEntity)) return;   // one listener per player entity, however often tracking is switched on
+            listenedEntity = entity;
+            entity.WatchedAttributes.RegisterModifiedListener(NutritionState.TreeKey, () =>
             {
                 if (capi == null) return;
                 var dialogs = capi.ModLoader.GetModSystem<CharacterExtraDialogs>();
@@ -418,6 +425,9 @@ namespace ComplexNutrition.Modules.Tracking
 
             ElementBounds labelBounds = ElementBounds.Fixed(0.0, 25.0, 200.0, 20.0);
             compo.AddStaticText(Lang.Get("complexnutrition:stats-heading"), CairoFont.WhiteSmallText().WithWeight(FontWeight.Bold), labelBounds);
+            // Opens the nutrition window (also Left Alt + N).
+            compo.AddSmallButton(Lang.Get("complexnutrition:stats-open-window"), () => { core?.ToggleWindow(); return true; },
+                ElementBounds.Fixed(172.0, 24.0, 0.0, 0.0).WithFixedPadding(5.0, 1.0), EnumButtonStyle.Small, "cn-openwindow");
             labelBounds = labelBounds.BelowCopy().WithFixedWidth(118.0).WithFixedHeight(RowHeight);
             // Calories, carbs and fats (in the gut), protein (in the gut and over the last 24 hours), then the stored nutrients.
             bool firstRow = true;

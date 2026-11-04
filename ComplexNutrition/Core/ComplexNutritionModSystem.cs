@@ -88,6 +88,8 @@ namespace ComplexNutrition.Core
 
         public override void StartClientSide(Vintagestory.API.Client.ICoreClientAPI capi)
         {
+            StartClientSettings(capi);
+
             // Guide pages load in asset order, which would put ours above the game's own Starter Guide; move them after.
             var handbook = capi.ModLoader.GetModSystem<Vintagestory.GameContent.ModSystemSurvivalHandbook>();
             if (handbook != null)
@@ -112,6 +114,8 @@ namespace ComplexNutrition.Core
 
         public override void StartServerSide(ICoreServerAPI sapi)
         {
+            StartServerSettings(sapi);
+
             // Tell each joining player's client whether tracking runs on this server, so it shows our bars or vanilla's.
             sapi.Event.PlayerNowPlaying += player =>
             {
@@ -179,6 +183,7 @@ namespace ComplexNutrition.Core
         public override void Dispose()
         {
             if (api == null) return;
+            DisposeSettings();
             foreach (var module in modules.Where(m => m.IsEnabled).Reverse()) module.Disable(api);
             if (api.Side == EnumAppSide.Server) EatingHooks.Remove();
         }
