@@ -77,6 +77,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 ## v1.0: Settings menu
 
 - Every module and number adjustable in game, with sliders and toggles, as well as in the config file and by server command.
+- A Complex Nutrition Guide (PDF) for new players, written once the core features are tested and settled: an overview, how nutrition is gained, each nutrient, the calorie system with tips, reading the UI, a food nutrient table and a modder's annex. Rebuilt with each release after that.
 
 ## After 1.0: Who knows!
 
