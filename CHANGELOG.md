@@ -9,7 +9,7 @@
 - New world setting, Advanced nutrition display (off by default). When it is on, hovering over the Carbs, Fats and Protein bars shows the grams being digested, the calories they will give after diminishing returns, how long they will take, and how fast they are being absorbed, in grams and kcal an hour. Each player can override it for themselves with `/nutritiondisplay advanced`, `/nutritiondisplay simple` or `/nutritiondisplay world`.
 - Units now sit right against their numbers everywhere in game ("94g", "80kcal", "7.0mg", "4mcg"), and "h" is written as "hours". Hover boxes wrap at 550px.
 - The hover boxes on the Stats panel and the HUD calorie bar are easier to read. Each one starts with the bar's name in its colour, then splits into sections with gold headings: Status (amounts and time left), About (what the nutrient does) and, where it applies, In Game. The "no effect yet" note is shown in grey. Amounts are coloured by unit everywhere the mod shows them (hovers, food tooltips and the handbook): grams green, kcal orange, mg, mcg and % DV (the B vitamins) yellow. The absorption rate segment ("at 6.4g (26kcal) an hour") is red, with its amounts still green and orange.
-- The handbook's Nutrient Reserves page mentions the setting.
+- The handbook's Nutrient Reserves page mentions the setting. The Digestion page explains that absorption times are for one serving on its own and gives examples of when each diminishing-returns limit is reached. Every amount in the handbook and tooltips carries its unit, with "fullness" as the unit for the stomach.
 
 ## v0.2.3
 
