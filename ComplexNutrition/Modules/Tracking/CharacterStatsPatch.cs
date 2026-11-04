@@ -345,6 +345,30 @@ namespace ComplexNutrition.Modules.Tracking
             return sb.ToString();
         }
 
+        /// <summary>
+        /// A gut pool's first hover line. With the advanced nutrition display: grams, the calories they will give
+        /// (after diminishing returns), time to absorb and the current absorption rate; otherwise grams and time.
+        /// </summary>
+        private static string GutLine(NutritionState st, NutrientDefinition def, float reserve)
+        {
+            string code = def.Code;
+            string hours = TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, reserve);
+            var s = Digestion.Settings;
+            var pool = s?.Pool(code);
+            if (st == null || pool == null || !Digestion.AdvancedDisplay(capi?.World, st) || reserve <= 0.01f)
+            {
+                return Lang.Get("complexnutrition:gut-hover", def.Format(reserve, core.Nutrients.ShowPercent), hours);
+            }
+            float grams = reserve / 100f * def.DailyTarget;
+            float window = Digestion.WindowGrams(st, code, pool);
+            float kcal = pool.Effective(window, grams) * pool.KcalPerGram;
+            float rate = pool.Rate(grams, Digestion.FiberSpeed(s, st, pool));
+            float kcalRate = pool.Effective(window, rate) * pool.KcalPerGram;
+            return Lang.Get("complexnutrition:gut-hover-advanced", Num(grams), Num(kcal), hours, Num(rate), Num(kcalRate));
+        }
+
+        private static string Num(float v) => v >= 10f ? Math.Round(v).ToString("#,0", System.Globalization.CultureInfo.InvariantCulture) : v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+
         private static bool IsGutPool(string code) => Digestion.Settings?.Pool(code) != null;
 
         /// <summary>Vanilla's ComposeStatsGui with the nutrition block swapped for our reserve bars.</summary>
@@ -421,7 +445,7 @@ namespace ComplexNutrition.Modules.Tracking
                     {
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
                         float r = st?.GetReserve(code) ?? 0f;
-                        return Lang.Get("complexnutrition:gut-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, r))
+                        return GutLine(st, def, r)
                             + "\n" + Lang.Get("complexnutrition:protein24-hover", Math.Round(st?.Protein24 ?? 0f),
                                 Math.Round(Digestion.Settings?.ProteinNeedGrams ?? 64f), Math.Round(Digestion.Settings?.ProteinMaxGrams ?? 128f))
                             + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
@@ -434,7 +458,7 @@ namespace ComplexNutrition.Modules.Tracking
                     {
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
                         float r = st?.GetReserve(code) ?? 0f;
-                        return Lang.Get("complexnutrition:gut-hover", def.Format(r, core.Nutrients.ShowPercent), TrackingModule.GutHoursText(st?.GetGutHours(code) ?? 0f, r))
+                        return GutLine(st, def, r)
                             + "\n" + Lang.Get("complexnutrition:nutrient-" + code + "-role")
                             + EffectLine(code);
                     });

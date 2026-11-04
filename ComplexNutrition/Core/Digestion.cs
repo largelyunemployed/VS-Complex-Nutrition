@@ -290,6 +290,41 @@ namespace ComplexNutrition.Core
             return total;
         }
 
+        /// <summary>World setting (see worldconfig.json): show the advanced nutrition display by default.</summary>
+        public const string AdvancedDisplayKey = "complexnutritionAdvancedDisplay";
+
+        /// <summary>
+        /// Whether this player sees the advanced nutrition display: their own choice (/nutritiondisplay) if they made
+        /// one, otherwise the world setting.
+        /// </summary>
+        public static bool AdvancedDisplay(IWorldAccessor world, NutritionState state)
+        {
+            int own = state?.DisplayChoice ?? 0;
+            if (own != 0) return own == 1;
+            string v = Convert.ToString(world?.Config?[AdvancedDisplayKey]?.GetValue(), System.Globalization.CultureInfo.InvariantCulture);
+            return string.Equals(v, "true", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Digestion speed from the fibre reserve: 1 when empty, 1 + the pool's bonus at the full-bonus line or above.</summary>
+        public static float FiberSpeed(DigestionSettings s, NutritionState state, DigestionPool pool)
+        {
+            float full = Math.Max(1f, s?.FiberBonusFullAt ?? 70f);
+            float share = Math.Clamp(state.GetReserve(NutrientCodes.Fiber) / full, 0f, 1f);
+            return 1f + pool.FiberSpeedBonus * share;
+        }
+
+        /// <summary>Grams of a pool absorbed within its diminishing-returns window, up to the last digestion step.</summary>
+        public static float WindowGrams(NutritionState state, string code, DigestionPool pool)
+        {
+            var log = state.GetAbsorbedLog(code);
+            long hour = state.AbsorbedHour;
+            if (log == null || hour == long.MinValue) return 0f;
+            float window = 0f;
+            int span = Math.Clamp(pool.WindowHours, 1, 24);
+            for (int k = 0; k < span; k++) window += log[(int)(((hour - k) % 24 + 24) % 24)];
+            return window;
+        }
+
         private const string ScaledKey = "fullnessScaled";
         private const string SavedFullnessKey = "savedFullness";
 

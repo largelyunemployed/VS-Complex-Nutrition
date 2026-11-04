@@ -257,12 +257,7 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>Speed of digestion from the fibre reserve: 1 at an empty reserve, 1 + the pool's bonus at the full-bonus line or above.</summary>
-        public float FiberSpeed(NutritionState state, DigestionPool pool)
-        {
-            float full = Math.Max(1f, Digest.FiberBonusFullAt);
-            float share = Math.Clamp(state.GetReserve(NutrientCodes.Fiber) / full, 0f, 1f);
-            return 1f + pool.FiberSpeedBonus * share;
-        }
+        public float FiberSpeed(NutritionState state, DigestionPool pool) => Digestion.FiberSpeed(Digest, state, pool);
 
         /// <summary>
         /// One digestion step: each gut batch is absorbed at its own rate (faster with fibre), absorbed grams
@@ -464,6 +459,26 @@ namespace ComplexNutrition.Modules.Tracking
                     return state == null
                         ? TextCommandResult.Error(Lang.Get("complexnutrition:cmd-no-state"))
                         : TextCommandResult.Success(ReserveReport(state, false, args.Caller.Entity));
+                });
+
+            sapi.ChatCommands.Create("nutritiondisplay")
+                .WithDescription("Choose how much detail nutrition tooltips show: advanced, simple, or world (follow the world setting)")
+                .RequiresPlayer()
+                .RequiresPrivilege(Privilege.chat)
+                .WithArgs(parsers.OptionalWordRange("mode", "advanced", "simple", "world"))
+                .HandleWith(args =>
+                {
+                    var state = NutritionState.Of(args.Caller.Entity);
+                    if (state == null) return TextCommandResult.Error(Lang.Get("complexnutrition:cmd-no-state"));
+                    string mode = args.Parsers[0].IsMissing ? null : (string)args[0];
+                    if (mode != null)
+                    {
+                        state.DisplayChoice = mode == "advanced" ? 1 : mode == "simple" ? 2 : 0;
+                        state.MarkDirty();
+                    }
+                    bool on = Digestion.AdvancedDisplay(sapi.World, state);
+                    string which = state.DisplayChoice == 0 ? Lang.Get("complexnutrition:display-world") : Lang.Get("complexnutrition:display-own");
+                    return TextCommandResult.Success(Lang.Get(on ? "complexnutrition:display-on" : "complexnutrition:display-off", which));
                 });
 
             sapi.ChatCommands.GetOrCreate("cnutrition")

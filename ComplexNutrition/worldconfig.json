@@ -1,6 +1,7 @@
 {
 	"playStyles": [],
 	"worldConfigAttributes": [
-		{ "category": "complexnutrition", "code": "complexnutritionStart", "dataType": "dropdown", "values": [ "1000", "700", "500", "300", "100", "1" ], "names": [ "Full", "Easy", "Normal", "Hard", "Brutal", "RockBottom" ], "default": "500" }
+		{ "category": "complexnutrition", "code": "complexnutritionStart", "dataType": "dropdown", "values": [ "1000", "700", "500", "300", "100", "1" ], "names": [ "Full", "Easy", "Normal", "Hard", "Brutal", "RockBottom" ], "default": "500" },
+		{ "category": "complexnutrition", "code": "complexnutritionAdvancedDisplay", "dataType": "bool", "default": "false" }
 	]
 }
