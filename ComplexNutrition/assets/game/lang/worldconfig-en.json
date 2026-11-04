@@ -9,7 +9,7 @@
 	"worldconfig-complexnutritionStart-Brutal": "Brutal: 1 day calorie reserve",
 	"worldconfig-complexnutritionStart-RockBottom": "Rock Bottom: 0.01 days calorie reserve (good luck!)",
 	"worldattribute-complexnutritionRespawn": "Respawn calories",
-	"worldattribute-complexnutritionRespawn-desc": "How much is in a character's calorie tank when they respawn after dying. Their vitamin and mineral stores are set to the same share, and their gut and the last 24 hours of digestion are cleared.",
+	"worldattribute-complexnutritionRespawn-desc": "How much is in a character's calorie tank when they respawn after dying. Their vitamin and mineral stores are set to the same share, and their gut, fiber and the last 24 hours of digestion are cleared.",
 	"worldconfig-complexnutritionRespawn-Full": "Full: 10 days calorie reserve",
 	"worldconfig-complexnutritionRespawn-Easy": "Easy: 7 days calorie reserve",
 	"worldconfig-complexnutritionRespawn-Normal": "Normal: 5 days calorie reserve",

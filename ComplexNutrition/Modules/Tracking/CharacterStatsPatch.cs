@@ -443,7 +443,7 @@ namespace ComplexNutrition.Modules.Tracking
         /// <summary>Fiber's hover line: the calories per hour it adds right now, its rate in red like the gut lines.</summary>
         private static string FiberBoostLine(float kcalPerHour) => kcalPerHour < 0.05f
             ? StatsHover.Text(Lang.Get("complexnutrition:fiber-boost-none"))
-            : StatsHover.Vtml("complexnutrition:fiber-boost", StatsHover.Paint(Lang.Get("complexnutrition:kcal-rate", Kcal(kcalPerHour)), UnitColors.Rate));
+            : StatsHover.Vtml("complexnutrition:fiber-boost", StatsHover.Paint(Kcal(kcalPerHour), UnitColors.Rate));
 
         /// <summary>Calories as text, as an amount or in % of a day's need, as the player chose.</summary>
         private static string Kcal(float kcal) => core.Nutrients.Get(NutrientCodes.Calories)?.FormatAmount(kcal, core.ShowPercent) ?? Num(kcal) + "kcal";

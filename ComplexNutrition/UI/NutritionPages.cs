@@ -58,7 +58,7 @@ namespace ComplexNutrition.UI
             float kcal = Digestion.FiberKcalPerHour(d.Digest, d.State, d.Nutrients);
             return kcal < 0.05f
                 ? StatsHover.Text(L("fiber-boost-none"))
-                : StatsHover.Vtml("complexnutrition:fiber-boost", StatsHover.Paint(L("kcal-rate", Kcal(d, kcal)), UnitColors.Rate));
+                : StatsHover.Vtml("complexnutrition:fiber-boost", StatsHover.Paint(Kcal(d, kcal), UnitColors.Rate));
         }
 
         private static List<PageBlock> Off() => new()

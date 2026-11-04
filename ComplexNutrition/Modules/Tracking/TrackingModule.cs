@@ -227,7 +227,7 @@ namespace ComplexNutrition.Modules.Tracking
         /// <summary>
         /// A respawned character gets the world's respawn condition (Brutal unless set: 1 day of calories and 10% of each
         /// vitamin and mineral store). The gut and the last 24 hours of digestion are cleared, so the new body starts fresh.
-        /// Fiber is kept. Vanilla gives half a stomach of fullness.
+        /// Fiber empties too: a new gut starts with none. Vanilla gives half a stomach of fullness.
         /// </summary>
         private void OnRespawn(IServerPlayer player)
         {
@@ -244,6 +244,13 @@ namespace ComplexNutrition.Modules.Tracking
                     if (old != 0f) Core.PublishReserveChanged(player, def.Code, old, 0f);
                 }
                 state.SetAbsorbedLog(kv.Key, new float[24]);
+            }
+            var fiber = Core.Nutrients.Get(NutrientCodes.Fiber);
+            if (fiber != null)
+            {
+                float old = state.GetReserve(fiber.Code);
+                state.SetReserve(fiber.Code, 0f);
+                if (old != 0f) Core.PublishReserveChanged(player, fiber.Code, old, 0f);
             }
             state.Protein24 = 0f;
             state.ClearSitting();
