@@ -64,7 +64,9 @@ namespace ComplexNutrition.Core
             api.Network.RegisterChannel(ChannelName)
                 .RegisterMessageType<SettingsSnapshotPacket>()
                 .RegisterMessageType<SettingsChangePacket>()
-                .RegisterMessageType<OpenSettingsPacket>();
+                .RegisterMessageType<OpenSettingsPacket>()
+                .RegisterMessageType<HistoryRequestPacket>()
+                .RegisterMessageType<HistoryPacket>();
         }
 
         // ---- Server ----
@@ -74,6 +76,7 @@ namespace ComplexNutrition.Core
             sapi = api;
             serverChannel = api.Network.GetChannel(ChannelName);
             serverChannel.SetMessageHandler<SettingsChangePacket>(OnSettingsChange);
+            serverChannel.SetMessageHandler<HistoryRequestPacket>(OnHistoryRequest);
             api.Event.PlayerNowPlaying += SendSettings;
 
             api.ChatCommands.GetOrCreate("cnutrition")
@@ -124,6 +127,25 @@ namespace ComplexNutrition.Core
                         return TextCommandResult.Success($"Module {module.Id} is {(module.IsEnabled ? "on" : "off")}.");
                     })
                 .EndSubCommand();
+        }
+
+        /// <summary>
+        /// Server: builds a player's history for the nutrition window. Set by the tracking module while it runs; null
+        /// otherwise, and the window then gets an empty answer.
+        /// </summary>
+        public System.Func<IServerPlayer, HistoryData> HistoryProvider { get; set; }
+
+        private readonly Dictionary<string, long> lastHistorySent = new();
+
+        private void OnHistoryRequest(IServerPlayer player, HistoryRequestPacket packet)
+        {
+            if (player == null) return;
+            // At most one answer a second per player, however often a client asks.
+            long now = sapi.World.ElapsedMilliseconds;
+            if (lastHistorySent.TryGetValue(player.PlayerUID, out long last) && now - last < 1000) return;
+            lastHistorySent[player.PlayerUID] = now;
+            var data = HistoryProvider?.Invoke(player);
+            serverChannel.SendPacket(new HistoryPacket { Json = data == null ? "" : JsonConvert.SerializeObject(data) }, player);
         }
 
         private static bool IsAdmin(IServerPlayer player) => player != null && player.HasPrivilege(Privilege.controlserver);
@@ -270,6 +292,7 @@ namespace ComplexNutrition.Core
             clientChannel = api.Network.GetChannel(ChannelName);
             clientChannel.SetMessageHandler<SettingsSnapshotPacket>(OnSettingsSnapshot);
             clientChannel.SetMessageHandler<OpenSettingsPacket>(_ => OpenSettings());
+            clientChannel.SetMessageHandler<HistoryPacket>(OnHistory);
 
             api.Input.RegisterHotKey(HotkeyCode, Lang.Get("complexnutrition:hotkey-window"), GlKeys.N, HotkeyType.GUIOrOtherControls, altPressed: true);
             api.Input.SetHotKeyHandler(HotkeyCode, _ => { ToggleWindow(); return true; });
@@ -307,6 +330,29 @@ namespace ComplexNutrition.Core
 
             settingsDialog?.Refresh();
             if (window?.IsOpened() == true) window.Refresh(true);
+        }
+
+        /// <summary>Client: the last history the server sent, or null (none yet, or tracking is off).</summary>
+        public HistoryData History { get; private set; }
+
+        /// <summary>Client: asks the server for the player's history; the answer refreshes the window.</summary>
+        public void RequestHistory()
+        {
+            clientChannel?.SendPacket(new HistoryRequestPacket());
+        }
+
+        private void OnHistory(HistoryPacket packet)
+        {
+            try
+            {
+                History = string.IsNullOrEmpty(packet?.Json) ? null : JsonConvert.DeserializeObject<HistoryData>(packet.Json);
+            }
+            catch (Exception e)
+            {
+                capi.Logger.Error("[complexnutrition] Could not read the history the server sent: {0}", e.Message);
+                History = null;
+            }
+            if (window?.IsOpened() == true) window.Refresh();
         }
 
         /// <summary>Client: asks the server to change a setting.</summary>
@@ -381,6 +427,7 @@ namespace ComplexNutrition.Core
                 MaxFullness = hunger?.GetFloat("maxsaturation") ?? 0f,
                 ShowPercent = ShowPercent,
                 Known = known,
+                History = state == null ? null : History,
             };
         }
 

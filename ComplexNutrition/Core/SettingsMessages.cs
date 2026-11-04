@@ -46,6 +46,20 @@ namespace ComplexNutrition.Core
         public bool Open = true;
     }
 
+    /// <summary>Client to server: send me my history (the nutrition window is open).</summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
+    public class HistoryRequestPacket
+    {
+        public bool Want = true;
+    }
+
+    /// <summary>Server to client: a <see cref="HistoryData"/>, as JSON (empty when tracking is off for the player).</summary>
+    [ProtoContract(ImplicitFields = ImplicitFields.AllPublic)]
+    public class HistoryPacket
+    {
+        public string Json;
+    }
+
     /// <summary>Setting keys sent in a <see cref="SettingsChangePacket"/>.</summary>
     public static class SettingKeys
     {

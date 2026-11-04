@@ -292,6 +292,53 @@ namespace ComplexNutrition.Tests
             Assert.Equal((float?)null, state.TakeOldGutBatches("fat"), "nothing to move the second time");
         }
 
+        // ---- History (v0.3.2) ----
+
+        [Test]
+        public static void HistoryKeepsDaysAndBuildsFourWeeks()
+        {
+            var history = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            for (int day = 1; day <= 40; day++) history.RecordDay(day, new Dictionary<string, float> { ["vitaminC"] = day });
+            history.Prune(41, 28);
+            Assert.Equal(0, history.DayReserves(13).Count, "day 13 pruned");
+            Assert.Near(14, history.DayReserves(14)["vitaminC"], 1e-6, "day 14 kept");
+
+            var data = history.Build(null, new Dictionary<string, float> { ["vitaminC"] = 99 }, 41, 41 * 24 + 5, 28);
+            Assert.Equal(28, data.Days.Count, "28 days");
+            Assert.Equal(14, data.Days[0].Day, "oldest first");
+            Assert.Near(99, data.Days[^1].Reserves["vitaminC"], 1e-6, "today is now");
+            Assert.True(data.DayAgo == null, "no hourly readings, no trend");
+        }
+
+        [Test]
+        public static void HistoryTrendsUseTheOldestReadingOfTheLastDay()
+        {
+            var history = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            for (long hour = 100; hour <= 160; hour++) history.RecordHour(hour, new Dictionary<string, float> { ["iron"] = hour });
+            var ago = history.DayAgo(160.5);
+            Assert.True(ago != null, "a reading a day old");
+            Assert.Near(136, ago.Value.reserves["iron"], 1e-6, "24 hours back");
+            Assert.Near(24.5, ago.Value.hoursAgo, 1e-4, "hours ago");
+
+            history.ClearHours();
+            history.RecordHour(161, new Dictionary<string, float> { ["iron"] = 1 });
+            Assert.True(history.DayAgo(163) == null, "too recent for a trend");
+
+            Assert.Equal(1, NutrientHistory.Trend(100, 130, 24), "rising");
+            Assert.Equal(0, NutrientHistory.Trend(100, 95, 24), "steady");
+            Assert.Equal(-1, NutrientHistory.Trend(100, 60, 24), "falling");
+            Assert.Equal(-1, NutrientHistory.Trend(100, 90, 6), "10 in 6 hours is 40 a day");
+        }
+
+        [Test]
+        public static void HistoryScaleRoundsUp()
+        {
+            Assert.Near(5000, ComplexNutrition.UI.NutritionPages.NiceCeiling(3500), 1e-3, "3,500 to 5,000");
+            Assert.Near(200, ComplexNutrition.UI.NutritionPages.NiceCeiling(179), 1e-3, "179 to 200");
+            Assert.Near(250, ComplexNutrition.UI.NutritionPages.NiceCeiling(201), 1e-3, "201 to 250");
+            Assert.Near(1000, ComplexNutrition.UI.NutritionPages.NiceCeiling(1000), 1e-3, "exact stays");
+        }
+
         // ---- Text ----
 
         [Test]
