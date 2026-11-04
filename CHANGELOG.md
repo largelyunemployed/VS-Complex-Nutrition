@@ -2,7 +2,8 @@
 
 ## v0.2.4
 
-- New world setting, Starting calories, on a new Complex Nutrition tab when you create a world. It sets how much is in a character's calorie tank the first time they join: Easy (a full tank, 7 days), Normal (5 days, the default and the amount before this version), Hard (3 days), Brutal (1 day) or Rock Bottom (1% of a day). Respawning is not affected. Server owners can change it later with `/worldconfig complexnutritionStart <700|500|300|100|1>`.
+- New world setting, Starting calories, on a new Complex Nutrition tab when you create a world. It sets how much is in a character's calorie tank the first time they join: Full (10 days), Easy (7 days), Normal (5 days, the default and the amount before this version), Hard (3 days), Brutal (1 day) or Rock Bottom (0.01 days, good luck!). Respawning is not affected. Server owners can change it later with `/worldconfig complexnutritionStart <1000|700|500|300|100|1>`.
+- The calorie tank holds 10 active days (28,000 kcal), up from 7 (19,600 kcal). The HUD bar still flashes below 10% of a full tank, which is now 1 day.
 - The handbook's Nutrient Reserves page mentions the setting.
 
 ## v0.2.3
