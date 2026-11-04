@@ -17,7 +17,7 @@ namespace ComplexNutrition.Modules.Tracking
     /// switching it off brings both back.
     ///
     /// Since v0.2.2 it also runs digestion (see <see cref="DigestionSettings"/>): vanilla satiety becomes
-    /// fullness (max 300, filled by each food's weight, draining at a fixed rate), eaten fats, protein and net
+    /// fullness (max 500, filled by each food's weight, draining at a fixed rate), eaten fats, protein and net
     /// carbohydrate go into gut pools that are absorbed over hours, and only absorption fills the calorie
     /// tank. Activity burns the tank as it burned satiety, and an empty tank starves.
     /// </summary>
@@ -119,6 +119,12 @@ namespace ComplexNutrition.Modules.Tracking
             state.TrackingOn = true;
             state.LastUpdateHours = NowHours;
             Digestion.UseOurScale(player.Entity, Digest);
+            if (created)
+            {
+                // A new character starts with an empty stomach, whatever the start condition.
+                var hunger = player.Entity.GetBehavior<EntityBehaviorHunger>();
+                if (hunger != null) hunger.Saturation = EmptyStomach;
+            }
             EnsureDay(player, state);
             state.MarkDirty();
             RefreshVanillaHealthBonus(player);
@@ -283,27 +289,12 @@ namespace ComplexNutrition.Modules.Tracking
                     for (long h = lastHour + 1; h <= hour; h++) log[(int)(h % 24)] = 0f;
                 }
 
-                state.GetBatches(code, out var grams, out var rates);
+                // The pool absorbs as a whole, faster the more it holds, up to its fastest rate.
                 float speed = FiberSpeed(state, pool);
-                float absorbed = 0f, left = 0f, eta = 0f;
-                var keepG = new List<float>(grams.Length);
-                var keepR = new List<float>(grams.Length);
-                for (int i = 0; i < grams.Length; i++)
-                {
-                    float rate = rates[i] * speed;
-                    float take = Math.Min(grams[i], rate * hours);
-                    absorbed += take;
-                    float rest = grams[i] - take;
-                    if (rest > 0.001f)
-                    {
-                        keepG.Add(rest);
-                        keepR.Add(rates[i]);
-                        left += rest;
-                        if (rate > 0f) eta = Math.Max(eta, rest / rate);
-                    }
-                }
-                state.SetBatches(code, keepG.ToArray(), keepR.ToArray());
-                state.SetGutHours(code, eta);
+                float inGut = GutGrams(state, code);
+                float left = pool.Absorb(inGut, hours, speed);
+                float absorbed = inGut - left;
+                SetGut(state, code, left, pool, speed);
 
                 if (absorbed > 0f)
                 {
@@ -414,8 +405,25 @@ namespace ComplexNutrition.Modules.Tracking
             Core.PublishFoodAbsorbed(absorbed);
         }
 
+        /// <summary>Grams in a gut pool. Saves from before v0.2.4 held one batch per meal; their sum is the pool.</summary>
+        private static float GutGrams(NutritionState state, string code)
+        {
+            state.GetBatches(code, out var grams, out _);
+            float sum = 0f;
+            foreach (var g in grams) sum += g;
+            return sum;
+        }
+
+        /// <summary>Stores a gut pool's contents (as a single batch) and how long it will take to empty.</summary>
+        private static void SetGut(NutritionState state, string code, float grams, DigestionPool pool, float speed)
+        {
+            bool any = grams > DigestionPool.EmptyGrams;
+            state.SetBatches(code, any ? new[] { grams } : new float[0], any ? new[] { 0f } : new float[0]);
+            state.SetGutHours(code, any ? pool.HoursToEmpty(grams, speed) : 0f);
+        }
+
         /// <summary>
-        /// Puts eaten grams in a gut pool as a new batch, absorbed evenly over the pool's window.
+        /// Puts eaten grams in a gut pool, which absorbs them along with whatever it already holds.
         /// What does not fit in the pool passes through unused.
         /// </summary>
         private void AddToGut(IServerPlayer player, NutritionState state, NutrientDefinition n, DigestionPool pool, float grams, FoodAbsorbedInfo absorbed)
@@ -425,27 +433,10 @@ namespace ComplexNutrition.Modules.Tracking
             if (multipliers.Count > 0) absorbed.Multipliers[n.Code] = multipliers;
             if (grams <= 0f) return;
 
-            state.GetBatches(n.Code, out var batchGrams, out var rates);
-            float inGut = 0f;
-            foreach (var g in batchGrams) inGut += g;
+            float inGut = GutGrams(state, n.Code);
             float accepted = Math.Min(grams, Math.Max(0f, pool.MaxGrams - inGut));
             if (accepted <= 0.001f) return;
-
-            var g2 = new List<float>(batchGrams) { accepted };
-            var r2 = new List<float>(rates) { accepted / Math.Max(0.01f, pool.AbsorbHours) };
-            int max = Math.Max(2, Digest.MaxBatches);
-            while (g2.Count > max)
-            {
-                // Merge the two oldest: the same grams, absorbed at their combined rate.
-                g2[1] += g2[0];
-                r2[1] += r2[0];
-                g2.RemoveAt(0);
-                r2.RemoveAt(0);
-            }
-            state.SetBatches(n.Code, g2.ToArray(), r2.ToArray());
-            float eta = state.GetGutHours(n.Code);
-            float speed = FiberSpeed(state, pool);
-            state.SetGutHours(n.Code, Math.Max(eta, pool.AbsorbHours / speed));
+            SetGut(state, n.Code, inGut + accepted, pool, FiberSpeed(state, pool));
 
             float old = state.GetReserve(n.Code);
             float updated = n.ToPercent(inGut + accepted);
@@ -550,10 +541,8 @@ namespace ComplexNutrition.Modules.Tracking
                 var pool = Digest.Pool(n.Code);
                 if (pool != null)
                 {
-                    // A gut pool holds batches: replace them with one fresh batch of that size.
                     float grams = Math.Min(pool.MaxGrams, value / 100f * n.DailyTarget);
-                    state.SetBatches(n.Code, grams > 0f ? new[] { grams } : new float[0], grams > 0f ? new[] { grams / Math.Max(0.01f, pool.AbsorbHours) } : new float[0]);
-                    state.SetGutHours(n.Code, grams > 0f ? pool.AbsorbHours / FiberSpeed(state, pool) : 0f);
+                    SetGut(state, n.Code, grams, pool, FiberSpeed(state, pool));
                     value = n.ToPercent(grams);
                 }
                 state.SetReserve(n.Code, value);

@@ -14,8 +14,44 @@ namespace ComplexNutrition.Core
         /// <summary>Most the pool holds, in g. Food past a full pool passes through unused.</summary>
         [JsonProperty("maxGrams")] public float MaxGrams = 100;
 
-        /// <summary>Each bite is absorbed evenly over this many in-game hours.</summary>
-        [JsonProperty("absorbHours")] public float AbsorbHours = 6;
+        /// <summary>Fastest absorption, in g per in-game hour, reached when the pool is well filled.</summary>
+        [JsonProperty("maxRateGrams")] public float MaxRateGrams = 10;
+
+        /// <summary>Contents, in g, at which the pool absorbs at half its fastest rate. Below this it slows down sharply.</summary>
+        [JsonProperty("halfRateGrams")] public float HalfRateGrams = 10;
+
+        /// <summary>Below this many grams a pool counts as empty and the rest is absorbed at once.</summary>
+        public const float EmptyGrams = 0.5f;
+
+        /// <summary>
+        /// Absorption rate in g per hour for <paramref name="grams"/> in the pool: it rises with the contents and levels
+        /// off at <see cref="MaxRateGrams"/> (times <paramref name="speed"/>, the fibre bonus), like a real gut, which
+        /// absorbs little when nearly empty and has a limit when full.
+        /// </summary>
+        public float Rate(float grams, float speed) =>
+            grams <= 0f ? 0f : Math.Max(0.01f, MaxRateGrams) * speed * grams / (Math.Max(0.01f, HalfRateGrams) + grams);
+
+        /// <summary>Grams left in the pool after <paramref name="hours"/> of digestion from <paramref name="grams"/>.</summary>
+        public float Absorb(float grams, float hours, float speed)
+        {
+            if (grams <= 0f || hours <= 0f) return Math.Max(0f, grams);
+            int steps = Math.Clamp((int)Math.Ceiling(hours / 0.05f), 1, 2000);
+            float dt = hours / steps;
+            for (int i = 0; i < steps && grams > EmptyGrams; i++)
+            {
+                float mid = grams - Rate(grams, speed) * dt / 2f;   // midpoint step
+                grams = Math.Max(0f, grams - Rate(Math.Max(0f, mid), speed) * dt);
+            }
+            return grams <= EmptyGrams ? 0f : grams;
+        }
+
+        /// <summary>In-game hours until a pool holding <paramref name="grams"/> is empty, at this fibre <paramref name="speed"/>.</summary>
+        public float HoursToEmpty(float grams, float speed)
+        {
+            if (grams <= EmptyGrams) return 0f;
+            float k = Math.Max(0.01f, HalfRateGrams);
+            return (float)((grams - EmptyGrams + k * Math.Log(grams / EmptyGrams)) / (Math.Max(0.01f, MaxRateGrams) * speed));
+        }
 
         /// <summary>Calories per gram absorbed.</summary>
         [JsonProperty("kcalPerGram")] public float KcalPerGram = 4;
@@ -69,7 +105,7 @@ namespace ComplexNutrition.Core
         public const string AssetPath = "config/digestion.json";
 
         /// <summary>The fullness (vanilla satiety) maximum while tracking runs.</summary>
-        [JsonProperty("fullnessMax")] public float FullnessMax = 300;
+        [JsonProperty("fullnessMax")] public float FullnessMax = 500;
 
         /// <summary>Vanilla's own maximum, restored when tracking is switched off.</summary>
         [JsonProperty("vanillaFullnessMax")] public float VanillaFullnessMax = 1500;
@@ -97,8 +133,6 @@ namespace ComplexNutrition.Core
         /// <summary>Gut pools by nutrient code: carbohydrate (net of fibre), protein and fat.</summary>
         [JsonProperty("pools")] public Dictionary<string, DigestionPool> Pools = new();
 
-        /// <summary>Most batches kept per pool; past this the two oldest are merged.</summary>
-        [JsonProperty("maxBatches")] public int MaxBatches = 24;
 
         /// <summary>Protein the body needs over any 24 hours, at least. The protein bar's line marks it.</summary>
         [JsonProperty("proteinNeedGrams")] public float ProteinNeedGrams = 64;
@@ -134,9 +168,9 @@ namespace ComplexNutrition.Core
             {
                 s.Pools = new Dictionary<string, DigestionPool>
                 {
-                    [NutrientCodes.Carbohydrate] = new() { MaxGrams = 500, AbsorbHours = 3, KcalPerGram = 4, DiminishingAboveGrams = 300, WindowHours = 12, DiminishingScaleGrams = 150, FiberSpeedBonus = 0.1f },
-                    [NutrientCodes.Protein] = new() { MaxGrams = 200, AbsorbHours = 6, KcalPerGram = 4, DiminishingAboveGrams = 65, ZeroAtGrams = 128, WindowHours = 24, FiberSpeedBonus = 0.2f },
-                    [NutrientCodes.Fat] = new() { MaxGrams = 240, AbsorbHours = 24, KcalPerGram = 9, DiminishingAboveGrams = 70, WindowHours = 24, DiminishingScaleGrams = 35, FiberSpeedBonus = 0.3f },
+                    [NutrientCodes.Carbohydrate] = new() { MaxGrams = 500, MaxRateGrams = 90, HalfRateGrams = 30, KcalPerGram = 4, DiminishingAboveGrams = 300, WindowHours = 12, DiminishingScaleGrams = 150, FiberSpeedBonus = 0.1f },
+                    [NutrientCodes.Protein] = new() { MaxGrams = 200, MaxRateGrams = 15, HalfRateGrams = 10, KcalPerGram = 4, DiminishingAboveGrams = 65, ZeroAtGrams = 128, WindowHours = 24, FiberSpeedBonus = 0.2f },
+                    [NutrientCodes.Fat] = new() { MaxGrams = 240, MaxRateGrams = 6, HalfRateGrams = 15, KcalPerGram = 9, DiminishingAboveGrams = 70, WindowHours = 24, DiminishingScaleGrams = 35, FiberSpeedBonus = 0.3f },
                 };
             }
             return s;
@@ -260,7 +294,7 @@ namespace ComplexNutrition.Core
         private const string SavedFullnessKey = "savedFullness";
 
         /// <summary>
-        /// Puts a player on our fullness scale (max 300). A player coming back from vanilla gets back the fullness
+        /// Puts a player on our fullness scale (max 500). A player coming back from vanilla gets back the fullness
         /// they had when tracking was switched off, whatever they ate since; anyone else has their stomach scaled
         /// to match. Safe to call again.
         /// </summary>
