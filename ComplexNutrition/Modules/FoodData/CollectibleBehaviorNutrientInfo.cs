@@ -26,17 +26,17 @@ namespace ComplexNutrition.Modules.FoodData
             if (MealNutrition.IsMealContainer(collObj))
             {
                 var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack);
-                if (meal != null) dsc.Append(BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo));
+                if (meal != null) dsc.Append(BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo, core.ShortTooltipNow(withDebugInfo)));
                 return;
             }
 
             var resolved = core.Foods.Resolve(collObj);
             if (resolved == null) return;
-            dsc.Append(BuildTooltip(core.Nutrients, resolved, core.ShowPercent, withDebugInfo, collObj));
+            dsc.Append(BuildTooltip(core.Nutrients, resolved, core.ShowPercent, withDebugInfo, collObj, core.ShortTooltipNow(withDebugInfo)));
         }
 
         /// <summary>The tooltip block for a single food, amounts in % of a day when <paramref name="percent"/> is set. Also used by the /cnutrition info command.</summary>
-        public static string BuildTooltip(NutrientRegistry nutrients, ResolvedFoodProfile food, bool percent, bool withDebugInfo, CollectibleObject coll = null)
+        public static string BuildTooltip(NutrientRegistry nutrients, ResolvedFoodProfile food, bool percent, bool withDebugInfo, CollectibleObject coll = null, bool brief = false)
         {
             float fullness = Digestion.Settings == null ? 0f : Digestion.FoodFullness(Digestion.Settings, food, coll);
             string header = food.IsLiquid
@@ -52,11 +52,11 @@ namespace ComplexNutrition.Modules.FoodData
             {
                 footer = Lang.Get("complexnutrition:tooltip-source", food.Profile.Source.Description, food.Profile.Source.FdcId);
             }
-            return BuildBlock(nutrients, header, food.PerPortion, percent, withDebugInfo, footer, fullness);
+            return BuildBlock(nutrients, header, food.PerPortion, percent, withDebugInfo, footer, fullness, brief);
         }
 
         /// <summary>The tooltip block for a cooked dish or pie.</summary>
-        public static string BuildMealTooltip(NutrientRegistry nutrients, MealNutritionResult meal, bool percent, bool withDebugInfo)
+        public static string BuildMealTooltip(NutrientRegistry nutrients, MealNutritionResult meal, bool percent, bool withDebugInfo, bool brief = false)
         {
             string header = meal.IsPie
                 ? Lang.Get("complexnutrition:tooltip-header-pie", meal.PieSlices)
@@ -67,10 +67,14 @@ namespace ComplexNutrition.Modules.FoodData
             {
                 footer += "\n" + Lang.Get("complexnutrition:tooltip-meal-unknown", meal.UnknownIngredients);
             }
-            return BuildBlock(nutrients, header, code => meal.Totals.TryGetValue(code, out var v) ? v : 0f, percent, withDebugInfo, footer, meal.Fullness);
+            return BuildBlock(nutrients, header, code => meal.Totals.TryGetValue(code, out var v) ? v : 0f, percent, withDebugInfo, footer, meal.Fullness, brief);
         }
 
-        private static string BuildBlock(NutrientRegistry nutrients, string header, System.Func<string, float> rawAmount, bool percent, bool withDebugInfo, string footer, float fullness)
+        /// <summary>
+        /// The block: a header, the macros, the richest vitamins and minerals, fullness and a footer. With <paramref name="brief"/>
+        /// (short tooltips, Ctrl not held) only the header with calories and fullness, and a hint to hold Ctrl.
+        /// </summary>
+        private static string BuildBlock(NutrientRegistry nutrients, string header, System.Func<string, float> rawAmount, bool percent, bool withDebugInfo, string footer, float fullness, bool brief = false)
         {
             var sb = new StringBuilder();
             sb.AppendLine();
@@ -82,6 +86,17 @@ namespace ComplexNutrition.Modules.FoodData
                 ? rawAmount
                 : code => code == NutrientCodes.Calories ? digest.KcalFromMacros(rawAmount) : rawAmount(code);
             string Macro(string code) => nutrients.Get(code)?.FormatAmount(amount(code), percent) ?? "0";
+            if (brief)
+            {
+                string fills = digest != null && fullness > 0f
+                    ? Lang.Get("complexnutrition:tooltip-short-fills", Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0"))
+                    : "";
+                sb.Clear();
+                sb.AppendLine();
+                sb.AppendLine(UnitColors.Paint(header + " " + Lang.Get("complexnutrition:tooltip-short", Macro(NutrientCodes.Calories), fills)));
+                sb.AppendLine(Lang.Get("complexnutrition:tooltip-short-hint"));
+                return sb.ToString();
+            }
             // Amounts in their unit colours (grams green, kcal orange, mg and mcg yellow), as on the Stats panel.
             sb.AppendLine(UnitColors.Paint(Lang.Get(percent ? "complexnutrition:tooltip-macros-percent" : "complexnutrition:tooltip-macros",
                 Macro(NutrientCodes.Calories),

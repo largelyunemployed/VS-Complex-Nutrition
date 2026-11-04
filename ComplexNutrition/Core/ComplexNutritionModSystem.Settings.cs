@@ -31,6 +31,9 @@ namespace ComplexNutrition.Core
 
         private ICoreServerAPI sapi;
         private ICoreClientAPI capi;
+
+        /// <summary>Client: the client API, or null on the server.</summary>
+        public ICoreClientAPI ClientApi => capi;
         private IServerNetworkChannel serverChannel;
         private IClientNetworkChannel clientChannel;
         private GuiDialogNutrition window;
@@ -368,6 +371,31 @@ namespace ComplexNutrition.Core
             Client.DisplayUnits = value;
             capi.StoreModConfig(Client, ClientSettings.FileName);
             if (window?.IsOpened() == true) window.Refresh(true);
+        }
+
+        /// <summary>Client: switches the short food tooltips on or off, saved on this computer.</summary>
+        public void SetClientShortTooltips(bool on)
+        {
+            Client.ShortTooltips = on;
+            capi.StoreModConfig(Client, ClientSettings.FileName);
+        }
+
+        /// <summary>Client: switches the running-low HUD icon on or off, saved on this computer.</summary>
+        public void SetClientHudIcon(bool on)
+        {
+            Client.HudIcon = on;
+            capi.StoreModConfig(Client, ClientSettings.FileName);
+        }
+
+        /// <summary>
+        /// Client: should food tooltips be short right now? Only when the player chose short tooltips, Ctrl is not held and the
+        /// extended (Shift) info is not showing.
+        /// </summary>
+        public bool ShortTooltipNow(bool withDebugInfo)
+        {
+            if (capi == null || withDebugInfo || Client?.ShortTooltips != true) return false;
+            var keys = capi.Input.KeyboardKeyStateRaw;
+            return !(keys[(int)GlKeys.ControlLeft] || keys[(int)GlKeys.ControlRight]);
         }
 
         public void ToggleWindow()

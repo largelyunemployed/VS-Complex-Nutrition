@@ -187,8 +187,9 @@ namespace ComplexNutrition.UI
             }
             if (d.MaxHealth > 0 && d.Health < d.MaxHealth - 0.01f && d.Tracking != null)
             {
-                float perHour = d.Tracking.HealingKcalPerDay((d.MaxHealth - d.Health) / d.MaxHealth) / 24f;
-                blocks.Add(new TextBlock(StatsHover.Vtml("complexnutrition:window-healing", StatsHover.Paint(Kcal(d, perHour), UnitColors.Rate)), true));
+                float perHp = d.Tracking.KcalPerHp((d.MaxHealth - d.Health) / d.MaxHealth);
+                float toFull = d.Tracking.KcalToHeal(d.Health, d.MaxHealth);
+                blocks.Add(new TextBlock(StatsHover.Text(L("window-healing", Kcal(d, perHp), Kcal(d, toFull))), true));
             }
 
             // How close the rolling totals are to where calories start falling off.

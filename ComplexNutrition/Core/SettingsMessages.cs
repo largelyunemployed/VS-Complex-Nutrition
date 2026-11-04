@@ -85,5 +85,11 @@ namespace ComplexNutrition.Core
 
         /// <summary>"server" (use the server's default), "amount" or "percent".</summary>
         public string DisplayUnits = "server";
+
+        /// <summary>Food tooltips show only calories and fullness until Ctrl is held (v0.3.3).</summary>
+        public bool ShortTooltips = true;
+
+        /// <summary>The little icon right of the hotbar that warns when something runs low (v0.3.3).</summary>
+        public bool HudIcon = true;
     }
 }

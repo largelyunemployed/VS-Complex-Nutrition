@@ -351,6 +351,9 @@ namespace ComplexNutrition.Tests
             var t = new TrackingSettings();
             Assert.Near(640, t.HealingKcalPerDay(0f), 1e-3, "lightly hurt: (33 - 25) x 80");
             Assert.Near(1520, t.HealingKcalPerDay(1f), 1e-3, "badly hurt: (44 - 25) x 80");
+            Assert.Near(640 / 28.8, t.KcalPerHp(0f), 1e-3, "a point when barely hurt");
+            Assert.True(t.KcalToHeal(1, 15) > 2 * t.KcalToHeal(8, 15), "more damage costs more than its share");
+            Assert.Equal(0f, t.KcalToHeal(15, 15), "nothing to heal");
         }
 
         [Test]

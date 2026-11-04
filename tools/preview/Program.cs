@@ -128,6 +128,19 @@ static class P
             using var page = PageRenderer.Render(capi, tabs[t].Item2, GuiDialogNutrition.ContentWidth - 4);
             Frame(page, names, Math.Min(t, 4), System.IO.Path.Combine(outDir, "window-" + tabs[t].Item1 + ".png"));
         }
+        // The running-low icon in its three states, side by side.
+        using (var icons = new ImageSurface(Format.Argb32, (int)S(3 * 40), (int)S(40)))
+        using (var ictx = new Context(icons))
+        {
+            ictx.SetSourceRGB(0.35, 0.42, 0.30); ictx.Paint();
+            var cols = new[] { RunningLowIcon.FineColor, RunningLowIcon.LowColor, RunningLowIcon.EmptyColor };
+            for (int i = 0; i < 3; i++)
+            {
+                using var one = RunningLowIcon.Draw(cols[i], S(RunningLowIcon.Size));
+                ictx.SetSourceSurface(one, (int)S(5 + 40 * i), (int)S(5)); ictx.Paint();
+            }
+            icons.WriteToPng(System.IO.Path.Combine(outDir, "lowicon.png"));
+        }
         var off = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = null };
         using (var page = PageRenderer.Render(capi, NutritionPages.Overview(off), GuiDialogNutrition.ContentWidth - 4)) Frame(page, names, 0, System.IO.Path.Combine(outDir, "window-tracking-off.png"));
     }

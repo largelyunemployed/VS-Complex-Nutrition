@@ -45,6 +45,8 @@ namespace ComplexNutrition.Modules.Tracking
         private long tickListener;
         private float starveTimer;
         private float heldTimer;
+        /// <summary>Client: the running-low icon right of the hotbar.</summary>
+        private RunningLowIcon lowIcon;
 
         public void Start(ICoreAPI api, ComplexNutritionModSystem core)
         {
@@ -94,6 +96,8 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 CharacterStatsPatch.Apply(capi, core);
                 FullnessDisplayPatch.Apply(core);
+                lowIcon = new RunningLowIcon(capi, core);
+                lowIcon.Register();
             }
         }
 
@@ -125,6 +129,9 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 CharacterStatsPatch.Remove();
                 FullnessDisplayPatch.Remove();
+                lowIcon?.Unregister();
+                lowIcon?.Dispose();
+                lowIcon = null;
             }
             Digestion.Settings = null;
         }

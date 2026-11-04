@@ -44,8 +44,9 @@ namespace ComplexNutrition.Modules.Tracking
         /// <summary>
         /// Vanilla heals at full speed only above 75% fullness, slower below, and pays for it in satiety. While
         /// tracking runs, a player heals at full speed whenever there is anything in the calorie tank, and since v0.3.3
-        /// recovery burns calories for as long as it lasts (<see cref="TrackingSettings.HealingKcalPerDay"/>, more the worse
-        /// the injury) in place of vanilla's cost per point healed. With an empty tank there is no healing.
+        /// each point healed costs <see cref="TrackingSettings.KcalPerHp"/> calories (more the worse the injury) in place of
+        /// vanilla's satiety cost. Only this natural regeneration costs anything: healing items don't. With an empty tank
+        /// there is no healing.
         /// </summary>
         public static bool RegenPrefix(EntityBehaviorHealth __instance)
         {
@@ -65,8 +66,8 @@ namespace ComplexNutrition.Modules.Tracking
             float gameSeconds = SecondsRef(__instance) * cal.SpeedOfTime * cal.CalendarSpeedMul;
             float healed = Math.Min(gameSeconds * perSecond, max - health);
             if (healed <= 0f) return false;
-            float kcal = module.Settings.HealingKcalPerDay((max - health) / max) * gameSeconds / (cal.HoursPerDay * 3600f);
-            module.BurnCalories(player, kcal);
+            // Priced at the middle of this step's health, so a big step costs what small ones would.
+            module.BurnCalories(player, module.Settings.KcalPerHp((max - (health + healed / 2f)) / max) * healed);
             __instance.Health = health + healed;
             return false;
         }

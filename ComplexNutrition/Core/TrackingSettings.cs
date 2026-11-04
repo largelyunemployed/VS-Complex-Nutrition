@@ -45,18 +45,40 @@ namespace ComplexNutrition.Core
         /// <summary>
         /// The calorie cost of healing (v0.3.3). A recovering body needs <see cref="RecoveryKcalPerKgMin"/> to
         /// <see cref="RecoveryKcalPerKgMax"/> kcal per kg a day (more the worse the injury), against <see cref="RestingKcalPerKg"/>
-        /// when well; the difference, for a body of <see cref="BodyKg"/>, is burned while health is below its maximum.
+        /// when well. The difference, for a body of <see cref="BodyKg"/>, spread over the health vanilla regenerates in a day
+        /// (<see cref="RegenHpPerDay"/>), is the cost of each health point healed naturally. Healing items cost nothing.
         /// </summary>
         [JsonProperty("bodyKg")] public float BodyKg = 80f;
         [JsonProperty("restingKcalPerKg")] public float RestingKcalPerKg = 25f;
         [JsonProperty("recoveryKcalPerKgMin")] public float RecoveryKcalPerKgMin = 33f;
         [JsonProperty("recoveryKcalPerKgMax")] public float RecoveryKcalPerKgMax = 44f;
 
+        /// <summary>Health vanilla regenerates in an in-game day at the default regen speed (0.000333 a game second).</summary>
+        [JsonProperty("regenHpPerDay")] public float RegenHpPerDay = 28.8f;
+
         /// <summary>Extra calories a day while healing, with <paramref name="missing"/> (0 to 1) of max health missing.</summary>
         public float HealingKcalPerDay(float missing)
         {
             float perKg = RecoveryKcalPerKgMin + (RecoveryKcalPerKgMax - RecoveryKcalPerKgMin) * Math.Clamp(missing, 0f, 1f);
             return Math.Max(0f, perKg - RestingKcalPerKg) * BodyKg;
+        }
+
+        /// <summary>Calories for one health point healed naturally, with <paramref name="missing"/> (0 to 1) of max health missing.</summary>
+        public float KcalPerHp(float missing) => RegenHpPerDay > 0 ? HealingKcalPerDay(missing) / RegenHpPerDay : 0f;
+
+        /// <summary>About how many calories healing naturally from <paramref name="health"/> back to <paramref name="max"/> costs.</summary>
+        public float KcalToHeal(float health, float max)
+        {
+            if (max <= 0 || health >= max) return 0f;
+            float kcal = 0f;
+            const int steps = 50;
+            float step = (max - health) / steps;
+            for (int i = 0; i < steps; i++)
+            {
+                float mid = health + step * (i + 0.5f);
+                kcal += KcalPerHp((max - mid) / max) * step;
+            }
+            return kcal;
         }
 
         public static TrackingSettings Load(ICoreAPI api) => ConfigAsset.Load<TrackingSettings>(api, AssetPath);
