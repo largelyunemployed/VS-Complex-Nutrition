@@ -8,7 +8,7 @@ using Vintagestory.GameContent;
 
 namespace ComplexNutrition.Core
 {
-    /// <summary>One gut pool (carbohydrate, protein or fats), from config/digestion.json.</summary>
+    /// <summary>One gut pool (net carbohydrate, protein or fats), from config/digestion.json.</summary>
     public class DigestionPool
     {
         /// <summary>Most the pool holds, in g. Food past a full pool passes through unused.</summary>
@@ -113,7 +113,7 @@ namespace ComplexNutrition.Core
 
     /// <summary>
     /// The digestion rules (v0.2.2), from config/digestion.json: fullness from each food's weight,
-    /// three gut pools that turn carbohydrate, protein and fats into calories over time, and the
+    /// three gut pools that turn net carbohydrate, protein and fats into calories over time, and the
     /// calorie reserve's starvation rule. Used while the tracking module runs.
     /// </summary>
     public class DigestionSettings
@@ -195,11 +195,10 @@ namespace ComplexNutrition.Core
 
         public DigestionPool Pool(string code) => code != null && Pools.TryGetValue(code, out var p) ? p : null;
 
-        /// <summary>Grams a food adds to a pool: its carbohydrate (fiber included, since v0.3.4), protein or fats.</summary>
+        /// <summary>Grams a food adds to a pool: net carbohydrate (carbohydrate minus fibre) for carbs, the plain amount otherwise.</summary>
         public static float PoolGrams(string pool, System.Func<string, float> amount)
         {
-            // Since v0.3.4 carbs count with their fiber (total carbohydrate, as most food labels count it at 4kcal a gram),
-            // which stands in for the calories gut bacteria make from fermenting fiber.
+            if (pool == NutrientCodes.Carbohydrate) return Math.Max(0f, amount(NutrientCodes.Carbohydrate) - amount(NutrientCodes.Fiber));
             return Math.Max(0f, amount(pool));
         }
 

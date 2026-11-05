@@ -206,13 +206,14 @@ namespace ComplexNutrition.Tests
         }
 
         [Test]
-        public static void CarbsWithFiberAndMacroCalories()
+        public static void NetCarbsAndMacroCalories()
         {
             var amounts = new Dictionary<string, float> { ["carbohydrate"] = 10, ["fiber"] = 2, ["protein"] = 10, ["fat"] = 10 };
             float Get(string c) => amounts.TryGetValue(c, out var v) ? v : 0f;
-            Assert.Equal(10f, DigestionSettings.PoolGrams(NutrientCodes.Carbohydrate, Get), "carbs count with their fiber (v0.3.4)");
+            Assert.Equal(8f, DigestionSettings.PoolGrams(NutrientCodes.Carbohydrate, Get), "net carbs");
+            Assert.Equal(0f, DigestionSettings.PoolGrams(NutrientCodes.Carbohydrate, c => c == "fiber" ? 5f : 1f), "net carbs never below 0");
             var s = new DigestionSettings { Pools = DigestionSettings.DefaultPools() };
-            Assert.Near(10 * 4 + 10 * 4 + 10 * 9, s.KcalFromMacros(Get), 1e-3, "kcal from macros");
+            Assert.Near(8 * 4 + 10 * 4 + 10 * 9, s.KcalFromMacros(Get), 1e-3, "kcal from macros");
         }
 
         [Test]
