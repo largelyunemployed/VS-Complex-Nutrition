@@ -111,7 +111,7 @@ namespace ComplexNutrition.Modules.FoodData
             var sb = new StringBuilder();
             sb.AppendLine();
             sb.AppendLine(header);
-            // With digestion on, the body gets its calories from the macros (4 kcal per g of net carbs and protein,
+            // With digestion on, the body gets its calories from the macros (4 kcal per g of carbs and protein,
             // 9 per g of fats), so that is the figure shown.
             var digest = Digestion.Settings;
             System.Func<string, float> amount = digest == null
