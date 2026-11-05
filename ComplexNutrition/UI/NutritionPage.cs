@@ -66,6 +66,8 @@ namespace ComplexNutrition.UI
         public float?[] Line = new float?[0];
         public float LineMax = 1;
         public double[] LineColor;
+        /// <summary>More lines on the same scale as <see cref="Line"/>.</summary>
+        public List<(float?[] values, double[] color)> ExtraLines = new();
         /// <summary>VTML under the chart, at the left and right ends.</summary>
         public string BottomLeft, BottomRight;
         /// <summary>Legend entries: a colour swatch and its VTML label.</summary>
@@ -81,6 +83,11 @@ namespace ComplexNutrition.UI
                 foreach (var day in Bars) sb.Append(string.Join(",", Array.ConvertAll(day, v => Math.Round(v).ToString()))).Append(';');
                 sb.Append('|');
                 foreach (var v in Line) sb.Append(v == null ? "-" : Math.Round(v.Value, 1).ToString()).Append(';');
+                foreach (var (values, _) in ExtraLines)
+                {
+                    sb.Append('|');
+                    foreach (var v in values) sb.Append(v == null ? "-" : Math.Round(v.Value).ToString()).Append(';');
+                }
                 sb.Append('|').Append(BottomLeft).Append('|').Append(BottomRight).Append('|');
                 foreach (var l in Legend) sb.Append(l.label).Append(';');
                 if (LineColor != null) sb.Append(string.Join(",", LineColor));
@@ -296,6 +303,7 @@ namespace ComplexNutrition.UI
             ctx.Stroke();
 
             int days = Math.Max(c.Bars.Length, c.Line.Length);
+            foreach (var (values, _) in c.ExtraLines) days = Math.Max(days, values.Length);
             if (days > 0)
             {
                 double slot = (right - left) / days;
@@ -333,42 +341,47 @@ namespace ComplexNutrition.UI
                     ctx.SetDash(new double[0], 0);
                 }
 
-                // The line, broken where a day has no record, with a dot per day.
-                var lc = c.LineColor ?? SteadyColor;
+                // The lines, broken where a day has no record, with a dot per day.
                 double Ly(float v) => bottom - plotH * Math.Clamp(v / Math.Max(1e-6, c.LineMax), 0, 1);
-                ctx.LineWidth = GuiElement.scaled(2);
-                bool drawing = false;
-                for (int d = 0; d < c.Line.Length; d++)
+                void Line(float?[] values, double[] lc)
                 {
-                    var v = c.Line[d];
-                    if (v == null)
+                    lc ??= SteadyColor;
+                    bool drawing = false;
+                    ctx.NewPath();
+                    for (int d = 0; d < values.Length; d++)
                     {
-                        drawing = false;
-                        continue;
+                        var v = values[d];
+                        if (v == null)
+                        {
+                            drawing = false;
+                            continue;
+                        }
+                        double x = left + slot * (d + 0.5);
+                        if (drawing) ctx.LineTo(x, Ly(v.Value));
+                        else ctx.MoveTo(x, Ly(v.Value));
+                        drawing = true;
                     }
-                    double x = left + slot * (d + 0.5);
-                    if (drawing) ctx.LineTo(x, Ly(v.Value));
-                    else ctx.MoveTo(x, Ly(v.Value));
-                    drawing = true;
-                }
-                // A dark outline under the coloured line, so it reads over the bars.
-                ctx.SetSourceRGBA(0, 0, 0, 0.6);
-                ctx.LineWidth = GuiElement.scaled(3.5);
-                ctx.StrokePreserve();
-                ctx.SetSourceRGBA(lc[0], lc[1], lc[2], 1);
-                ctx.LineWidth = GuiElement.scaled(2);
-                ctx.Stroke();
-                for (int d = 0; d < c.Line.Length; d++)
-                {
-                    var v = c.Line[d];
-                    if (v == null) continue;
-                    ctx.Arc(left + slot * (d + 0.5), Ly(v.Value), GuiElement.scaled(2.2), 0, Math.PI * 2);
-                    ctx.SetSourceRGBA(lc[0], lc[1], lc[2], 1);
-                    ctx.FillPreserve();
+                    // A dark outline under the coloured line, so it reads over the bars.
                     ctx.SetSourceRGBA(0, 0, 0, 0.6);
-                    ctx.LineWidth = 1.0;
+                    ctx.LineWidth = GuiElement.scaled(3.5);
+                    ctx.StrokePreserve();
+                    ctx.SetSourceRGBA(lc[0], lc[1], lc[2], 1);
+                    ctx.LineWidth = GuiElement.scaled(2);
                     ctx.Stroke();
+                    for (int d = 0; d < values.Length; d++)
+                    {
+                        var v = values[d];
+                        if (v == null) continue;
+                        ctx.Arc(left + slot * (d + 0.5), Ly(v.Value), GuiElement.scaled(2.2), 0, Math.PI * 2);
+                        ctx.SetSourceRGBA(lc[0], lc[1], lc[2], 1);
+                        ctx.FillPreserve();
+                        ctx.SetSourceRGBA(0, 0, 0, 0.6);
+                        ctx.LineWidth = 1.0;
+                        ctx.Stroke();
+                    }
                 }
+                Line(c.Line, c.LineColor);
+                foreach (var (values, color) in c.ExtraLines) Line(values, color);
             }
 
             ctx.SetSourceRGBA(0, 0, 0, 0.6);

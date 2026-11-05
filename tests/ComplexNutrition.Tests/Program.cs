@@ -331,6 +331,32 @@ namespace ComplexNutrition.Tests
         }
 
         [Test]
+        public static void HistoryCountsCaloriesGainedAndBurned()
+        {
+            var history = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            for (int h = 0; h < 30; h++) history.AddFlow(100 * 24 + h + 0.5, 100 + (h + 0) / 24, 50, 100);
+            var (gained, burned) = history.DayFlow(100);
+            Assert.Near(24 * 50, gained, 1e-3, "a day's gains");
+            Assert.Near(24 * 100, burned, 1e-3, "a day's burn");
+            double now = 100 * 24 + 29.25;
+            Assert.Near(100 + 100 * 0.75, history.BurnedOver(now, 1), 1e-3, "the last hour: this hour and the rest of the one before");
+            Assert.Near(24 * 100, history.BurnedOver(now, 24), 1e-3, "the last 24 hours");
+            history.Prune(140, 28);
+            Assert.Equal(0f, history.DayFlow(100).burned, "old days pruned");
+        }
+
+        [Test]
+        public static void HealingCostsTheExtraOverRestingNeed()
+        {
+            var t = new TrackingSettings();
+            Assert.Near(640, t.HealingKcalPerDay(0f), 1e-3, "lightly hurt: (33 - 25) x 80");
+            Assert.Near(1520, t.HealingKcalPerDay(1f), 1e-3, "badly hurt: (44 - 25) x 80");
+            Assert.Near(640 / 28.8, t.KcalPerHp(0f), 1e-3, "a point when barely hurt");
+            Assert.True(t.KcalToHeal(1, 15) > 2 * t.KcalToHeal(8, 15), "more damage costs more than its share");
+            Assert.Equal(0f, t.KcalToHeal(15, 15), "nothing to heal");
+        }
+
+        [Test]
         public static void HistoryScaleRoundsUp()
         {
             Assert.Near(5000, ComplexNutrition.UI.NutritionPages.NiceCeiling(3500), 1e-3, "3,500 to 5,000");

@@ -11,7 +11,7 @@ namespace ComplexNutrition.Modules.Tracking
     /// <summary>
     /// Server-side patches on vanilla's hunger behaviour, applied only while tracking runs:
     /// calories burn as satiety burned, fullness no longer burns with activity, starvation moves to the
-    /// calorie tank, the five category bars give no extra HP, and healing runs on the calorie tank.
+    /// calorie reserve, the five category bars give no extra HP, and healing runs on the calorie reserve.
     /// </summary>
     public static class HungerPatches
     {
@@ -40,13 +40,13 @@ namespace ComplexNutrition.Modules.Tracking
         private static readonly AccessTools.FieldRef<EntityBehaviorHealth, float> SecondsRef =
             AccessTools.Field(typeof(EntityBehaviorHealth), "secondsSinceLastUpdate") == null ? null
             : AccessTools.FieldRefAccess<EntityBehaviorHealth, float>("secondsSinceLastUpdate");
-        private static readonly System.Reflection.MethodInfo SatPerHpGetter =
-            AccessTools.PropertyGetter(typeof(EntityBehaviorHealth), "SaturationPerHealthPoint");
 
         /// <summary>
         /// Vanilla heals at full speed only above 75% fullness, slower below, and pays for it in satiety. While
-        /// tracking runs, a player heals at full speed whenever there is anything in the calorie tank, and the
-        /// same cost comes out of the tank as calories. With an empty tank there is no healing.
+        /// tracking runs, a player heals at full speed whenever there is anything in the calorie reserve, and since v0.3.3
+        /// each point healed costs <see cref="TrackingSettings.KcalPerHp"/> calories (more the worse the injury) in place of
+        /// vanilla's satiety cost. Only this natural regeneration costs anything: healing items don't. With an empty reserve
+        /// there is no healing.
         /// </summary>
         public static bool RegenPrefix(EntityBehaviorHealth __instance)
         {
@@ -66,8 +66,8 @@ namespace ComplexNutrition.Modules.Tracking
             float gameSeconds = SecondsRef(__instance) * cal.SpeedOfTime * cal.CalendarSpeedMul;
             float healed = Math.Min(gameSeconds * perSecond, max - health);
             if (healed <= 0f) return false;
-            float satPerHp = SatPerHpGetter?.Invoke(__instance, null) is float f ? f : 75f;
-            module.BurnSatiety(player, satPerHp * healed);
+            // Priced at the middle of this step's health, so a big step costs what small ones would.
+            module.BurnCalories(player, module.Settings.KcalPerHp((max - (health + healed / 2f)) / max) * healed);
             __instance.Health = health + healed;
             return false;
         }
@@ -105,7 +105,7 @@ namespace ComplexNutrition.Modules.Tracking
 
         /// <summary>
         /// Vanilla's SlowTick also deals starvation damage at zero satiety. While tracking runs, starvation comes
-        /// from an empty calorie tank instead (see the tracking tick), so an empty stomach is kept just above zero.
+        /// from an empty calorie reserve instead (see the tracking tick), so an empty stomach is kept just above zero.
         /// The rest of SlowTick (the cold raising the hunger rate) runs as usual.
         /// </summary>
         public static void SlowTickPrefix(EntityBehaviorHunger __instance)

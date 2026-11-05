@@ -110,6 +110,8 @@ namespace ComplexNutrition.UI
                 new[] { L("settings-units-server", serverUnits), L("settings-units-amount"), L("settings-units-percent") },
                 core.Client.DisplayUnits ?? "server",
                 v => core.SetClientDisplayUnits(v), "units");
+            Switch(L("settings-short-tooltips"), L("settings-short-tooltips-desc"), core.Client.ShortTooltips, on => core.SetClientShortTooltips(on), "shorttooltips");
+            Switch(L("settings-hud-icon"), L("settings-hud-icon-desc"), core.Client.HudIcon, on => core.SetClientHudIcon(on), "hudicon");
 
             if (admin)
             {

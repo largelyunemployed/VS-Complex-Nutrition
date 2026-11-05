@@ -15,7 +15,7 @@ namespace ComplexNutrition.Core
         public bool LogFallbacks = true;
         public string DisplayUnits = "amount";
         public Dictionary<string, bool> Modules = new();
-        /// <summary>The world's start condition (% of a day in the calorie tank), or null when the world has none.</summary>
+        /// <summary>The world's start condition (% of a day in the calorie reserve), or null when the world has none.</summary>
         public string StartCalories;
         public string RespawnCalories;
         public bool AdvancedDefault;
@@ -85,5 +85,11 @@ namespace ComplexNutrition.Core
 
         /// <summary>"server" (use the server's default), "amount" or "percent".</summary>
         public string DisplayUnits = "server";
+
+        /// <summary>Food tooltips show only calories and fullness until Ctrl is held (v0.3.3).</summary>
+        public bool ShortTooltips = true;
+
+        /// <summary>The little icon right of the hotbar that warns when something runs low (v0.3.3).</summary>
+        public bool HudIcon = true;
     }
 }

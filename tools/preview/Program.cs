@@ -99,6 +99,8 @@ static class P
                 day.KcalByCategory["Vegetable"] = lean ? 0 : 250 + rnd.Next(0, 200);
                 day.KcalByCategory["Fruit"] = lean ? 80 : 150 + rnd.Next(0, 250);
                 day.KcalByCategory["Dairy"] = lean ? 0 : 300 + rnd.Next(0, 300);
+                day.Gained = day.TotalKcal * 0.85f;
+                day.Burned = 2000 + rnd.Next(0, 1200);
                 foreach (var n in reg.All)
                 {
                     float now = st.GetReserve(n.Code);
@@ -112,9 +114,11 @@ static class P
         history.Days[^1].Reserves = r.ToDictionary(kv => kv.Key, kv => kv.Value);
         history.DayAgo = r.ToDictionary(kv => kv.Key, kv => kv.Key == "vitaminC" ? kv.Value - 40 : kv.Key == "calcium" ? kv.Value + 60 : kv.Key == "vitaminA" ? kv.Value + 30 : kv.Value - 5);
         history.DayAgoHours = 24;
+        history.BurnedHour = 96;
+        history.Burned24 = 2410;
 
         bool percent = a.Length > 1 && a[1] == "percent";   // second argument "percent": amounts in % of a day
-        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 600, Known = known, ShowPercent = percent, History = history };
+        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 600, Health = 9, MaxHealth = 15, Known = known, ShowPercent = percent, History = history };
         Console.WriteLine("writing to " + System.IO.Path.GetFullPath(outDir));
         var tabs = new[] { ("overview", NutritionPages.Overview(data)), ("digestion", NutritionPages.DigestionPage(data)), ("vitamins", NutritionPages.Vitamins(data)), ("minerals", NutritionPages.Minerals(data)),
             ("history", NutritionPages.History(data, "calories")), ("history-vitaminA", NutritionPages.History(data, "vitaminA")) };
@@ -123,6 +127,19 @@ static class P
         {
             using var page = PageRenderer.Render(capi, tabs[t].Item2, GuiDialogNutrition.ContentWidth - 4);
             Frame(page, names, Math.Min(t, 4), System.IO.Path.Combine(outDir, "window-" + tabs[t].Item1 + ".png"));
+        }
+        // The running-low icon in its three states, side by side.
+        using (var icons = new ImageSurface(Format.Argb32, (int)S(3 * 40), (int)S(40)))
+        using (var ictx = new Context(icons))
+        {
+            ictx.SetSourceRGB(0.35, 0.42, 0.30); ictx.Paint();
+            var cols = new[] { RunningLowIcon.FineColor, RunningLowIcon.LowColor, RunningLowIcon.EmptyColor };
+            for (int i = 0; i < 3; i++)
+            {
+                using var one = RunningLowIcon.Draw(cols[i], S(RunningLowIcon.Size));
+                ictx.SetSourceSurface(one, (int)S(5 + 40 * i), (int)S(5)); ictx.Paint();
+            }
+            icons.WriteToPng(System.IO.Path.Combine(outDir, "lowicon.png"));
         }
         var off = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = null };
         using (var page = PageRenderer.Render(capi, NutritionPages.Overview(off), GuiDialogNutrition.ContentWidth - 4)) Frame(page, names, 0, System.IO.Path.Combine(outDir, "window-tracking-off.png"));

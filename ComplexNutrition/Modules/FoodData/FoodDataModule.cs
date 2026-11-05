@@ -50,6 +50,7 @@ namespace ComplexNutrition.Modules.FoodData
                 }
                 api.Logger.Notification("[complexnutrition] Nutrient info added to {0} foods and meal containers.", patched.Count);
                 PieTooltipPatch.Apply(core);
+                TooltipCtrlPatch.Apply((Vintagestory.API.Client.ICoreClientAPI)api, core);
             }
 
             if (api.Side == EnumAppSide.Server)
@@ -65,7 +66,11 @@ namespace ComplexNutrition.Modules.FoodData
                 coll.CollectibleBehaviors = coll.CollectibleBehaviors.Where(b => b is not CollectibleBehaviorNutrientInfo).ToArray();
             }
             patched.Clear();
-            if (api.Side == EnumAppSide.Client) PieTooltipPatch.Remove();
+            if (api.Side == EnumAppSide.Client)
+            {
+                PieTooltipPatch.Remove();
+                TooltipCtrlPatch.Remove();
+            }
             IsEnabled = false;
         }
 

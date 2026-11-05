@@ -23,28 +23,29 @@ Every module has its own switch. With all of them off, the game plays exactly li
 ### v0.2.2: Digestion
 
 - Fullness comes from each food's weight and empties in 6 hours; cooked food fills you less, so cooking lets you eat more.
-- Fats, protein and carbohydrate are digested over hours, and only digestion fills the calorie tank (10 active days since v0.2.4). An empty tank starves you.
+- Fats, protein and carbohydrate are digested over hours, and only digestion fills the calorie reserve (10 active days since v0.2.4). An empty reserve starves you.
 - Fiber speeds up digestion.
 
 ### v0.2.4: Start conditions
 
-- A world setting, on the Complex Nutrition tab when you create a world, for how full the calorie tank is when a character first joins: Full (10 days), Easy (7 days), Normal (5 days), Hard (3 days), Brutal (1 day) or Rock Bottom (0.01 days).
-- The calorie tank holds 10 active days, the stomach holds 600 fullness (100 an hour drained), and the gut absorbs faster the more it holds, up to a limit.
+- A world setting, on the Complex Nutrition tab when you create a world, for how full the calorie reserve is when a character first joins: Full (10 days), Easy (7 days), Normal (5 days), Hard (3 days), Brutal (1 day) or Rock Bottom (0.01 days).
+- The calorie reserve holds 10 active days, the stomach holds 600 fullness (100 an hour drained), and the gut absorbs faster the more it holds, up to a limit.
 - An Advanced nutrition display setting (world default, per-player override with /cnutrition display) that shows calories, time and absorption rate for the food being digested.
 
 ## v0.3: Nutrition UI
 
-- v0.3.0: a nutrition window (Left Alt + N), the size of the handbook, with Overview, Digestion, Vitamins and Minerals tabs, and a settings menu holding every toggle so far. Healing runs at full speed while the calorie tank has anything in it.
+- v0.3.0: a nutrition window (Left Alt + N), the size of the handbook, with Overview, Digestion, Vitamins and Minerals tabs, and a settings menu holding every toggle so far. Healing runs at full speed while the calorie reserve has anything in it.
 - v0.3.1: a clean-up release with no new features: the code tidied so each module keeps to itself, settings read from one place, safer config loading, and automatic tests and build checks.
 - v0.3.2: a respawn calories world setting (same choices as the start setting, default Brutal; respawning clears the 24-hour log); vitamin and mineral reserves that follow the start and respawn choice; fiber's speed-up shown as calories per hour in its tooltip and the window; food data in real units (mg and mcg); a 28-day history tab and trend arrows.
-- v0.3.3: the Overview tab shows how many calories your gut will still give once everything is digested, and how many are being lost to diminishing returns; healing costs extra calories at a realistic rate (33 to 44 kcal per kg of bodyweight a day while recovering, for an 80 kg character); a shorter tooltip block that expands while you hold Ctrl, and an optional little HUD icon right of the hotbar that turns amber or red when something is running low.
-- v0.3.4: Discover Nutrition, a setting that hides a food's values ("???") until you have eaten it.
+- v0.3.3: the Overview tab shows the calories your gut will still give and those lost to diminishing returns, calories burned over the last hour, day and week, and the cost of healing; the History tab charts calories gained and burned; healing costs calories per health point at a realistic rate (a recovering body needs 33 to 44 kcal per kg a day, for an 80 kg character), with healing items free; a shorter tooltip block that expands while you hold Ctrl, and an optional little HUD icon right of the hotbar that turns amber or red when something is running low.
+- v0.3.4: a calorie rebalance, since reaching a day's calories takes far too much food. Diminishing returns become a setting that can be switched off, portion sizes are checked against real ones, and wild plants drop a range of portions when harvested (as mushrooms do), with farmed crops checked for the same. Also Discover Nutrition, a setting that hides a food's values ("???") until you have eaten it.
+- v0.3.5: hover the History charts to see each day's makeup and totals and each point's calories; a pause button at the top of the nutrition window, like the handbook's; each chart's top value in yellow in its corner instead of a line of text; the dashed line becomes your average daily burn over the last 28 days (or as long as you have played), with an info symbol explaining it; less text on the History tab; and a max fullness slider (0 to 1,500, default 300; 0 means no limit), with fullness always draining 100 an hour and kept apart from every other calculation.
 
 ## v0.4: Diet tiers and effects
 
 - A diet score sets one of five tiers, from Thriving to Malnourished, with buffs and debuffs to healing, max health, walk speed and hunger rate.
 - Effects build over in-game weeks; one bad meal does nothing.
-- Healing scales with, and uses up, a good share of your vitamin K, calcium and iron reserves. With an empty calorie tank you don't heal and you suffer malnutrition damage.
+- Healing scales with, and uses up, a good share of your vitamin K, calcium and iron reserves. With an empty calorie reserve you don't heal and you suffer malnutrition damage.
 - Different nutrients fail on different clocks: vitamin C and B in days, minerals in a week or two, vitamins A, D, E and K over weeks.
 - Specific deficiencies have their own effects (scurvy slows healing, low iron costs max health, and so on), each with its own switch.
 - Every nutrient gets a gameplay effect of its own, even if a small one.
@@ -77,9 +78,9 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - Cold, injury and intoxication change how much you absorb and how fast you burn through it.
 - A hook for disease mods to plug into.
 
-## v1.0: Settings menu
+## v1.0: Graphical UI overhaul
 
-- Every module and number adjustable in game, with sliders and toggles, as well as in the config file and by server command.
+- A new look for the nutrition window, the settings menu and the HUD. (The settings menu itself arrived in v0.3.0.)
 - A Complex Nutrition Guide (PDF) for new players, written once the core features are tested and settled: an overview, how nutrition is gained, each nutrient, the calorie system with tips, reading the UI, a food nutrient table and a modder's annex. Rebuilt with each release after that.
 
 ## After 1.0: Who knows!

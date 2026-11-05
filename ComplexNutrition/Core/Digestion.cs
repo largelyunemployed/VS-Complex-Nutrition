@@ -107,7 +107,7 @@ namespace ComplexNutrition.Core
     /// <summary>
     /// The digestion rules (v0.2.2), from config/digestion.json: fullness from each food's weight,
     /// three gut pools that turn net carbohydrate, protein and fats into calories over time, and the
-    /// calorie tank's starvation rule. Used while the tracking module runs.
+    /// calorie reserve's starvation rule. Used while the tracking module runs.
     /// </summary>
     public class DigestionSettings
     {
@@ -160,15 +160,15 @@ namespace ComplexNutrition.Core
             }
         }
 
-        /// <summary>Calories per point of vanilla satiety: vanilla's satiety burn costs this many kcal, and switching tracking off turns the tank back into satiety at this rate.</summary>
+        /// <summary>Calories per point of vanilla satiety: vanilla's satiety burn costs this many kcal, and switching tracking off turns the reserve back into satiety at this rate.</summary>
         [JsonProperty("kcalPerSatiety")] public float KcalPerSatiety = 1f;
 
-        /// <summary>Damage dealt every <see cref="StarvationSeconds"/> while the calorie tank is empty (vanilla: 0.125 HP every 6 s).</summary>
+        /// <summary>Damage dealt every <see cref="StarvationSeconds"/> while the calorie reserve is empty (vanilla: 0.125 HP every 6 s).</summary>
         [JsonProperty("starvationDamage")] public float StarvationDamage = 0.125f;
 
         [JsonProperty("starvationSeconds")] public float StarvationSeconds = 6f;
 
-        /// <summary>Below this share of a full tank the HUD calorie bar flashes.</summary>
+        /// <summary>Below this share of a full reserve the HUD calorie bar flashes.</summary>
         [JsonProperty("flashBelow")] public float FlashBelow = 0.1f;
 
         public static DigestionSettings Load(ICoreAPI api)
@@ -343,6 +343,29 @@ namespace ComplexNutrition.Core
                 kcal += Math.Max(0f, fast - plain) * pool.KcalPerGram;
             }
             return kcal;
+        }
+
+        /// <summary>
+        /// What the gut holds, in calories: about how many it will still give once everything is digested (each pool's
+        /// contents after diminishing returns, against the totals so far), and how many of the food in it are lost to them.
+        /// </summary>
+        public static (float coming, float lost) GutOutlook(DigestionSettings s, NutritionState state, NutrientRegistry nutrients)
+        {
+            float coming = 0f, lost = 0f;
+            if (s == null || state == null || nutrients == null) return (0f, 0f);
+            foreach (var kv in s.Pools)
+            {
+                var def = nutrients.Get(kv.Key);
+                var pool = kv.Value;
+                if (def == null) continue;
+                float grams = def.FromPercent(state.GetReserve(def.Code));
+                if (grams <= DigestionPool.EmptyGrams) continue;
+                float full = grams * pool.KcalPerGram;
+                float got = pool.Effective(WindowGrams(state, kv.Key, pool), grams) * pool.KcalPerGram;
+                coming += got;
+                lost += Math.Max(0f, full - got);
+            }
+            return (coming, lost);
         }
 
         public static float WindowGrams(NutritionState state, string code, DigestionPool pool)

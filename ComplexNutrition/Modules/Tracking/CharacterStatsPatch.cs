@@ -16,7 +16,7 @@ namespace ComplexNutrition.Modules.Tracking
     /// <summary>
     /// Client: while the server tracks this player, the Stats panel next to the character dialog shows one
     /// bar per nutrient reserve (and per gut pool) in place of vanilla's five food category bars, and the HUD
-    /// bar above the hotbar shows the calorie tank in place of satiety. Everything else on the panel
+    /// bar above the hotbar shows the calorie reserve in place of satiety. Everything else on the panel
     /// is laid out as vanilla does it (CharacterExtraDialogs.ComposeStatsGui in 1.22.7). When the server does
     /// not track the player, vanilla's panel is left alone.
     /// </summary>
@@ -81,8 +81,8 @@ namespace ComplexNutrition.Modules.Tracking
         private static float hudKcal = -1f, hudFullness = -1f, hudMax = -1f;
         private static bool hudOurs;
 
-        /// <summary>The calorie tank in kcal and its size, or false while the server does not track this player.</summary>
-        private static bool CalorieTank(out float kcal, out float maxKcal, out float fullness, out float maxFullness)
+        /// <summary>The calorie reserve in kcal and its size, or false while the server does not track this player.</summary>
+        private static bool CalorieReserve(out float kcal, out float maxKcal, out float fullness, out float maxFullness)
         {
             kcal = maxKcal = fullness = maxFullness = 0f;
             var attrs = capi?.World?.Player?.Entity?.WatchedAttributes;
@@ -100,12 +100,12 @@ namespace ComplexNutrition.Modules.Tracking
 
         /// <summary>
         /// Vanilla redraws the satiety bar every 20 ms when the value changed. While tracking runs, it shows the
-        /// calorie tank instead, one block per active day, with fullness in its hover text.
+        /// calorie reserve instead, one block per active day, with fullness in its hover text.
         /// </summary>
         public static bool HudUpdatePrefix(object __instance)
         {
             var bar = hudBarField?.GetValue(__instance) as GuiElementStatbar;
-            if (!CalorieTank(out var kcal, out var maxKcal, out var fullness, out var maxFullness))
+            if (!CalorieReserve(out var kcal, out var maxKcal, out var fullness, out var maxFullness))
             {
                 if (hudOurs && bar != null)
                 {
@@ -137,7 +137,7 @@ namespace ComplexNutrition.Modules.Tracking
 
         private static string HudHover()
         {
-            if (!CalorieTank(out var kcal, out var maxKcal, out var fullness, out var maxFullness)) return "";
+            if (!CalorieReserve(out var kcal, out var maxKcal, out var fullness, out var maxFullness)) return "";
             var def = core.Nutrients.Get(NutrientCodes.Calories);
             float pct = def.ToPercent(kcal);
             return new StatsHover.Builder(Lang.Get(def.LangKey), StatsHover.Hex(NutrientDisplay.GroupColors["Energy"]))
@@ -147,10 +147,10 @@ namespace ComplexNutrition.Modules.Tracking
                 .ToString();
         }
 
-        /// <summary>Vanilla flashes the bar below 20% satiety; while tracking runs it flashes below 10% of a full calorie tank instead.</summary>
+        /// <summary>Vanilla flashes the bar below 20% satiety; while tracking runs it flashes below 10% of a full calorie reserve instead.</summary>
         public static void HudFlashPostfix(object __instance)
         {
-            if (!CalorieTank(out var kcal, out var maxKcal, out _, out _)) return;
+            if (!CalorieReserve(out var kcal, out var maxKcal, out _, out _)) return;
             if (hudBarField?.GetValue(__instance) is not GuiElementStatbar bar) return;
             var mode = capi.World.Player.WorldData.CurrentGameMode;
             float below = Digestion.Settings?.FlashBelow ?? 0.1f;

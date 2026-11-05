@@ -37,7 +37,7 @@ namespace ComplexNutrition.Modules.FoodData
         {
             if (core == null || !core.ShowTooltip) return;
             var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack);
-            if (meal != null) dsc.Append(CollectibleBehaviorNutrientInfo.BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo));
+            if (meal != null) dsc.Append(CollectibleBehaviorNutrientInfo.BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo, core.ShortTooltipNow(withDebugInfo)));
         }
     }
 }
