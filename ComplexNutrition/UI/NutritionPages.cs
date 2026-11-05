@@ -333,12 +333,11 @@ namespace ComplexNutrition.UI
             {
                 blocks.Add(new HeadingBlock(Lang.Get(fiber.LangKey)));
                 blocks.Add(ReserveBar(d, fiber));
-                // Fiber digesting (v0.3.5), at the carbs pool's rate, with no diminishing returns.
-                var carbs = s.Pool(NutrientCodes.Carbohydrate);
+                // Fiber digesting (v0.3.5), at the fiber reserve's own steady rate, with no diminishing returns.
                 float fg = d.State.FiberGut;
-                if (carbs != null && fg > DigestionPool.EmptyGrams)
+                if (fg > DigestionPool.EmptyGrams)
                 {
-                    float rate = carbs.Rate(fg, Digestion.FiberSpeed(s, d.State, carbs));
+                    float rate = Math.Min(fg, DigestionSettings.FiberGutRate(fiber));
                     blocks.Add(new TextBlock(StatsHover.Vtml("complexnutrition:window-fiber-gut",
                         StatsHover.Text(Amt(d, NutrientCodes.Fiber, fg)),
                         StatsHover.Text(Kcal(d, fg * s.FiberKcalPerGram)),

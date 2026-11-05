@@ -149,8 +149,18 @@ namespace ComplexNutrition.Core
         /// <summary>Fibre reserve (in % of a day's need) at which the fibre speed-up is at its full size.</summary>
         [JsonProperty("fiberBonusFullAt")] public float FiberBonusFullAt = 70;
 
-        /// <summary>Calories each gram of eaten fibre gives (since v0.3.4). Since v0.3.5 it is digested like the macros, at the carbs pool's rate.</summary>
+        /// <summary>Calories each gram of eaten fibre gives (since v0.3.4). Since v0.3.5 it is digested from the gut at the fibre reserve's own rate.</summary>
         [JsonProperty("fiberKcalPerGram")] public float FiberKcalPerGram = 2;
+
+        /// <summary>The most fibre the gut holds (since v0.3.5); the rest still fills the fibre reserve but gives no calories.</summary>
+        [JsonProperty("fiberGutMaxGrams")] public float FiberGutMaxGrams = 60;
+
+        /// <summary>
+        /// Grams of fibre digested per in-game hour (v0.3.5): a steady rate, the same as the fibre reserve is used up at
+        /// (its drainPerDay of a day's need, so 30g a day, 1.25g an hour).
+        /// </summary>
+        public static float FiberGutRate(NutrientDefinition fiber) =>
+            fiber == null ? 0f : Math.Max(0f, fiber.DrainPerDay) / 100f * fiber.DailyTarget / 24f;
 
         /// <summary>Gut pools by nutrient code: carbohydrate (net of fibre), protein and fat.</summary>
         [JsonProperty("pools")] public Dictionary<string, DigestionPool> Pools = new();
@@ -393,7 +403,7 @@ namespace ComplexNutrition.Core
         {
             float coming = 0f, lost = 0f;
             if (s == null || state == null || nutrients == null) return (0f, 0f);
-            coming += Math.Max(0f, state.FiberGut) * s.FiberKcalPerGram;   // fiber has no diminishing returns
+            coming += Math.Max(0f, state.FiberGut) * s.FiberKcalPerGram;   // fibre has no diminishing returns
             foreach (var kv in s.Pools)
             {
                 var def = nutrients.Get(kv.Key);

@@ -575,31 +575,31 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// Fiber's calories (v0.3.4; digested since v0.3.5): eaten fiber also goes into the gut, where it is digested at the carbs
-        /// pool's rate and gives fiberKcalPerGram calories a gram, with no diminishing returns. The fiber reserve fills as before.
+        /// Fiber's calories (v0.3.4; digested since v0.3.5): eaten fiber also goes into the gut, up to fiberGutMaxGrams, where it is
+        /// digested at the fiber reserve's own steady rate and gives fiberKcalPerGram calories a gram, with no diminishing returns.
+        /// The fiber reserve fills as before.
         /// </summary>
         private void AddFiberToGut(IServerPlayer player, NutritionState state, float grams)
         {
             if (grams <= 0f || Digest.FiberKcalPerGram <= 0f) return;
             foreach (var m in Core.AbsorptionMultipliers(player, NutrientCodes.Fiber).Values) grams *= m;
-            var carbs = Digest.Pool(NutrientCodes.Carbohydrate);
-            if (grams <= 0f || carbs == null) return;
-            float now = Math.Min(carbs.MaxGrams, state.FiberGut + grams);
+            float rate = DigestionSettings.FiberGutRate(Core.Nutrients.Get(NutrientCodes.Fiber));
+            if (grams <= 0f || rate <= 0f) return;
+            float now = Math.Max(state.FiberGut, Math.Min(Digest.FiberGutMaxGrams, state.FiberGut + grams));
             state.FiberGut = now;
-            state.SetGutHours(NutrientCodes.Fiber, carbs.HoursToEmpty(now, FiberSpeed(state, carbs)));
+            state.SetGutHours(NutrientCodes.Fiber, now / rate);
         }
 
         /// <summary>Digests the fiber in the gut for <paramref name="hours"/>; returns the calories it gave.</summary>
         private float DigestFiber(NutritionState state, float hours)
         {
-            var carbs = Digest.Pool(NutrientCodes.Carbohydrate);
             float inGut = state.FiberGut;
-            if (carbs == null || inGut <= 0f) return 0f;
-            float speed = FiberSpeed(state, carbs);
-            float left = carbs.Absorb(inGut, hours, speed);
+            float rate = DigestionSettings.FiberGutRate(Core.Nutrients.Get(NutrientCodes.Fiber));
+            if (inGut <= 0f || rate <= 0f) return 0f;
+            float left = Math.Max(0f, inGut - rate * hours);
             if (left <= DigestionPool.EmptyGrams) left = 0f;
             state.FiberGut = left;
-            state.SetGutHours(NutrientCodes.Fiber, left > 0f ? carbs.HoursToEmpty(left, speed) : 0f);
+            state.SetGutHours(NutrientCodes.Fiber, left / rate);
             return (inGut - left) * Digest.FiberKcalPerGram;
         }
 

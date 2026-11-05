@@ -456,13 +456,12 @@ namespace ComplexNutrition.Modules.Tracking
         private static string FiberGutLine(NutritionState st, NutrientDefinition def)
         {
             var s = Digestion.Settings;
-            var carbs = s?.Pool(NutrientCodes.Carbohydrate);
             float grams = st?.FiberGut ?? 0f;
-            if (carbs == null || grams <= DigestionPool.EmptyGrams) return StatsHover.Text(Lang.Get("complexnutrition:fiber-gut-empty"));
+            if (s == null || grams <= DigestionPool.EmptyGrams) return StatsHover.Text(Lang.Get("complexnutrition:fiber-gut-empty"));
             string hours = StatsHover.Text(NutrientDisplay.GutHoursText(st.GetGutHours(NutrientCodes.Fiber), def.ToPercent(grams)));
             string amount = StatsHover.Text(def.FormatAmount(grams, core.ShowPercent));
             if (!Digestion.AdvancedDisplay(capi?.World, st)) return StatsHover.Vtml("complexnutrition:gut-hover", amount, hours);
-            float rate = carbs.Rate(grams, Digestion.FiberSpeed(s, st, carbs));
+            float rate = Math.Min(grams, DigestionSettings.FiberGutRate(def));
             return StatsHover.Vtml("complexnutrition:gut-hover-advanced", amount, StatsHover.Text(Kcal(grams * s.FiberKcalPerGram)), hours,
                 StatsHover.Paint(Lang.Get("complexnutrition:gut-rate", def.FormatAmount(rate, core.ShowPercent), Kcal(rate * s.FiberKcalPerGram)), UnitColors.Rate));
         }
