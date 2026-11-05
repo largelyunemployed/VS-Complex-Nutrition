@@ -179,6 +179,7 @@ namespace ComplexNutrition.Core
             AdvancedDefault = Digestion.WorldAdvancedDefault(sapi.World),
             MeatInPots = WorldSettings.Bool(sapi.World, WorldSettings.MeatInPotsKey),
             DiminishingReturns = WorldSettings.DiminishingReturns(sapi.World),
+            Discover = WorldSettings.Bool(sapi.World, WorldSettings.DiscoverKey),
             WildHarvest = (WorldSettings.WildHarvestShare(sapi.World) * 100f).ToString("0", System.Globalization.CultureInfo.InvariantCulture),
         };
 
@@ -248,6 +249,10 @@ namespace ComplexNutrition.Core
                 case SettingKeys.DiminishingReturns:
                     sapi.World.Config.SetString(WorldSettings.DiminishingReturnsKey, on ? "true" : "false");
                     ApplyWorldTweaks(sapi.World);
+                    saveConfig = false;
+                    break;
+                case SettingKeys.Discover:
+                    sapi.World.Config.SetString(WorldSettings.DiscoverKey, on ? "true" : "false");
                     saveConfig = false;
                     break;
                 case SettingKeys.WildHarvest:
@@ -355,6 +360,7 @@ namespace ComplexNutrition.Core
             if (cfg != null)
             {
                 cfg.SetBool(WorldSettings.AdvancedDisplayKey, snap.AdvancedDefault);
+                cfg.SetString(WorldSettings.DiscoverKey, snap.Discover ? "true" : "false");
                 cfg.SetString(WorldSettings.DiminishingReturnsKey, snap.DiminishingReturns ? "true" : "false");
                 cfg.SetString(WorldSettings.WildHarvestKey, snap.WildHarvest ?? WorldSettings.DefaultWildHarvest);
                 if (snap.StartCalories != null) cfg.SetString(WorldSettings.StartConditionKey, snap.StartCalories);
@@ -446,7 +452,15 @@ namespace ComplexNutrition.Core
 
         // ---- Nutrition window data ----
 
-        private string[] knownCodes;
+        /// <summary>Client: whether Discover Nutrition is on for this world (from the server's settings).</summary>
+        public bool DiscoverOn => ServerSettings?.Discover == true;
+
+        /// <summary>Client: whether the local player may see this stack's nutrients (always, unless Discover Nutrition hides them).</summary>
+        public bool CanSeeNutrients(IWorldAccessor world, ItemStack stack) =>
+            !DiscoverOn || capi?.World?.Player?.Entity == null || Discovery.Knows(capi.World.Player.Entity, world, stack);
+
+        private string[] knownCodes, knownEaten;
+        private bool knownDiscover;
         private List<KnownFood> known = new();
 
         /// <summary>Client: what the nutrition window shows, read from the player's synced data.</summary>
@@ -461,9 +475,12 @@ namespace ComplexNutrition.Core
             var health = entity?.WatchedAttributes.GetTreeAttribute("health");
 
             var codes = (entity?.WatchedAttributes[NutritionState.HeldKey] as StringArrayAttribute)?.value;
-            if (codes != knownCodes)
+            var eaten = Discovery.Eaten(entity);
+            if (codes != knownCodes || eaten != knownEaten || DiscoverOn != knownDiscover)
             {
                 knownCodes = codes;
+                knownEaten = eaten;
+                knownDiscover = DiscoverOn;
                 known = new List<KnownFood>();
                 foreach (var code in codes ?? new string[0])
                 {
@@ -472,6 +489,7 @@ namespace ComplexNutrition.Core
                     if (coll == null || coll.Id == 0) continue;
                     var food = Foods.Resolve(coll);
                     if (food == null) continue;
+                    if (DiscoverOn && Array.IndexOf(eaten, code) < 0) continue;
                     known.Add(new KnownFood { Name = coll.GetHeldItemName(new ItemStack(coll)), Food = food });
                 }
             }

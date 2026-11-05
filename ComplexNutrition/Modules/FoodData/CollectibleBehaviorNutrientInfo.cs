@@ -26,22 +26,25 @@ namespace ComplexNutrition.Modules.FoodData
             if (MealNutrition.IsMealContainer(collObj))
             {
                 var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack);
-                if (meal != null) dsc.Append(BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo, core.ShortTooltipNow(withDebugInfo)));
+                if (meal == null) return;
+                dsc.Append(core.CanSeeNutrients(world, inSlot?.Itemstack)
+                    ? BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo, core.ShortTooltipNow(withDebugInfo))
+                    : BuildUndiscovered(MealHeader(meal), meal.Fullness, core.ShortTooltipNow(withDebugInfo)));
                 return;
             }
 
             var resolved = core.Foods.Resolve(collObj);
             if (resolved == null) return;
-            dsc.Append(BuildTooltip(core.Nutrients, resolved, core.ShowPercent, withDebugInfo, collObj, core.ShortTooltipNow(withDebugInfo)));
+            dsc.Append(core.CanSeeNutrients(world, inSlot?.Itemstack ?? new ItemStack(collObj))
+                ? BuildTooltip(core.Nutrients, resolved, core.ShowPercent, withDebugInfo, collObj, core.ShortTooltipNow(withDebugInfo))
+                : BuildUndiscovered(FoodHeader(resolved), Digestion.Settings == null ? 0f : Digestion.FoodFullness(Digestion.Settings, resolved, collObj), core.ShortTooltipNow(withDebugInfo)));
         }
 
         /// <summary>The tooltip block for a single food, amounts in % of a day when <paramref name="percent"/> is set. Also used by the /cnutrition info command.</summary>
         public static string BuildTooltip(NutrientRegistry nutrients, ResolvedFoodProfile food, bool percent, bool withDebugInfo, CollectibleObject coll = null, bool brief = false)
         {
             float fullness = Digestion.Settings == null ? 0f : Digestion.FoodFullness(Digestion.Settings, food, coll);
-            string header = food.IsLiquid
-                ? Lang.Get("complexnutrition:tooltip-header-litre")
-                : Lang.Get("complexnutrition:tooltip-header-portion", Math.Round(food.PortionGrams));
+            string header = FoodHeader(food);
 
             string footer = null;
             if (food.IsFallback)
@@ -58,9 +61,7 @@ namespace ComplexNutrition.Modules.FoodData
         /// <summary>The tooltip block for a cooked dish or pie.</summary>
         public static string BuildMealTooltip(NutrientRegistry nutrients, MealNutritionResult meal, bool percent, bool withDebugInfo, bool brief = false)
         {
-            string header = meal.IsPie
-                ? Lang.Get("complexnutrition:tooltip-header-pie", meal.PieSlices)
-                : Lang.Get("complexnutrition:tooltip-header-serving");
+            string header = MealHeader(meal);
 
             string footer = Lang.Get(meal.Cooked ? "complexnutrition:tooltip-meal-cooked" : "complexnutrition:tooltip-meal-uncooked");
             if (meal.UnknownIngredients > 0)
@@ -68,6 +69,37 @@ namespace ComplexNutrition.Modules.FoodData
                 footer += "\n" + Lang.Get("complexnutrition:tooltip-meal-unknown", meal.UnknownIngredients);
             }
             return BuildBlock(nutrients, header, code => meal.Totals.TryGetValue(code, out var v) ? v : 0f, percent, withDebugInfo, footer, meal.Fullness, brief);
+        }
+
+        private static string FoodHeader(ResolvedFoodProfile food) => food.IsLiquid
+            ? Lang.Get("complexnutrition:tooltip-header-litre")
+            : Lang.Get("complexnutrition:tooltip-header-portion", Math.Round(food.PortionGrams));
+
+        private static string MealHeader(MealNutritionResult meal) => meal.IsPie
+            ? Lang.Get("complexnutrition:tooltip-header-pie", meal.PieSlices)
+            : Lang.Get("complexnutrition:tooltip-header-serving");
+
+        /// <summary>
+        /// Discover Nutrition (v0.3.4): the block for a food the player hasn't eaten yet. Its nutrients are "???", but how filling
+        /// it is still shows, since you can see how big it is.
+        /// </summary>
+        public static string BuildUndiscovered(string header, float fullness, bool brief)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine();
+            var digest = Digestion.Settings;
+            string fill = digest != null && fullness > 0f ? (Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0")) : null;
+            if (brief)
+            {
+                sb.AppendLine(header + " " + Lang.Get("complexnutrition:tooltip-short", "???", fill == null ? "" : Lang.Get("complexnutrition:tooltip-short-fills", fill)));
+                sb.AppendLine(Lang.Get("complexnutrition:tooltip-undiscovered-hint"));
+                return sb.ToString();
+            }
+            sb.AppendLine(header);
+            sb.AppendLine(Lang.Get("complexnutrition:tooltip-undiscovered"));
+            if (fill != null) sb.AppendLine(Lang.Get("complexnutrition:tooltip-fullness", fill, Math.Round(digest.FullnessMax)));
+            sb.AppendLine(Lang.Get("complexnutrition:tooltip-undiscovered-hint"));
+            return sb.ToString();
         }
 
         /// <summary>

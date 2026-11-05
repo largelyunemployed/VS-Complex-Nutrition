@@ -55,6 +55,8 @@ namespace ComplexNutrition.Modules.FoodData
 
             if (api.Side == EnumAppSide.Server)
             {
+                // Eating teaches foods for Discover Nutrition, so the eating hooks run even with tracking off.
+                core.RequireEatingHooks();
                 api.Logger.Notification("[complexnutrition] " + core.CoverageReport(api, verbose: core.Config.LogFallbacks));
             }
         }

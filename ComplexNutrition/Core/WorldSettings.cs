@@ -42,6 +42,9 @@ namespace ComplexNutrition.Core
         /// <summary>Diminishing returns on calories and nutrients (since v0.3.4). On unless the world switches it off.</summary>
         public const string DiminishingReturnsKey = "complexnutritionDiminishingReturns";
 
+        /// <summary>Discover Nutrition (since v0.3.4): food tooltips show "???" until the player has eaten that food. Off by default.</summary>
+        public const string DiscoverKey = "complexnutritionDiscover";
+
         /// <summary>How much a wild crop gives when harvested, in % of a farmed one (since v0.3.4; vanilla gives 25%).</summary>
         public const string WildHarvestKey = "complexnutritionWildHarvest";
 

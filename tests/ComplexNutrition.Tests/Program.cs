@@ -197,6 +197,15 @@ namespace ComplexNutrition.Tests
         }
 
         [Test]
+        public static void DiscoveryTeachesTheFoodItself()
+        {
+            var berry = new Vintagestory.API.Common.Item { Code = new Vintagestory.API.Common.AssetLocation("game:fruit-blueberry") };
+            var codes = Discovery.CodesOf(null, new Vintagestory.API.Common.ItemStack(berry));
+            Assert.Equal("game:fruit-blueberry", string.Join(",", codes), "a plain food teaches its own code");
+            Assert.Equal(0, Discovery.CodesOf(null, null).Count, "nothing teaches nothing");
+        }
+
+        [Test]
         public static void NetCarbsAndMacroCalories()
         {
             var amounts = new Dictionary<string, float> { ["carbohydrate"] = 10, ["fiber"] = 2, ["protein"] = 10, ["fat"] = 10 };
@@ -285,7 +294,7 @@ namespace ComplexNutrition.Tests
             }
             Assert.Near(0.7, WorldSettings.StoreShare(700f), 1e-6, "Easy keeps 70% of each store");
             Assert.Near(0.001, WorldSettings.StoreShare(1f), 1e-6, "Rock Bottom keeps 0.1%");
-            foreach (var key in new[] { WorldSettings.AdvancedDisplayKey, WorldSettings.MeatInPotsKey, WorldSettings.DiminishingReturnsKey })
+            foreach (var key in new[] { WorldSettings.AdvancedDisplayKey, WorldSettings.MeatInPotsKey, WorldSettings.DiminishingReturnsKey, WorldSettings.DiscoverKey })
                 Assert.True(attrs.Any(a => (string)a["code"] == key), "worldconfig.json has " + key);
 
             // v0.3.4: wild crop harvest options and their names.

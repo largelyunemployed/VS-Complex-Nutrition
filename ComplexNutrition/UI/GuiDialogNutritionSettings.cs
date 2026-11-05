@@ -123,6 +123,8 @@ namespace ComplexNutrition.UI
                     new[] { "amount", "percent" }, new[] { L("settings-units-amount"), L("settings-units-percent") },
                     snap.ShowPercent ? "percent" : "amount",
                     v => core.SendSetting(SettingKeys.DisplayUnits, v), "unitsdefault");
+                Switch(L("settings-discover"), Lang.Get("worldattribute-" + WorldSettings.DiscoverKey + "-desc"), snap.Discover,
+                    on => core.SendSetting(SettingKeys.Discover, on ? "true" : "false"), "discover");
                 Switch(L("settings-logfallbacks"), L("settings-logfallbacks-desc"), snap.LogFallbacks,
                     on => core.SendSetting(SettingKeys.LogFallbacks, on ? "true" : "false"), "logfallbacks");
 

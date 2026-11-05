@@ -20,6 +20,8 @@
 	"worldattribute-complexnutritionAdvancedDisplay-desc": "Shows more detail when you hover over the Carbs, Fats and Protein bars: how many calories the food being digested will give, how long it will take and how fast it is being absorbed. Each player can change this for themselves in game by typing /cnutrition display.",
 	"worldattribute-complexnutritionMeatInPots": "All poultry and bushmeat in pots",
 	"worldattribute-complexnutritionMeatInPots-desc": "Lets raw, cooked and cured poultry and bushmeat go into meat stews and soups as regular ingredients. Changing it takes effect the next time the world is loaded.",
+	"worldattribute-complexnutritionDiscover": "Discover Nutrition",
+	"worldattribute-complexnutritionDiscover-desc": "Hides a food's nutrients (shown as ???) until you have eaten it. Eating a meal or pie teaches you each of its ingredients. How filling a food is still shows. The nutrition window only suggests foods you have eaten.",
 	"worldattribute-complexnutritionDiminishingReturns": "Diminishing returns",
 	"worldattribute-complexnutritionDiminishingReturns-desc": "When on, eating a lot of one thing gives less and less: carbs, fats and protein give fewer calories past a day's worth, and vitamins and minerals count for less past a day's worth in one sitting. Switch it off and every gram counts in full.",
 	"worldattribute-complexnutritionWildHarvest": "Wild crop harvest",

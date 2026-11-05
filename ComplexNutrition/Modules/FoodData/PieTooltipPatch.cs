@@ -2,6 +2,7 @@ using System.Text;
 using ComplexNutrition.Core;
 using HarmonyLib;
 using Vintagestory.API.Common;
+using Vintagestory.API.Config;
 using Vintagestory.GameContent;
 
 namespace ComplexNutrition.Modules.FoodData
@@ -37,7 +38,11 @@ namespace ComplexNutrition.Modules.FoodData
         {
             if (core == null || !core.ShowTooltip) return;
             var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack);
-            if (meal != null) dsc.Append(CollectibleBehaviorNutrientInfo.BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo, core.ShortTooltipNow(withDebugInfo)));
+            if (meal == null) return;
+            dsc.Append(core.CanSeeNutrients(world, inSlot?.Itemstack)
+                ? CollectibleBehaviorNutrientInfo.BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo, core.ShortTooltipNow(withDebugInfo))
+                : CollectibleBehaviorNutrientInfo.BuildUndiscovered(
+                    Lang.Get("complexnutrition:tooltip-header-pie", meal.PieSlices), meal.Fullness, core.ShortTooltipNow(withDebugInfo)));
         }
     }
 }
