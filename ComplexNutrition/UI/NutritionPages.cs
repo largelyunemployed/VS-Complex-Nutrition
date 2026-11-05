@@ -447,6 +447,59 @@ namespace ComplexNutrition.UI
             float lineTop = line.Where(v => v != null).Select(v => v.Value).DefaultIfEmpty(0).Max();
             float lineMax = Math.Max(n.Cap, lineTop);
 
+            // Calories into and out of the tank.
+            var gained = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Gained : null).ToArray();
+            var burned = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Burned : null).ToArray();
+            float flowTop = h.Days.Select(day => Math.Max(day.Gained, day.Burned)).DefaultIfEmpty(0).Max();
+            float flowMax = d.ShowPercent ? NiceCeiling(cal.ToPercent(Math.Max(flowTop, cal.DailyTarget * 1.25f))) / 100f * cal.DailyTarget : NiceCeiling(Math.Max(flowTop, cal.DailyTarget * 1.25f));
+            blocks.Add(new HeadingBlock(L("history-heading-flow")));
+            blocks.Add(new TextBlock(StatsHover.Text(L("history-flow-intro", Kcal(d, flowMax))), true));
+            blocks.Add(new GapBlock(4));
+            blocks.Add(new ChartBlock
+            {
+                BarMax = flowMax,
+                BarMark = cal.DailyTarget,
+                Line = gained,
+                LineMax = flowMax,
+                LineColor = GainedColor,
+                ExtraLines = { (burned, BurnedColor) },
+                BottomLeft = StatsHover.Text(L("history-days-ago", h.Days.Count - 1)),
+                BottomRight = StatsHover.Text(L("history-today")),
+                Legend = { (GainedColor, StatsHover.Esc(L("history-gained"))), (BurnedColor, StatsHover.Esc(L("history-burned"))) },
+            });
+
+            // The last week in words.
+            blocks.Add(new HeadingBlock(L("history-heading-week")));
+            var week = h.Days.Skip(Math.Max(0, h.Days.Count - 8)).Take(Math.Min(7, Math.Max(0, h.Days.Count - 1))).ToList();
+            var flowWeek = week.Where(day => day.Gained > 0 || day.Burned > 0).ToList();
+            var eaten = week.Where(day => day.TotalKcal > 0).ToList();
+            if (eaten.Count == 0)
+            {
+                blocks.Add(new TextBlock(StatsHover.Text(L("history-week-none"))));
+            }
+            else
+            {
+                float avg = week.Sum(day => day.TotalKcal) / week.Count;
+                var totals = new float[Categories.Length];
+                foreach (var day in week)
+                {
+                    var st = Stack(day);
+                    for (int i = 0; i < totals.Length; i++) totals[i] += st[i];
+                }
+                int top = Array.IndexOf(totals, totals.Max());
+                float share = totals.Sum() > 0 ? totals[top] / totals.Sum() * 100f : 0f;
+                string pct = Math.Round(share).ToString("0", CultureInfo.InvariantCulture);
+                string from = L("history-from-" + Categories[top].ToLowerInvariant());
+                blocks.Add(new TextBlock(StatsHover.Text(flowWeek.Count > 0
+                    ? L("history-week-eaten-spent", Kcal(d, avg), Kcal(d, flowWeek.Average(day => day.Burned)), week.Count, pct, from)
+                    : L("history-week-eaten", Kcal(d, avg), week.Count, pct, from))));
+            }
+            if (flowWeek.Count > 0)
+            {
+                blocks.Add(new TextBlock(StatsHover.Text(L("history-week-gained", Kcal(d, flowWeek.Average(day => day.Gained))))));
+            }
+
+            blocks.Add(new HeadingBlock(L("history-heading-food")));
             blocks.Add(new TextBlock(n.IsCalories
                 ? StatsHover.Text(L("history-intro-calories", h.Days.Count))
                 : StatsHover.Text(L("history-intro", h.Days.Count, JoinNames(new[] { name }))), true));
@@ -473,56 +526,6 @@ namespace ComplexNutrition.UI
             }
             chart.Legend.Add((chart.LineColor, StatsHover.Esc(n.IsCalories ? L("history-line-legend-calories") : L("history-line-legend", name))));
             blocks.Add(chart);
-
-            // Calories into and out of the tank.
-            var gained = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Gained : null).ToArray();
-            var burned = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Burned : null).ToArray();
-            float flowTop = h.Days.Select(day => Math.Max(day.Gained, day.Burned)).DefaultIfEmpty(0).Max();
-            float flowMax = d.ShowPercent ? NiceCeiling(cal.ToPercent(Math.Max(flowTop, cal.DailyTarget * 1.25f))) / 100f * cal.DailyTarget : NiceCeiling(Math.Max(flowTop, cal.DailyTarget * 1.25f));
-            blocks.Add(new HeadingBlock(L("history-heading-flow")));
-            blocks.Add(new TextBlock(StatsHover.Text(L("history-flow-intro", Kcal(d, flowMax))), true));
-            blocks.Add(new GapBlock(4));
-            blocks.Add(new ChartBlock
-            {
-                BarMax = flowMax,
-                BarMark = cal.DailyTarget,
-                Line = gained,
-                LineMax = flowMax,
-                LineColor = GainedColor,
-                ExtraLines = { (burned, BurnedColor) },
-                BottomLeft = StatsHover.Text(L("history-days-ago", h.Days.Count - 1)),
-                BottomRight = StatsHover.Text(L("history-today")),
-                Legend = { (GainedColor, StatsHover.Esc(L("history-gained"))), (BurnedColor, StatsHover.Esc(L("history-burned"))) },
-            });
-
-            // The last week in words.
-            blocks.Add(new HeadingBlock(L("history-heading-week")));
-            var week = h.Days.Skip(Math.Max(0, h.Days.Count - 8)).Take(Math.Min(7, Math.Max(0, h.Days.Count - 1))).ToList();
-            var eaten = week.Where(day => day.TotalKcal > 0).ToList();
-            if (eaten.Count == 0)
-            {
-                blocks.Add(new TextBlock(StatsHover.Text(L("history-week-none"))));
-            }
-            else
-            {
-                float avg = week.Sum(day => day.TotalKcal) / week.Count;
-                var totals = new float[Categories.Length];
-                foreach (var day in week)
-                {
-                    var st = Stack(day);
-                    for (int i = 0; i < totals.Length; i++) totals[i] += st[i];
-                }
-                int top = Array.IndexOf(totals, totals.Max());
-                float share = totals.Sum() > 0 ? totals[top] / totals.Sum() * 100f : 0f;
-                blocks.Add(new TextBlock(StatsHover.Text(L("history-week-eaten", Kcal(d, avg), week.Count,
-                    Math.Round(share).ToString("0", CultureInfo.InvariantCulture), L("history-from-" + Categories[top].ToLowerInvariant())))));
-            }
-
-            var flowWeek = week.Where(day => day.Gained > 0 || day.Burned > 0).ToList();
-            if (flowWeek.Count > 0)
-            {
-                blocks.Add(new TextBlock(StatsHover.Text(L("history-week-flow", Kcal(d, flowWeek.Average(day => day.Gained)), Kcal(d, flowWeek.Average(day => day.Burned)), flowWeek.Count))));
-            }
 
             float now = d.State.GetReserve(n.Code);
             if (n.IsCalories) name = L("history-line-legend-calories");
