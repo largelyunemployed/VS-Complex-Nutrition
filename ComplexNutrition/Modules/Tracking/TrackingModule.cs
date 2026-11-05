@@ -516,7 +516,7 @@ namespace ComplexNutrition.Modules.Tracking
         /// <summary>Absorption above the sitting limit: the extra x adds scale * ln(1 + x / scale).</summary>
         public float SittingCurve(float total, float limit)
         {
-            if (total <= limit) return total;
+            if (total <= limit || !DigestionPool.DiminishingReturns) return total;
             float scale = Math.Max(1f, Settings.DiminishingScale);
             return limit + scale * (float)Math.Log(1.0 + (total - limit) / scale);
         }
@@ -535,7 +535,7 @@ namespace ComplexNutrition.Modules.Tracking
             var absorbed = new FoodAbsorbedInfo { Eaten = eaten };
             foreach (var n in Core.Nutrients.All)
             {
-                // Calories come from digestion only, never straight from eating.
+                // Calories come from digestion, apart from fiber's (below), never straight from eating.
                 if (n.IsCalories) continue;
                 var pool = Digest.Pool(n.Code);
                 if (pool != null)
@@ -565,9 +565,27 @@ namespace ComplexNutrition.Modules.Tracking
                 Core.PublishReserveChanged(player, n.Code, old, updated);
             }
 
+            AddFiberCalories(player, state, eaten.Get(NutrientCodes.Fiber));
             DietLedger.Of(player.Entity).Add(Today, eaten.KcalByCategory);
             state.MarkDirty();
             Core.PublishFoodAbsorbed(absorbed);
+        }
+
+        /// <summary>Fiber's calories (since v0.3.4): each gram eaten adds fiberKcalPerGram to the calorie reserve straight away.</summary>
+        private void AddFiberCalories(IServerPlayer player, NutritionState state, float grams)
+        {
+            var cal = Core.Nutrients.Get(NutrientCodes.Calories);
+            if (cal == null || grams <= 0f) return;
+            foreach (var m in Core.AbsorptionMultipliers(player, NutrientCodes.Fiber).Values) grams *= m;
+            float kcal = grams * Digest.FiberKcalPerGram;
+            if (kcal <= 0f) return;
+            float old = state.GetReserve(cal.Code);
+            float updated = Math.Max(old, Math.Min(cal.Cap, old + cal.ToPercent(kcal)));   // a full reserve wastes the rest
+            if (updated == old) return;
+            state.SetReserve(cal.Code, updated);
+            state.AddAbsorbedToday(cal.Code, updated - old);
+            NutrientHistory.Of(player.Entity).AddFlow(NowHours, Today, cal.FromPercent(updated - old), 0f);
+            Core.PublishReserveChanged(player, cal.Code, old, updated);
         }
 
         /// <summary>Grams in a gut pool: its reserve, in grams.</summary>

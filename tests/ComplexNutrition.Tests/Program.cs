@@ -184,6 +184,28 @@ namespace ComplexNutrition.Tests
         // ---- Settings ----
 
         [Test]
+        public static void DiminishingReturnsCanBeSwitchedOff()
+        {
+            var carbs = DigestionSettings.DefaultPools()[NutrientCodes.Carbohydrate];
+            try
+            {
+                Assert.True(carbs.Effective(400f, 100f) < 100f, "on: past the line, 100g count for less");
+                DigestionPool.DiminishingReturns = false;
+                Assert.Near(100f, carbs.Effective(400f, 100f), 1e-4, "off: every gram counts");
+            }
+            finally { DigestionPool.DiminishingReturns = true; }
+        }
+
+        [Test]
+        public static void DiscoveryTeachesTheFoodItself()
+        {
+            var berry = new Vintagestory.API.Common.Item { Code = new Vintagestory.API.Common.AssetLocation("game:fruit-blueberry") };
+            var codes = Discovery.CodesOf(null, new Vintagestory.API.Common.ItemStack(berry));
+            Assert.Equal("game:fruit-blueberry", string.Join(",", codes), "a plain food teaches its own code");
+            Assert.Equal(0, Discovery.CodesOf(null, null).Count, "nothing teaches nothing");
+        }
+
+        [Test]
         public static void NetCarbsAndMacroCalories()
         {
             var amounts = new Dictionary<string, float> { ["carbohydrate"] = 10, ["fiber"] = 2, ["protein"] = 10, ["fat"] = 10 };
@@ -191,7 +213,7 @@ namespace ComplexNutrition.Tests
             Assert.Equal(8f, DigestionSettings.PoolGrams(NutrientCodes.Carbohydrate, Get), "net carbs");
             Assert.Equal(0f, DigestionSettings.PoolGrams(NutrientCodes.Carbohydrate, c => c == "fiber" ? 5f : 1f), "net carbs never below 0");
             var s = new DigestionSettings { Pools = DigestionSettings.DefaultPools() };
-            Assert.Near(8 * 4 + 10 * 4 + 10 * 9, s.KcalFromMacros(Get), 1e-3, "kcal from macros");
+            Assert.Near(8 * 4 + 10 * 4 + 10 * 9 + 2 * 2, s.KcalFromMacros(Get), 1e-3, "kcal from macros and fiber");
         }
 
         [Test]
@@ -272,8 +294,16 @@ namespace ComplexNutrition.Tests
             }
             Assert.Near(0.7, WorldSettings.StoreShare(700f), 1e-6, "Easy keeps 70% of each store");
             Assert.Near(0.001, WorldSettings.StoreShare(1f), 1e-6, "Rock Bottom keeps 0.1%");
-            foreach (var key in new[] { WorldSettings.AdvancedDisplayKey, WorldSettings.MeatInPotsKey })
+            foreach (var key in new[] { WorldSettings.AdvancedDisplayKey, WorldSettings.MeatInPotsKey, WorldSettings.DiminishingReturnsKey, WorldSettings.DiscoverKey })
                 Assert.True(attrs.Any(a => (string)a["code"] == key), "worldconfig.json has " + key);
+
+            // v0.3.4: wild crop harvest options and their names.
+            var wild = attrs.First(a => (string)a["code"] == WorldSettings.WildHarvestKey);
+            Assert.Equal(string.Join(",", WorldSettings.WildHarvestOptions), string.Join(",", wild["values"].Select(v => (string)v)), "wild harvest values");
+            Assert.Equal(WorldSettings.DefaultWildHarvest, (string)wild["default"], "wild harvest default");
+            foreach (var v in WorldSettings.WildHarvestOptions)
+                Assert.True(lang["worldconfig-" + WorldSettings.WildHarvestKey + "-" + v] != null, "worldconfig-en.json names wild harvest " + v);
+            Assert.Equal("true", (string)attrs.First(a => (string)a["code"] == WorldSettings.DiminishingReturnsKey)["default"], "diminishing returns on by default");
 
         }
 

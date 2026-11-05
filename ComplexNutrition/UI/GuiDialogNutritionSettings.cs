@@ -123,6 +123,8 @@ namespace ComplexNutrition.UI
                     new[] { "amount", "percent" }, new[] { L("settings-units-amount"), L("settings-units-percent") },
                     snap.ShowPercent ? "percent" : "amount",
                     v => core.SendSetting(SettingKeys.DisplayUnits, v), "unitsdefault");
+                Switch(L("settings-discover"), Lang.Get("worldattribute-" + WorldSettings.DiscoverKey + "-desc"), snap.Discover,
+                    on => core.SendSetting(SettingKeys.Discover, on ? "true" : "false"), "discover");
                 Switch(L("settings-logfallbacks"), L("settings-logfallbacks-desc"), snap.LogFallbacks,
                     on => core.SendSetting(SettingKeys.LogFallbacks, on ? "true" : "false"), "logfallbacks");
 
@@ -139,6 +141,12 @@ namespace ComplexNutrition.UI
                 Switch(L("settings-advanced-default"), L("settings-advanced-default-desc"), snap.AdvancedDefault,
                     on => core.SendSetting(SettingKeys.AdvancedDefault, on ? "true" : "false"), "advanceddefault");
 
+                Switch(L("settings-diminishing"), Lang.Get("worldattribute-" + WorldSettings.DiminishingReturnsKey + "-desc"), snap.DiminishingReturns,
+                    on => core.SendSetting(SettingKeys.DiminishingReturns, on ? "true" : "false"), "diminishing");
+                Dropdown(L("settings-wildharvest"), Lang.Get("worldattribute-" + WorldSettings.WildHarvestKey + "-desc"),
+                    WorldSettings.WildHarvestOptions, WorldSettings.WildHarvestOptions.Select(v => Lang.Get("worldconfig-" + WorldSettings.WildHarvestKey + "-" + v)).ToArray(),
+                    snap.WildHarvest ?? WorldSettings.DefaultWildHarvest,
+                    v => core.SendSetting(SettingKeys.WildHarvest, v), "wildharvest");
                 Switch(L("settings-meatinpots"), Lang.Get("worldattribute-" + WorldSettings.MeatInPotsKey + "-desc"), snap.MeatInPots,
                     on => core.SendSetting(SettingKeys.MeatInPots, on ? "true" : "false"), "meatinpots");
 

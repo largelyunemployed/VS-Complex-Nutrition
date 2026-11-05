@@ -49,6 +49,9 @@ namespace ComplexNutrition.Core
         {
             try
             {
+                // Discover Nutrition (v0.3.4): every food eaten is remembered, whatever the world setting.
+                var entity = info.Player?.Entity;
+                if (entity != null && info.Source != null) Discovery.Record(entity, Discovery.CodesOf(entity.World, info.Source));
                 FoodEaten?.Invoke(info);
             }
             catch (Exception e)

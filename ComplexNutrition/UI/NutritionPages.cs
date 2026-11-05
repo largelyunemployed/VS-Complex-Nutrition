@@ -69,7 +69,7 @@ namespace ComplexNutrition.UI
             var (coming, lost) = Digestion.GutOutlook(d.Digest, d.State, d.Nutrients);
             if (coming < 0.5f && lost < 0.5f) return StatsHover.Text(L("window-outlook-empty"));
             string text = L("window-outlook", Kcal(d, coming));
-            text += " " + (lost < 0.5f ? L("window-outlook-nolost") : L("window-outlook-lost", Kcal(d, lost)));
+            if (DigestionPool.DiminishingReturns) text += " " + (lost < 0.5f ? L("window-outlook-nolost") : L("window-outlook-lost", Kcal(d, lost)));
             return StatsHover.Text(text);
         }
 
@@ -227,7 +227,9 @@ namespace ComplexNutrition.UI
                         Right = StatsHover.Text(L("window-protein-value", Amt(d, protein.Code, p24), Amt(d, protein.Code, s.ProteinNeedGrams))),
                     });
                 }
-                blocks.Add(new TextBlock(StatsHover.Text(L("window-macros-note", Amt(d, NutrientCodes.Protein, s.ProteinMaxGrams))), true));
+                blocks.Add(new TextBlock(StatsHover.Text(DigestionPool.DiminishingReturns
+                    ? L("window-macros-note", Amt(d, NutrientCodes.Protein, s.ProteinMaxGrams))
+                    : L("window-macros-note-off")), true));
                 blocks.Add(new TextBlock(FiberBoost(d), true));
             }
 
@@ -315,9 +317,12 @@ namespace ComplexNutrition.UI
                     blocks.Add(new TextBlock(StatsHover.Text(L("window-gut-empty")), true));
                 }
 
+                bool dr = DigestionPool.DiminishingReturns;
                 string limits = code == NutrientCodes.Protein
-                    ? L("window-gut-window-protein", Amt(d, code, d.State.Protein24), Amt(d, code, s.ProteinNeedGrams), Amt(d, code, s.ProteinMaxGrams))
-                    : L("window-gut-window", pool.WindowHours, Amt(d, code, window), Amt(d, code, pool.DiminishingAboveGrams));
+                    ? (dr ? L("window-gut-window-protein", Amt(d, code, d.State.Protein24), Amt(d, code, s.ProteinNeedGrams), Amt(d, code, s.ProteinMaxGrams))
+                          : L("window-gut-window-protein-off", Amt(d, code, d.State.Protein24), Amt(d, code, s.ProteinNeedGrams)))
+                    : (dr ? L("window-gut-window", pool.WindowHours, Amt(d, code, window), Amt(d, code, pool.DiminishingAboveGrams))
+                          : L("window-gut-window-off", pool.WindowHours, Amt(d, code, window)));
                 blocks.Add(new TextBlock(StatsHover.Text(limits), true));
                 blocks.Add(new GapBlock(4));
             }
