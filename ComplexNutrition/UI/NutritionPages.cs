@@ -426,6 +426,9 @@ namespace ComplexNutrition.UI
         public static readonly double[] GainedColor = { 0.45, 0.78, 0.40, 1.0 };
         public static readonly double[] BurnedColor = { 0.93, 0.42, 0.37, 1.0 };
 
+        /// <summary>The top of both History charts unless a day went past it, in kcal.</summary>
+        public const float ChartKcal = 5000f;
+
         /// <summary>The colour of each chart's top value, in its top left corner.</summary>
         public const string TopValueColor = "#ffd94a";
 
@@ -487,9 +490,6 @@ namespace ComplexNutrition.UI
 
             var stacks = h.Days.Select(Stack).ToArray();
             float most = stacks.Length == 0 ? 0 : stacks.Max(st => st.Sum());
-            float barTop = Math.Max(most, cal.DailyTarget * 1.25f);
-            // A round top in the units the reader sees.
-            float barMax = d.ShowPercent ? NiceCeiling(cal.ToPercent(barTop)) / 100f * cal.DailyTarget : NiceCeiling(barTop);
             var line = h.Days.Select(day => day.Reserves != null && day.Reserves.TryGetValue(n.Code, out float r) ? (float?)r : null).ToArray();
             float lineTop = line.Where(v => v != null).Select(v => v.Value).DefaultIfEmpty(0).Max();
             float lineMax = Math.Max(n.Cap, lineTop);
@@ -498,7 +498,10 @@ namespace ComplexNutrition.UI
             var gained = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Gained : null).ToArray();
             var burned = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Burned : null).ToArray();
             float flowTop = h.Days.Select(day => Math.Max(day.Gained, day.Burned)).DefaultIfEmpty(0).Max();
-            float flowMax = d.ShowPercent ? NiceCeiling(cal.ToPercent(Math.Max(flowTop, cal.DailyTarget * 1.25f))) / 100f * cal.DailyTarget : NiceCeiling(Math.Max(flowTop, cal.DailyTarget * 1.25f));
+            // Both charts share one scale (v0.3.5): 5,000kcal, raised to a round number only if a day went past it.
+            float chartTop = Math.Max(most, flowTop);
+            float flowMax = chartTop <= ChartKcal ? ChartKcal : NiceCeiling(chartTop);
+            float barMax = flowMax;
             // The dashed line on both charts: the calories burned a day on average (v0.3.5), a day's need until anything was burned.
             var (mark, markTip) = BurnMark(d, h, cal);
 

@@ -64,12 +64,13 @@ namespace ComplexNutrition.UI
             ElementBounds pickLabelBounds = ElementBounds.Fixed(140.0, 0.0, 70.0, 25.0).FixedUnder(clipBounds, 22.0);
             ElementBounds pickBounds = ElementBounds.Fixed(210.0, 0.0, 170.0, 25.0).FixedUnder(clipBounds, 17.0);
 
-            // Top right, above the tabs, where the handbook has its own.
-            ElementBounds pauseBounds = ElementBounds.Fixed(ContentWidth - 75.0, 4.0, 100.0, 22.0);
+            // In the title bar, just left of its menu and close icons and in line with them.
+            ElementBounds pauseBounds = ElementBounds.Fixed(0.0, 4.5, 100.0, 22.0)
+                .WithAlignment(EnumDialogArea.RightFixed).WithFixedAlignmentOffset(-62.0, 0.0);
 
             ElementBounds bgBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);
             bgBounds.BothSizing = ElementSizing.FitToChildren;
-            bgBounds.WithChildren(tabBounds, settingsBounds, insetBounds, clipBounds, scrollBounds, closeBounds, pickLabelBounds, pickBounds, pauseBounds);
+            bgBounds.WithChildren(tabBounds, settingsBounds, insetBounds, clipBounds, scrollBounds, closeBounds, pickLabelBounds, pickBounds);
 
             ElementBounds dialogBounds = ElementStdBounds.AutosizedMainDialog
                 .WithAlignment(EnumDialogArea.CenterFixed).WithFixedPosition(0.0, 70.0);
@@ -81,6 +82,9 @@ namespace ComplexNutrition.UI
             var composer = capi.Gui.CreateCompo("complexnutrition-window", dialogBounds)
                 .AddShadedDialogBG(bgBounds, true, 5.0, 0.75f)
                 .AddDialogTitleBar(Lang.Get("complexnutrition:window-title"), OnTitleBarClose)
+                .AddIf(CanPause)
+                    .AddToggleButton(Lang.Get("Pause game"), CairoFont.WhiteDetailText(), OnTogglePause, pauseBounds, "pausegame")
+                .EndIf()
                 .BeginChildElements(bgBounds)
                     .AddHorizontalTabs(tabs, tabBounds, OnTab, font, selected, "tabs")
                     .AddInset(insetBounds, 3, 0.85f)
@@ -90,7 +94,6 @@ namespace ComplexNutrition.UI
                     .AddVerticalScrollbar(OnScroll, scrollBounds, "scrollbar")
                     .AddSmallButton(Lang.Get("complexnutrition:window-settings"), OnSettings, settingsBounds, EnumButtonStyle.Normal, "settings")
                     .AddSmallButton(Lang.Get("complexnutrition:window-close"), () => { TryClose(); return true; }, closeBounds, EnumButtonStyle.Normal);
-            if (CanPause) composer.AddToggleButton(Lang.Get("Pause game"), CairoFont.WhiteDetailText(), OnTogglePause, pauseBounds, "pausegame");
             if (tab == HistoryTab)
             {
                 var choices = NutritionPages.HistoryNutrients(core.Nutrients);

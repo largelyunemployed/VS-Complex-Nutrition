@@ -414,11 +414,12 @@ namespace ComplexNutrition.UI
                 }
             }
 
-            // The white "i" at the dashed line's right end, which says what the line is.
+            // The white "i" on the dashed line, which says what the line is.
             if (c.MarkTip != null && c.BarMark > 0 && c.BarMark < c.BarMax)
             {
                 double r = GuiElement.scaled(6);
-                double cx = right - r - GuiElement.scaled(4);
+                // In the leftmost day's column (28 days ago), where it is least in the way of recent days.
+                double cx = left + Math.Max(r + GuiElement.scaled(3), (right - left) / Math.Max(1, days) / 2);
                 double cy = Math.Clamp(bottom - plotH * c.BarMark / c.BarMax, top + r + 1, bottom - r - 1);
                 DrawInfo(ctx, cx, cy, r);
                 // Listed after the days so it wins where they overlap.
