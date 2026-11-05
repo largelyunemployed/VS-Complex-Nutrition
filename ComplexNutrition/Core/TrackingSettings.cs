@@ -27,7 +27,7 @@ namespace ComplexNutrition.Core
         /// <summary>Reserves drain once at least this many in-game hours have passed since the last drain.</summary>
         [JsonProperty("minDrainHours")] public float MinDrainHours = 0.1f;
 
-        /// <summary>The nutrition window lists the calorie tank as running low below this many days.</summary>
+        /// <summary>The nutrition window lists the calorie reserve as running low below this many days.</summary>
         [JsonProperty("lowCaloriesDays")] public float LowCaloriesDays = 1f;
 
         /// <summary>The nutrition window lists a nutrient of a <see cref="LowGroups"/> group as running low below this many days.</summary>

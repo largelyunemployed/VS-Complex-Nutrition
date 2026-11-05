@@ -20,7 +20,7 @@ namespace ComplexNutrition.Modules.Tracking
     /// Since v0.2.2 it also runs digestion (see <see cref="DigestionSettings"/>): vanilla satiety becomes
     /// fullness (max 600, filled by each food's weight, draining at a fixed rate), eaten fats, protein and net
     /// carbohydrate go into gut pools that are absorbed over hours, and only absorption fills the calorie
-    /// tank. Activity burns the tank as it burned satiety, and an empty tank starves.
+    /// reserve. Activity burns the reserve as it burned satiety, and an empty reserve starves.
     /// </summary>
     public class TrackingModule : INutritionModule
     {
@@ -189,7 +189,7 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// A character new to Complex Nutrition starts with what the world's start condition picks: the calorie tank
+        /// A character new to Complex Nutrition starts with what the world's start condition picks: the calorie reserve
         /// (Full 10 days, Easy 7, Normal 5, Hard 3, Brutal 1, Rock Bottom 1% of a day) and the same share of every
         /// vitamin and mineral store (Full 100%, Easy 70%, ...). Only on first join; respawning uses the respawn condition.
         /// Worlds from before v0.2.4 have none, and the nutrients' startReserve applies.
@@ -201,7 +201,7 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// Sets the calorie tank to <paramref name="calories"/> (% of a day) and each vitamin and mineral to the same share
+        /// Sets the calorie reserve to <paramref name="calories"/> (% of a day) and each vitamin and mineral to the same share
         /// of its store (<see cref="WorldSettings.StoreShare"/>).
         /// </summary>
         private void ApplyCondition(IServerPlayer player, NutritionState state, float calories, bool publish)
@@ -350,7 +350,7 @@ namespace ComplexNutrition.Modules.Tracking
                 bool drains = player.Entity.Alive && mode != EnumGameMode.Creative && mode != EnumGameMode.Spectator;
                 if (starveNow && drains && state.GetReserve(NutrientCodes.Calories) <= 0f)
                 {
-                    // Vanilla's starvation, moved from an empty stomach to an empty calorie tank.
+                    // Vanilla's starvation, moved from an empty stomach to an empty calorie reserve.
                     player.Entity.ReceiveDamage(new DamageSource { Source = EnumDamageSource.Internal, Type = EnumDamageType.Hunger }, Digest.StarvationDamage);
                 }
 
@@ -489,7 +489,7 @@ namespace ComplexNutrition.Modules.Tracking
             if (cal != null && kcal > 0f)
             {
                 float old = state.GetReserve(cal.Code);
-                float updated = Math.Max(old, Math.Min(cal.Cap, old + cal.ToPercent(kcal)));   // a full tank wastes the rest
+                float updated = Math.Max(old, Math.Min(cal.Cap, old + cal.ToPercent(kcal)));   // a full reserve wastes the rest
                 state.SetReserve(cal.Code, updated);
                 state.AddAbsorbedToday(cal.Code, updated - old);
                 NutrientHistory.Of(player.Entity).AddFlow(now, Today, cal.FromPercent(updated - old), 0f);

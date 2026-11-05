@@ -50,7 +50,7 @@ namespace ComplexNutrition.UI
             capi.Event.MouseDown -= OnMouseDown;
         }
 
-        /// <summary>0 fine, 1 something is running low, 2 something is nearly gone (or the calorie tank is under its line).</summary>
+        /// <summary>0 fine, 1 something is running low, 2 something is nearly gone (or the calorie reserve is under its line).</summary>
         public static int LevelOf(NutritionPageData d)
         {
             int result = 0;

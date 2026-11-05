@@ -15,7 +15,7 @@ namespace ComplexNutrition.Core
         public bool LogFallbacks = true;
         public string DisplayUnits = "amount";
         public Dictionary<string, bool> Modules = new();
-        /// <summary>The world's start condition (% of a day in the calorie tank), or null when the world has none.</summary>
+        /// <summary>The world's start condition (% of a day in the calorie reserve), or null when the world has none.</summary>
         public string StartCalories;
         public string RespawnCalories;
         public bool AdvancedDefault;

@@ -13,9 +13,9 @@ namespace ComplexNutrition.Core
         /// <summary>Reserves in % of a day's need, at the end of the day (for today: now). Empty when nothing was recorded.</summary>
         public Dictionary<string, float> Reserves = new();
         public Dictionary<string, float> KcalByCategory = new();
-        /// <summary>Calories that went into the calorie tank from digestion that day (v0.3.3).</summary>
+        /// <summary>Calories that went into the calorie reserve from digestion that day (v0.3.3).</summary>
         public float Gained;
-        /// <summary>Calories burned from the tank that day: activity and healing (v0.3.3).</summary>
+        /// <summary>Calories burned from the reserve that day: activity and healing (v0.3.3).</summary>
         public float Burned;
 
         public float TotalKcal => KcalByCategory.Values.Sum();
@@ -74,7 +74,7 @@ namespace ComplexNutrition.Core
         private ITreeAttribute Flow => tree.GetOrAddTreeAttribute("flow");
         private ITreeAttribute FlowHours => tree.GetOrAddTreeAttribute("flowhours");
 
-        /// <summary>Adds calories gained (into the tank from digestion) or burned (out of it) at a game time.</summary>
+        /// <summary>Adds calories gained (into the reserve from digestion) or burned (out of it) at a game time.</summary>
         public void AddFlow(double nowHours, int day, float gained, float burned)
         {
             if (gained <= 0f && burned <= 0f) return;

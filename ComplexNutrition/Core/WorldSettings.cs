@@ -4,7 +4,7 @@ using Vintagestory.API.Common;
 
 namespace ComplexNutrition.Core
 {
-    /// <summary>One start condition: its value (the calorie tank in % of a day) and its name in the lang files.</summary>
+    /// <summary>One start condition: its value (the calorie reserve in % of a day) and its name in the lang files.</summary>
     public readonly struct StartOption
     {
         public readonly string Value;
@@ -27,10 +27,10 @@ namespace ComplexNutrition.Core
     /// </summary>
     public static class WorldSettings
     {
-        /// <summary>The calorie tank of a new character, in % of a day.</summary>
+        /// <summary>The calorie reserve of a new character, in % of a day.</summary>
         public const string StartConditionKey = "complexnutritionStart";
 
-        /// <summary>The calorie tank a character respawns with, in % of a day, from the same options (since v0.3.2).</summary>
+        /// <summary>The calorie reserve a character respawns with, in % of a day, from the same options (since v0.3.2).</summary>
         public const string RespawnConditionKey = "complexnutritionRespawn";
 
         /// <summary>Show the advanced nutrition display by default.</summary>
@@ -40,7 +40,7 @@ namespace ComplexNutrition.Core
         public const string MeatInPotsKey = "complexnutritionMeatInPots";
 
         /// <summary>
-        /// The start conditions, best first, also used for respawning. Each is the calorie tank in % of a day; vitamins and
+        /// The start conditions, best first, also used for respawning. Each is the calorie reserve in % of a day; vitamins and
         /// minerals start at the same share of their own stores (Full 100%, Easy 70%, ... Rock Bottom 0.1%).
         /// worldconfig.json lists the same values and names for both settings (a test checks).
         /// </summary>
@@ -60,7 +60,7 @@ namespace ComplexNutrition.Core
         /// <summary>The respawn condition a world gets when it has none (Brutal).</summary>
         public const string DefaultRespawn = "100";
 
-        /// <summary>The calorie value of the Full option: a full tank. Other options are this share of every store.</summary>
+        /// <summary>The calorie value of the Full option: a full reserve. Other options are this share of every store.</summary>
         public const float FullValue = 1000f;
 
         public static bool IsStartOption(string value) => Array.Exists(StartOptions, o => o.Value == value);

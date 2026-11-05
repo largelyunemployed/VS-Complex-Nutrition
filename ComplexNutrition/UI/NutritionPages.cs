@@ -100,7 +100,7 @@ namespace ComplexNutrition.UI
         private static bool CanRunLow(NutritionPageData d, NutrientDefinition n) =>
             n.IsCalories || (d.Tracking.LowGroups?.Contains(n.Group) ?? false);
 
-        /// <summary>Nutrients running low, lowest first: the calorie tank under its line, and the slow nutrients under theirs.</summary>
+        /// <summary>Nutrients running low, lowest first: the calorie reserve under its line, and the slow nutrients under theirs.</summary>
         public static List<NutrientDefinition> RunningLow(NutritionPageData d)
         {
             var low = new List<(NutrientDefinition n, float days)>();
@@ -387,7 +387,7 @@ namespace ComplexNutrition.UI
             ["Unknown"] = new[] { 0.52, 0.52, 0.52, 1.0 },
         };
 
-        /// <summary>The nutrients the History tab can draw: the calorie tank, fiber, and every vitamin and mineral (gut pools only hold food on its way through).</summary>
+        /// <summary>The nutrients the History tab can draw: the calorie reserve, fiber, and every vitamin and mineral (gut pools only hold food on its way through).</summary>
         public static List<NutrientDefinition> HistoryNutrients(NutrientRegistry nutrients) =>
             nutrients.All.Where(n => n.IsCalories || n.Code == NutrientCodes.Fiber || n.IsMicronutrient).ToList();
 
@@ -447,7 +447,7 @@ namespace ComplexNutrition.UI
             float lineTop = line.Where(v => v != null).Select(v => v.Value).DefaultIfEmpty(0).Max();
             float lineMax = Math.Max(n.Cap, lineTop);
 
-            // Calories into and out of the tank.
+            // Calories into and out of the reserve.
             var gained = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Gained : null).ToArray();
             var burned = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Burned : null).ToArray();
             float flowTop = h.Days.Select(day => Math.Max(day.Gained, day.Burned)).DefaultIfEmpty(0).Max();
@@ -500,10 +500,8 @@ namespace ComplexNutrition.UI
             }
 
             blocks.Add(new HeadingBlock(L("history-heading-food")));
-            blocks.Add(new TextBlock(n.IsCalories
-                ? StatsHover.Text(L("history-intro-calories", h.Days.Count))
-                : StatsHover.Text(L("history-intro", h.Days.Count, JoinNames(new[] { name }))), true));
-            blocks.Add(new TextBlock(StatsHover.Text(L("history-scale", Kcal(d, barMax), Kcal(d, cal.DailyTarget), NutrientDisplay.DaysText(lineMax))), true));
+            blocks.Add(new TextBlock(StatsHover.Text(L("history-intro", h.Days.Count, n.IsCalories ? L("history-energy") : JoinNames(new[] { name }))), true));
+            blocks.Add(new TextBlock(StatsHover.Text(L("history-scale", Kcal(d, barMax), NutrientDisplay.DaysText(lineMax))), true));
             blocks.Add(new GapBlock(4));
 
             var chart = new ChartBlock
