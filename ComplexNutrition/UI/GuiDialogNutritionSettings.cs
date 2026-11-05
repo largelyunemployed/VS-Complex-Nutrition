@@ -139,6 +139,12 @@ namespace ComplexNutrition.UI
                 Switch(L("settings-advanced-default"), L("settings-advanced-default-desc"), snap.AdvancedDefault,
                     on => core.SendSetting(SettingKeys.AdvancedDefault, on ? "true" : "false"), "advanceddefault");
 
+                Switch(L("settings-diminishing"), Lang.Get("worldattribute-" + WorldSettings.DiminishingReturnsKey + "-desc"), snap.DiminishingReturns,
+                    on => core.SendSetting(SettingKeys.DiminishingReturns, on ? "true" : "false"), "diminishing");
+                Dropdown(L("settings-wildharvest"), Lang.Get("worldattribute-" + WorldSettings.WildHarvestKey + "-desc"),
+                    WorldSettings.WildHarvestOptions, WorldSettings.WildHarvestOptions.Select(v => Lang.Get("worldconfig-" + WorldSettings.WildHarvestKey + "-" + v)).ToArray(),
+                    snap.WildHarvest ?? WorldSettings.DefaultWildHarvest,
+                    v => core.SendSetting(SettingKeys.WildHarvest, v), "wildharvest");
                 Switch(L("settings-meatinpots"), Lang.Get("worldattribute-" + WorldSettings.MeatInPotsKey + "-desc"), snap.MeatInPots,
                     on => core.SendSetting(SettingKeys.MeatInPots, on ? "true" : "false"), "meatinpots");
 

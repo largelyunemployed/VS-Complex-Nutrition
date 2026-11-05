@@ -20,6 +20,8 @@ namespace ComplexNutrition.Core
         public string RespawnCalories;
         public bool AdvancedDefault;
         public bool MeatInPots;
+        public bool DiminishingReturns = true;
+        public string WildHarvest = WorldSettings.DefaultWildHarvest;
 
         [JsonIgnore] public bool ShowPercent => string.Equals(DisplayUnits, "percent", System.StringComparison.OrdinalIgnoreCase);
     }
@@ -72,6 +74,8 @@ namespace ComplexNutrition.Core
         public const string RespawnCalories = "respawnCalories";
         public const string AdvancedDefault = "advancedDefault";
         public const string MeatInPots = "meatInPots";
+        public const string DiminishingReturns = "diminishingReturns";
+        public const string WildHarvest = "wildHarvest";
         /// <summary>Prefix for a module switch: "module:tracking".</summary>
         public const string ModulePrefix = "module:";
     }

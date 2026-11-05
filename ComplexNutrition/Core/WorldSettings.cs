@@ -39,6 +39,18 @@ namespace ComplexNutrition.Core
         /// <summary>Poultry and bushmeat in pots. Read by the recipe patches in patches/meat-in-pots.json when the world loads.</summary>
         public const string MeatInPotsKey = "complexnutritionMeatInPots";
 
+        /// <summary>Diminishing returns on calories and nutrients (since v0.3.4). On unless the world switches it off.</summary>
+        public const string DiminishingReturnsKey = "complexnutritionDiminishingReturns";
+
+        /// <summary>How much a wild crop gives when harvested, in % of a farmed one (since v0.3.4; vanilla gives 25%).</summary>
+        public const string WildHarvestKey = "complexnutritionWildHarvest";
+
+        /// <summary>The wild harvest options, in % of a farmed crop's yield. worldconfig.json lists the same values (a test checks).</summary>
+        public static readonly string[] WildHarvestOptions = { "25", "50", "75", "100" };
+
+        /// <summary>The wild harvest a world gets when it has none: half a farmed crop, twice vanilla's quarter.</summary>
+        public const string DefaultWildHarvest = "50";
+
         /// <summary>
         /// The start conditions, best first, also used for respawning. Each is the calorie reserve in % of a day; vitamins and
         /// minerals start at the same share of their own stores (Full 100%, Easy 70%, ... Rock Bottom 0.1%).
@@ -72,6 +84,17 @@ namespace ComplexNutrition.Core
         /// <summary>A yes/no world setting: true only when it is set and reads "true".</summary>
         public static bool Bool(IWorldAccessor world, string key) =>
             string.Equals(Text(world, key), "true", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Whether diminishing returns apply on this world (on when the world has no such setting).</summary>
+        public static bool DiminishingReturns(IWorldAccessor world) =>
+            !string.Equals(Text(world, DiminishingReturnsKey), "false", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>A wild crop's harvest as a share of a farmed one's (0.25 is vanilla).</summary>
+        public static float WildHarvestShare(IWorldAccessor world)
+        {
+            float pct = Number(Text(world, WildHarvestKey)) ?? Number(DefaultWildHarvest).Value;
+            return Math.Clamp(pct, 0f, 100f) / 100f;
+        }
 
         /// <summary>The world's start condition in % of a day, or null when the world has none (the nutrient's startReserve applies).</summary>
         public static float? StartCalories(IWorldAccessor world) => Number(Text(world, StartConditionKey));

@@ -84,8 +84,15 @@ namespace ComplexNutrition.Core
         /// <summary>Grams that count as calories after diminishing returns, for <paramref name="grams"/> absorbed on top of <paramref name="window"/>.</summary>
         public float Effective(float window, float grams)
         {
+            if (!DiminishingReturns) return grams;
             return Curve(window + grams) - Curve(window);
         }
+
+        /// <summary>
+        /// The world's Diminishing returns setting (v0.3.4). Off, every gram counts in full. Kept in step with the world by the
+        /// server and, on the client, by the settings the server sends.
+        /// </summary>
+        public static bool DiminishingReturns = true;
 
         private float Curve(float total)
         {

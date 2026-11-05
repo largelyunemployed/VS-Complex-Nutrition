@@ -81,6 +81,9 @@ namespace ComplexNutrition.Core
             serverChannel.SetMessageHandler<SettingsChangePacket>(OnSettingsChange);
             serverChannel.SetMessageHandler<HistoryRequestPacket>(OnHistoryRequest);
             api.Event.PlayerNowPlaying += SendSettings;
+            // World settings can also change through /worldconfig, so they are read again every few seconds.
+            api.Event.SaveGameLoaded += () => ApplyWorldTweaks(api.World);
+            api.Event.RegisterGameTickListener(_ => ApplyWorldTweaks(api.World), 5000);
 
             api.ChatCommands.GetOrCreate("cnutrition")
                 .BeginSubCommand("settings")
@@ -151,6 +154,17 @@ namespace ComplexNutrition.Core
             serverChannel.SendPacket(new HistoryPacket { Json = data == null ? "" : JsonConvert.SerializeObject(data) }, player);
         }
 
+        /// <summary>
+        /// Puts the world's rebalance settings (v0.3.4) into effect on the server: diminishing returns on or off, and the share of a
+        /// farmed crop's yield that a wild crop gives (the game's own <c>BlockCrop.WildCropDropMul</c>, 0.25 in vanilla).
+        /// </summary>
+        private static void ApplyWorldTweaks(IWorldAccessor world)
+        {
+            if (world == null) return;
+            DigestionPool.DiminishingReturns = WorldSettings.DiminishingReturns(world);
+            Vintagestory.GameContent.BlockCrop.WildCropDropMul = WorldSettings.WildHarvestShare(world);
+        }
+
         private static bool IsAdmin(IServerPlayer player) => player != null && player.HasPrivilege(Privilege.controlserver);
 
         private SettingsSnapshot SnapshotFor(IServerPlayer player) => new()
@@ -164,6 +178,8 @@ namespace ComplexNutrition.Core
             RespawnCalories = WorldSettings.RespawnCalories(sapi.World).ToString(System.Globalization.CultureInfo.InvariantCulture),
             AdvancedDefault = Digestion.WorldAdvancedDefault(sapi.World),
             MeatInPots = WorldSettings.Bool(sapi.World, WorldSettings.MeatInPotsKey),
+            DiminishingReturns = WorldSettings.DiminishingReturns(sapi.World),
+            WildHarvest = (WorldSettings.WildHarvestShare(sapi.World) * 100f).ToString("0", System.Globalization.CultureInfo.InvariantCulture),
         };
 
         private void SendSettings(IServerPlayer player)
@@ -227,6 +243,17 @@ namespace ComplexNutrition.Core
                 case SettingKeys.MeatInPots:
                     // Recipes are patched when the world loads, so this takes effect after a restart.
                     sapi.World.Config.SetString(WorldSettings.MeatInPotsKey, on ? "true" : "false");
+                    saveConfig = false;
+                    break;
+                case SettingKeys.DiminishingReturns:
+                    sapi.World.Config.SetString(WorldSettings.DiminishingReturnsKey, on ? "true" : "false");
+                    ApplyWorldTweaks(sapi.World);
+                    saveConfig = false;
+                    break;
+                case SettingKeys.WildHarvest:
+                    if (Array.IndexOf(WorldSettings.WildHarvestOptions, value) < 0) return;
+                    sapi.World.Config.SetString(WorldSettings.WildHarvestKey, value);
+                    ApplyWorldTweaks(sapi.World);
                     saveConfig = false;
                     break;
                 case SettingKeys.AdvancedDefault:
@@ -315,6 +342,7 @@ namespace ComplexNutrition.Core
             }
             if (snap == null) return;
             ServerSettings = snap;
+            DigestionPool.DiminishingReturns = snap.DiminishingReturns;
 
             // The client follows the server's module switches, so a module switched on or off in the menu takes effect here too.
             foreach (var module in OrderByDependencies(modules).ToList())
@@ -327,6 +355,8 @@ namespace ComplexNutrition.Core
             if (cfg != null)
             {
                 cfg.SetBool(WorldSettings.AdvancedDisplayKey, snap.AdvancedDefault);
+                cfg.SetString(WorldSettings.DiminishingReturnsKey, snap.DiminishingReturns ? "true" : "false");
+                cfg.SetString(WorldSettings.WildHarvestKey, snap.WildHarvest ?? WorldSettings.DefaultWildHarvest);
                 if (snap.StartCalories != null) cfg.SetString(WorldSettings.StartConditionKey, snap.StartCalories);
                 if (snap.RespawnCalories != null) cfg.SetString(WorldSettings.RespawnConditionKey, snap.RespawnCalories);
             }

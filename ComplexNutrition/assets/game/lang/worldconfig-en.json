@@ -19,5 +19,13 @@
 	"worldattribute-complexnutritionAdvancedDisplay": "Advanced nutrition display",
 	"worldattribute-complexnutritionAdvancedDisplay-desc": "Shows more detail when you hover over the Carbs, Fats and Protein bars: how many calories the food being digested will give, how long it will take and how fast it is being absorbed. Each player can change this for themselves in game by typing /cnutrition display.",
 	"worldattribute-complexnutritionMeatInPots": "All poultry and bushmeat in pots",
-	"worldattribute-complexnutritionMeatInPots-desc": "Lets raw, cooked and cured poultry and bushmeat go into meat stews and soups as regular ingredients. Changing it takes effect the next time the world is loaded."
+	"worldattribute-complexnutritionMeatInPots-desc": "Lets raw, cooked and cured poultry and bushmeat go into meat stews and soups as regular ingredients. Changing it takes effect the next time the world is loaded.",
+	"worldattribute-complexnutritionDiminishingReturns": "Diminishing returns",
+	"worldattribute-complexnutritionDiminishingReturns-desc": "When on, eating a lot of one thing gives less and less: carbs, fats and protein give fewer calories past a day's worth, and vitamins and minerals count for less past a day's worth in one sitting. Switch it off and every gram counts in full.",
+	"worldattribute-complexnutritionWildHarvest": "Wild crop harvest",
+	"worldattribute-complexnutritionWildHarvest-desc": "How much a wild crop gives when you harvest it, compared with the same crop grown on farmland. A wild spelt plant gives about 1 or 2 grain at 25% (vanilla), 2 to 4 at 50%, and as much as a farmed one (5 to 7) at 100%. Seeds are not affected.",
+	"worldconfig-complexnutritionWildHarvest-25": "25% (vanilla)",
+	"worldconfig-complexnutritionWildHarvest-50": "50%",
+	"worldconfig-complexnutritionWildHarvest-75": "75%",
+	"worldconfig-complexnutritionWildHarvest-100": "100%: as much as farmed"
 }

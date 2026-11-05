@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.4
+
+A rebalance, because reaching a day's calories took far too much food.
+
+- New world setting, Diminishing returns (on by default). Switch it off and every gram of carbs, fats and protein gives its full calories, and vitamins and minerals count in full however much you eat in one sitting. Admins can change it under World in the settings menu.
+- New world setting, Wild crop harvest: how much a wild crop gives compared with the same crop on farmland. Vanilla gives a quarter; the default is now half, so a wild spelt plant gives 2 to 4 grain instead of 1 or 2. Choose 25% for vanilla, or up to 100% for as much as a farmed crop. Seeds are not affected.
+- The "calorie tank" is now called the calorie reserve everywhere.
+
 ## v0.3.3
 
 - The Overview tab tells you more about your calories:

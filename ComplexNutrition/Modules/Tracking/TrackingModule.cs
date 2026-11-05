@@ -516,7 +516,7 @@ namespace ComplexNutrition.Modules.Tracking
         /// <summary>Absorption above the sitting limit: the extra x adds scale * ln(1 + x / scale).</summary>
         public float SittingCurve(float total, float limit)
         {
-            if (total <= limit) return total;
+            if (total <= limit || !DigestionPool.DiminishingReturns) return total;
             float scale = Math.Max(1f, Settings.DiminishingScale);
             return limit + scale * (float)Math.Log(1.0 + (total - limit) / scale);
         }
