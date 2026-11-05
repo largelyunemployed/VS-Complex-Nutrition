@@ -120,8 +120,11 @@ namespace ComplexNutrition.Core
     {
         public const string AssetPath = "config/digestion.json";
 
-        /// <summary>The fullness (vanilla satiety) maximum while tracking runs.</summary>
-        [JsonProperty("fullnessMax")] public float FullnessMax = 600;
+        /// <summary>
+        /// The fullness (vanilla satiety) maximum while tracking runs: the world's Max fullness setting since v0.3.5
+        /// (<see cref="Digestion.StomachSize"/>), or the largest the slider allows when the world has no limit.
+        /// </summary>
+        [JsonIgnore] public float FullnessMax => Digestion.NoFullnessLimit ? WorldSettings.MaxFullnessTop : Digestion.StomachSize;
 
         /// <summary>Vanilla's own maximum, restored when tracking is switched off.</summary>
         [JsonProperty("vanillaFullnessMax")] public float VanillaFullnessMax = 1500;
@@ -146,8 +149,18 @@ namespace ComplexNutrition.Core
         /// <summary>Fibre reserve (in % of a day's need) at which the fibre speed-up is at its full size.</summary>
         [JsonProperty("fiberBonusFullAt")] public float FiberBonusFullAt = 70;
 
-        /// <summary>Calories each gram of eaten fibre gives (since v0.3.4), added to the calorie reserve when it is eaten.</summary>
+        /// <summary>Calories each gram of eaten fibre gives (since v0.3.4). Since v0.3.5 it is digested from the gut at the fibre reserve's own rate.</summary>
         [JsonProperty("fiberKcalPerGram")] public float FiberKcalPerGram = 2;
+
+        /// <summary>The most fibre the gut holds (since v0.3.5); the rest still fills the fibre reserve but gives no calories.</summary>
+        [JsonProperty("fiberGutMaxGrams")] public float FiberGutMaxGrams = 60;
+
+        /// <summary>
+        /// Grams of fibre digested per in-game hour (v0.3.5): a steady rate, the same as the fibre reserve is used up at
+        /// (its drainPerDay of a day's need, so 30g a day, 1.25g an hour).
+        /// </summary>
+        public static float FiberGutRate(NutrientDefinition fiber) =>
+            fiber == null ? 0f : Math.Max(0f, fiber.DrainPerDay) / 100f * fiber.DailyTarget / 24f;
 
         /// <summary>Gut pools by nutrient code: carbohydrate (net of fibre), protein and fat.</summary>
         [JsonProperty("pools")] public Dictionary<string, DigestionPool> Pools = new();
@@ -230,6 +243,33 @@ namespace ComplexNutrition.Core
     {
         /// <summary>The rules in force, or null while tracking does not run. Set by the tracking module.</summary>
         public static DigestionSettings Settings { get; set; }
+
+        /// <summary>The stomach's size in fullness: the world's Max fullness setting (since v0.3.5, default 300).</summary>
+        public static float StomachSize = WorldSettings.DefaultMaxFullness;
+
+        /// <summary>The world's Max fullness is 0: there is no limit, and the fullness bar runs up to the slider's top.</summary>
+        public static bool NoFullnessLimit;
+
+        /// <summary>Puts the world's Max fullness setting into effect for everything that reads <see cref="DigestionSettings.FullnessMax"/>.</summary>
+        public static void SetStomach(int maxFullness)
+        {
+            NoFullnessLimit = maxFullness <= 0;
+            StomachSize = NoFullnessLimit ? WorldSettings.MaxFullnessTop : maxFullness;
+        }
+
+        /// <summary>
+        /// Keeps a tracked player's stomach the world's size: when Max fullness changes, the stomach takes the new maximum and
+        /// keeps what it holds, up to that maximum. Does nothing for players on vanilla's scale.
+        /// </summary>
+        public static void FitStomach(Entity entity, DigestionSettings s)
+        {
+            var hunger = entity?.GetBehavior<EntityBehaviorHunger>();
+            var tree = entity?.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
+            if (hunger == null || tree == null || s == null || !tree.GetBool(ScaledKey)) return;
+            if (Math.Abs(hunger.MaxSaturation - s.FullnessMax) < 0.01f) return;
+            hunger.MaxSaturation = s.FullnessMax;
+            if (hunger.Saturation > s.FullnessMax) hunger.Saturation = s.FullnessMax;
+        }
 
         /// <summary>True when our fullness rules apply to this entity: tracking runs and has picked the player up.</summary>
         public static bool IsActiveFor(Entity entity)
@@ -363,6 +403,7 @@ namespace ComplexNutrition.Core
         {
             float coming = 0f, lost = 0f;
             if (s == null || state == null || nutrients == null) return (0f, 0f);
+            coming += Math.Max(0f, state.FiberGut) * s.FiberKcalPerGram;   // fibre has no diminishing returns
             foreach (var kv in s.Pools)
             {
                 var def = nutrients.Get(kv.Key);
@@ -393,7 +434,7 @@ namespace ComplexNutrition.Core
         private const string SavedFullnessKey = "savedFullness";
 
         /// <summary>
-        /// Puts a player on our fullness scale (max 600). A player coming back from vanilla gets back the fullness
+        /// Puts a player on our fullness scale (the world's Max fullness). A player coming back from vanilla gets back the fullness
         /// they had when tracking was switched off, whatever they ate since; anyone else has their stomach scaled
         /// to match. Safe to call again.
         /// </summary>
@@ -407,6 +448,12 @@ namespace ComplexNutrition.Core
                 hunger.MaxSaturation = s.FullnessMax;
                 hunger.Saturation = Math.Clamp(tree.GetFloat(SavedFullnessKey), 0f, s.FullnessMax);
                 tree.RemoveAttribute(SavedFullnessKey);
+            }
+            else if (tree.GetBool(ScaledKey))
+            {
+                // Already on our scale (the world's Max fullness may have changed): keep what the stomach holds.
+                hunger.MaxSaturation = s.FullnessMax;
+                hunger.Saturation = Math.Min(s.FullnessMax, hunger.Saturation);
             }
             else
             {

@@ -29,5 +29,7 @@
 	"worldconfig-complexnutritionWildHarvest-25": "25% (vanilla)",
 	"worldconfig-complexnutritionWildHarvest-50": "50%",
 	"worldconfig-complexnutritionWildHarvest-75": "75%",
-	"worldconfig-complexnutritionWildHarvest-100": "100%: as much as farmed"
+	"worldconfig-complexnutritionWildHarvest-100": "100%: as much as farmed",
+	"worldattribute-complexnutritionMaxFullness": "Max fullness",
+	"worldattribute-complexnutritionMaxFullness-desc": "How much your stomach holds, in fullness. 300 is about 1 kilogram of food. Fullness always empties at 100 an hour and only decides how much you can eat at once. 0 means no limit."
 }

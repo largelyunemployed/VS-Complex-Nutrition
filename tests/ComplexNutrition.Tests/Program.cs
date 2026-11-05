@@ -197,6 +197,23 @@ namespace ComplexNutrition.Tests
         }
 
         [Test]
+        public static void MaxFullnessSetsTheStomach()
+        {
+            var s = new DigestionSettings();
+            try
+            {
+                Assert.Near(300f, s.FullnessMax, 1e-4, "300 fullness by default");
+                Digestion.SetStomach(800);
+                Assert.Near(800f, s.FullnessMax, 1e-4, "the world's size");
+                Assert.True(!Digestion.NoFullnessLimit, "800 is a limit");
+                Digestion.SetStomach(0);
+                Assert.True(Digestion.NoFullnessLimit, "0 is no limit");
+                Assert.Near(WorldSettings.MaxFullnessTop, s.FullnessMax, 1e-4, "with no limit the bar runs to the slider's top");
+            }
+            finally { Digestion.SetStomach(WorldSettings.DefaultMaxFullness); }
+        }
+
+        [Test]
         public static void DiscoveryTeachesTheFoodItself()
         {
             var berry = new Vintagestory.API.Common.Item { Code = new Vintagestory.API.Common.AssetLocation("game:fruit-blueberry") };
@@ -305,6 +322,15 @@ namespace ComplexNutrition.Tests
                 Assert.True(lang["worldconfig-" + WorldSettings.WildHarvestKey + "-" + v] != null, "worldconfig-en.json names wild harvest " + v);
             Assert.Equal("true", (string)attrs.First(a => (string)a["code"] == WorldSettings.DiminishingReturnsKey)["default"], "diminishing returns on by default");
 
+            // v0.3.5: max fullness, a slider from 0 (no limit) to 1,500.
+            var full = attrs.First(a => (string)a["code"] == WorldSettings.MaxFullnessKey);
+            Assert.Equal("intrange", (string)full["dataType"], "max fullness is a slider");
+            Assert.Equal(0, (int)full["min"], "max fullness min");
+            Assert.Equal(WorldSettings.MaxFullnessTop, (int)full["max"], "max fullness max");
+            Assert.Equal(WorldSettings.MaxFullnessStep, (int)full["step"], "max fullness step");
+            Assert.Equal(WorldSettings.DefaultMaxFullness.ToString(), (string)full["default"], "max fullness default");
+            Assert.True(lang["worldattribute-" + WorldSettings.MaxFullnessKey] != null && lang["worldattribute-" + WorldSettings.MaxFullnessKey + "-desc"] != null, "worldconfig-en.json names and describes max fullness");
+
         }
 
         [Test]
@@ -328,15 +354,15 @@ namespace ComplexNutrition.Tests
         public static void HistoryKeepsDaysAndBuildsFourWeeks()
         {
             var history = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
-            for (int day = 1; day <= 40; day++) history.RecordDay(day, new Dictionary<string, float> { ["vitaminC"] = day });
+            for (int day = 1; day <= 40; day++) history.AddFlow(day * 24 + 1, day, day, 0f);
             history.Prune(41, 28);
-            Assert.Equal(0, history.DayReserves(13).Count, "day 13 pruned");
-            Assert.Near(14, history.DayReserves(14)["vitaminC"], 1e-6, "day 14 kept");
+            Assert.Equal(0f, history.DayFlow(13).gained, "day 13 pruned");
+            Assert.Near(14, history.DayFlow(14).gained, 1e-6, "day 14 kept");
 
-            var data = history.Build(null, new Dictionary<string, float> { ["vitaminC"] = 99 }, 41, 41 * 24 + 5, 28);
+            var data = history.Build(null, 41, 41 * 24 + 5, 28);
             Assert.Equal(28, data.Days.Count, "28 days");
             Assert.Equal(14, data.Days[0].Day, "oldest first");
-            Assert.Near(99, data.Days[^1].Reserves["vitaminC"], 1e-6, "today is now");
+            Assert.Near(14, data.Days[0].Gained, 1e-6, "each day's flow");
             Assert.True(data.DayAgo == null, "no hourly readings, no trend");
         }
 

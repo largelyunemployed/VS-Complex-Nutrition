@@ -21,7 +21,6 @@ namespace ComplexNutrition.UI
         private int tab;
         private long ticker;
         private int ticks;
-        private string historyCode = NutrientCodes.Calories;
 
         public const int HistoryTab = 4;
         /// <summary>Seconds between history requests while the window is open.</summary>
@@ -33,6 +32,15 @@ namespace ComplexNutrition.UI
         {
             this.core = core;
         }
+
+        /// <summary>The player's choice (since v0.3.5): pause a single player game while the window is open, like the handbook. Off by default.</summary>
+        public const string PauseSettingKey = "complexnutritionWindowPause";
+
+        private bool pausedByUs;
+
+        private bool CanPause => capi.IsSinglePlayer && !capi.OpenedToLan;
+
+        private bool PauseChosen => capi.Settings.Bool.Get(PauseSettingKey, false);
 
         public override string ToggleKeyCombinationCode => null;
 
@@ -51,13 +59,14 @@ namespace ComplexNutrition.UI
             ElementBounds closeBounds = ElementBounds.FixedSize(0.0, 0.0).FixedUnder(clipBounds, 15.0)
                 .WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(20.0, 4.0).WithFixedAlignmentOffset(-6.0, 0.0);
             ElementBounds settingsBounds = ElementBounds.FixedSize(0.0, 0.0).FixedUnder(clipBounds, 15.0).WithFixedPadding(20.0, 4.0);
-            // History tab: which nutrient the chart's line shows, between the two buttons.
-            ElementBounds pickLabelBounds = ElementBounds.Fixed(140.0, 0.0, 70.0, 25.0).FixedUnder(clipBounds, 22.0);
-            ElementBounds pickBounds = ElementBounds.Fixed(210.0, 0.0, 170.0, 25.0).FixedUnder(clipBounds, 17.0);
+
+            // In the title bar, just left of its menu and close icons and in line with them.
+            ElementBounds pauseBounds = ElementBounds.Fixed(0.0, 4.5, 100.0, 22.0)
+                .WithAlignment(EnumDialogArea.RightFixed).WithFixedAlignmentOffset(-62.0, 0.0);
 
             ElementBounds bgBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);
             bgBounds.BothSizing = ElementSizing.FitToChildren;
-            bgBounds.WithChildren(tabBounds, settingsBounds, insetBounds, clipBounds, scrollBounds, closeBounds, pickLabelBounds, pickBounds);
+            bgBounds.WithChildren(tabBounds, settingsBounds, insetBounds, clipBounds, scrollBounds, closeBounds);
 
             ElementBounds dialogBounds = ElementStdBounds.AutosizedMainDialog
                 .WithAlignment(EnumDialogArea.CenterFixed).WithFixedPosition(0.0, 70.0);
@@ -69,6 +78,9 @@ namespace ComplexNutrition.UI
             var composer = capi.Gui.CreateCompo("complexnutrition-window", dialogBounds)
                 .AddShadedDialogBG(bgBounds, true, 5.0, 0.75f)
                 .AddDialogTitleBar(Lang.Get("complexnutrition:window-title"), OnTitleBarClose)
+                .AddIf(CanPause)
+                    .AddToggleButton(Lang.Get("Pause game"), CairoFont.WhiteDetailText(), OnTogglePause, pauseBounds, "pausegame")
+                .EndIf()
                 .BeginChildElements(bgBounds)
                     .AddHorizontalTabs(tabs, tabBounds, OnTab, font, selected, "tabs")
                     .AddInset(insetBounds, 3, 0.85f)
@@ -78,42 +90,28 @@ namespace ComplexNutrition.UI
                     .AddVerticalScrollbar(OnScroll, scrollBounds, "scrollbar")
                     .AddSmallButton(Lang.Get("complexnutrition:window-settings"), OnSettings, settingsBounds, EnumButtonStyle.Normal, "settings")
                     .AddSmallButton(Lang.Get("complexnutrition:window-close"), () => { TryClose(); return true; }, closeBounds, EnumButtonStyle.Normal);
-            if (tab == HistoryTab)
-            {
-                var choices = NutritionPages.HistoryNutrients(core.Nutrients);
-                if (!choices.Exists(n => n.Code == historyCode)) historyCode = NutrientCodes.Calories;
-                string[] codes = choices.ConvertAll(n => n.Code).ToArray();
-                string[] names = choices.ConvertAll(n => Lang.Get(n.LangKey)).ToArray();
-                composer
-                    .AddStaticText(Lang.Get("complexnutrition:history-pick"), CairoFont.WhiteSmallText().WithOrientation(EnumTextOrientation.Right), pickLabelBounds)
-                    .AddDropDown(codes, names, Math.Max(0, Array.IndexOf(codes, historyCode)), OnPick, pickBounds, "pick");
-            }
             SingleComposer = composer.EndChildElements().Compose();
             SingleComposer.GetHorizontalTabs("tabs").activeElement = tab;
+            SingleComposer.GetToggleButton("pausegame")?.SetValue(PauseChosen);
             Refresh(true);
         }
 
         private void OnTab(int index)
         {
-            bool relayout = (index == HistoryTab) != (tab == HistoryTab);
             tab = index;
             if (index == HistoryTab) core.RequestHistory();
-            if (relayout)
-            {
-                // The History tab adds the nutrient picker along the bottom.
-                Compose();
-                return;
-            }
             if (page != null) page.ScrollOffset = 0;
             var bar = SingleComposer?.GetScrollbar("scrollbar");
             if (bar != null) bar.CurrentYPosition = 0;
             Refresh(true);
         }
 
-        private void OnPick(string code, bool selected)
+        private void OnTogglePause(bool on)
         {
-            historyCode = code;
-            Refresh(true);
+            capi.Settings.Bool[PauseSettingKey] = on;
+            if (!CanPause) return;
+            capi.PauseGame(on);
+            pausedByUs = on;
         }
 
         private bool OnSettings()
@@ -137,7 +135,7 @@ namespace ComplexNutrition.UI
                 1 => NutritionPages.DigestionPage(data),
                 2 => NutritionPages.Vitamins(data),
                 3 => NutritionPages.Minerals(data),
-                HistoryTab => NutritionPages.History(data, historyCode),
+                HistoryTab => NutritionPages.History(data),
                 _ => NutritionPages.Overview(data),
             };
             if (page.SetBlocks(blocks) || force)
@@ -156,6 +154,11 @@ namespace ComplexNutrition.UI
         {
             base.OnGuiOpened();
             Compose();
+            if (CanPause && PauseChosen)
+            {
+                capi.PauseGame(true);
+                pausedByUs = true;
+            }
             core.RequestHistory();
             ticks = 0;
             ticker = capi.Event.RegisterGameTickListener(_ =>
@@ -168,8 +171,16 @@ namespace ComplexNutrition.UI
         public override void OnGuiClosed()
         {
             base.OnGuiClosed();
+            if (pausedByUs) capi.PauseGame(false);
+            pausedByUs = false;
             if (ticker != 0) capi.Event.UnregisterGameTickListener(ticker);
             ticker = 0;
+        }
+
+        public override void OnRenderGUI(float deltaTime)
+        {
+            base.OnRenderGUI(deltaTime);
+            page?.RenderTooltip();
         }
 
         private void OnTitleBarClose() => TryClose();

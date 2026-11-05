@@ -101,32 +101,41 @@ static class P
                 day.KcalByCategory["Dairy"] = lean ? 0 : 300 + rnd.Next(0, 300);
                 day.Gained = day.TotalKcal * 0.85f;
                 day.Burned = 2000 + rnd.Next(0, 1200);
-                foreach (var n in reg.All)
-                {
-                    float now = st.GetReserve(n.Code);
-                    float wobble = (float)Math.Sin(i * 0.7 + n.SortOrder) * 0.15f;
-                    float slope = n.Code == "vitaminA" ? (27 - i) * 25 : n.Code == "calories" ? (lean ? -40 : 15) * (27 - i) * 0.3f : 0;
-                    day.Reserves[n.Code] = Math.Max(0, now * (1 + wobble) + slope);
-                }
             }
             history.Days.Add(day);
         }
-        history.Days[^1].Reserves = r.ToDictionary(kv => kv.Key, kv => kv.Value);
         history.DayAgo = r.ToDictionary(kv => kv.Key, kv => kv.Key == "vitaminC" ? kv.Value - 40 : kv.Key == "calcium" ? kv.Value + 60 : kv.Key == "vitaminA" ? kv.Value + 30 : kv.Value - 5);
         history.DayAgoHours = 24;
         history.BurnedHour = 96;
         history.Burned24 = 2410;
 
         bool percent = a.Length > 1 && a[1] == "percent";   // second argument "percent": amounts in % of a day
-        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 600, Health = 9, MaxHealth = 15, Known = known, ShowPercent = percent, History = history };
+        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 300, Health = 9, MaxHealth = 15, Known = known, ShowPercent = percent, History = history };
         Console.WriteLine("writing to " + System.IO.Path.GetFullPath(outDir));
         var tabs = new[] { ("overview", NutritionPages.Overview(data)), ("digestion", NutritionPages.DigestionPage(data)), ("vitamins", NutritionPages.Vitamins(data)), ("minerals", NutritionPages.Minerals(data)),
-            ("history", NutritionPages.History(data, "calories")), ("history-vitaminA", NutritionPages.History(data, "vitaminA")) };
+            ("history", NutritionPages.History(data)), };
         string[] names = { "Overview", "Digestion", "Vitamins", "Minerals", "History" };
         for (int t = 0; t < tabs.Length; t++)
         {
             using var page = PageRenderer.Render(capi, tabs[t].Item2, GuiDialogNutrition.ContentWidth - 4);
             Frame(page, names, Math.Min(t, 4), System.IO.Path.Combine(outDir, "window-" + tabs[t].Item1 + ".png"));
+        }
+        // Hover tooltips (v0.3.5): a day on each History chart and the dashed line's "i", drawn where the mouse would be.
+        {
+            var spots = new List<Hotspot>();
+            using var page = PageRenderer.Render(capi, NutritionPages.History(data), GuiDialogNutrition.ContentWidth - 4, spots);
+            using var ctx = new Context(page);
+            var days = spots.Where(sp => sp.Highlight).ToList();
+            var picks = new List<Hotspot> { days[days.Count / 2 - 3], days[^2], spots.First(sp => !sp.Highlight) };
+            foreach (var sp in picks)
+            {
+                if (sp.Highlight) { ctx.SetSourceRGBA(1, 1, 1, 28 / 255.0); ctx.Rectangle(sp.X, sp.Y, sp.W, sp.H); ctx.Fill(); }
+                using var tip = PageRenderer.RenderTip(capi, sp.Vtml, GuiElementNutritionPage.TipWidth);
+                double tx = Math.Min(sp.X + sp.W / 2 + S(14), page.Width - tip.Width - 2);
+                ctx.SetSourceSurface(tip, (int)tx, (int)(sp.Y + sp.H / 2 + S(14))); ctx.Paint();
+            }
+            page.WriteToPng(System.IO.Path.Combine(outDir, "window-history-tips.png"));
+            Console.WriteLine("hotspots: " + spots.Count);
         }
         // The running-low icon in its three states, side by side.
         using (var icons = new ImageSurface(Format.Argb32, (int)S(3 * 40), (int)S(40)))
@@ -167,12 +176,6 @@ static class P
         }
         ctx.SetSourceRGBA(0.33, 0.27, 0.21, 1); ctx.Rectangle(pad, S(590) + pad, S(80), S(26)); ctx.Fill();
         ctx.SetSourceRGB(0.9, 0.85, 0.75); ctx.SetFontSize(S(13)); ctx.MoveTo(pad + S(14), S(608) + pad); ctx.ShowText("Settings");
-        if (active == 4)
-        {
-            ctx.MoveTo(pad + S(170), S(608) + pad); ctx.ShowText("Line:");
-            ctx.SetSourceRGBA(0.12, 0.10, 0.08, 1); ctx.Rectangle(pad + S(210), S(590) + pad, S(170), S(25)); ctx.Fill();
-            ctx.SetSourceRGB(0.9, 0.85, 0.75); ctx.MoveTo(pad + S(218), S(608) + pad); ctx.ShowText(path.Contains("vitaminA") ? "Vitamin A  v" : "Calories  v");
-        }
         ctx.SetSourceRGBA(0, 0, 0, 0.35); ctx.Rectangle(pad, S(72) + pad, S(506), S(506)); ctx.Fill();
         ctx.SetSourceRGBA(0.45, 0.38, 0.30, 1); ctx.Rectangle(pad + S(517), S(72) + pad, S(20), S(506)); ctx.Fill();
         double ph = Math.Min(page.Height, S(500));

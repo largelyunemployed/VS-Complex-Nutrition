@@ -10,8 +10,6 @@ namespace ComplexNutrition.Core
     public class HistoryDay
     {
         public int Day;
-        /// <summary>Reserves in % of a day's need, at the end of the day (for today: now). Empty when nothing was recorded.</summary>
-        public Dictionary<string, float> Reserves = new();
         public Dictionary<string, float> KcalByCategory = new();
         /// <summary>Calories that went into the calorie reserve from digestion that day (v0.3.3).</summary>
         public float Gained;
@@ -70,6 +68,7 @@ namespace ComplexNutrition.Core
         /// <summary>A history over a bare tree (tests).</summary>
         public static NutrientHistory FromTree(ITreeAttribute tree) => new(tree);
 
+        /// <summary>End-of-day reserves, recorded until v0.3.5 for the History line; now only cleared out by <see cref="Prune"/>.</summary>
         private ITreeAttribute Days => tree.GetOrAddTreeAttribute("days");
         private ITreeAttribute Flow => tree.GetOrAddTreeAttribute("flow");
         private ITreeAttribute FlowHours => tree.GetOrAddTreeAttribute("flowhours");
@@ -137,16 +136,6 @@ namespace ComplexNutrition.Core
             return result;
         }
 
-        /// <summary>Records the reserves a day ended with.</summary>
-        public void RecordDay(int day, IReadOnlyDictionary<string, float> reserves)
-        {
-            var dayTree = new TreeAttribute();
-            Copy(dayTree, reserves);
-            Days["d" + day] = dayTree;
-        }
-
-        public Dictionary<string, float> DayReserves(int day) => Read(Days.GetTreeAttribute("d" + day));
-
         /// <summary>The last whole game hour recorded, or long.MinValue.</summary>
         public long LastHour => tree.GetLong("lastHour", long.MinValue);
 
@@ -213,10 +202,10 @@ namespace ComplexNutrition.Core
         }
 
         /// <summary>
-        /// The window's history: <paramref name="keepDays"/> days ending today (today's reserves are <paramref name="current"/>),
-        /// with the calories eaten from the diet ledger.
+        /// The window's history: <paramref name="keepDays"/> days ending today, with the calories eaten from the diet ledger
+        /// and the calories gained and burned.
         /// </summary>
-        public HistoryData Build(DietLedger ledger, IReadOnlyDictionary<string, float> current, int today, double nowHours, int keepDays)
+        public HistoryData Build(DietLedger ledger, int today, double nowHours, int keepDays)
         {
             var data = new HistoryData { Today = today };
             for (int day = today - keepDays + 1; day <= today; day++)
@@ -224,7 +213,6 @@ namespace ComplexNutrition.Core
                 var entry = new HistoryDay
                 {
                     Day = day,
-                    Reserves = day == today ? new Dictionary<string, float>(current) : DayReserves(day),
                 };
                 if (ledger != null) entry.KcalByCategory = ledger.Get(day).KcalByCategory;
                 (entry.Gained, entry.Burned) = DayFlow(day);

@@ -121,6 +121,13 @@ namespace ComplexNutrition.Core
             return sum;
         }
 
+        /// <summary>Grams of fiber in the gut (since v0.3.5): digested at the carbs pool's rate into fiberKcalPerGram calories each.</summary>
+        public float FiberGut
+        {
+            get => Gut.GetFloat("fiber-g");
+            set => Gut.SetFloat("fiber-g", value);
+        }
+
         /// <summary>In-game hours until a gut pool is empty, as of the last digestion step.</summary>
         public float GetGutHours(string pool) => Gut.GetFloat(pool + "-h");
 

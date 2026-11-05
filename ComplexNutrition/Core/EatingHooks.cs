@@ -108,7 +108,7 @@ namespace ComplexNutrition.Core
         /// </summary>
         private static bool TooFull(EntityAgent byEntity, float fullness)
         {
-            if (fullness <= 0f || !Digestion.IsActiveFor(byEntity)) return false;
+            if (fullness <= 0f || Digestion.NoFullnessLimit || !Digestion.IsActiveFor(byEntity)) return false;
             var hunger = byEntity.GetBehavior<EntityBehaviorHunger>();
             if (hunger == null) return false;
             float cur = hunger.Saturation;

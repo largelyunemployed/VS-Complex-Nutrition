@@ -78,11 +78,24 @@ namespace ComplexNutrition.UI
             composer.AddDropDown(values, names, index, (code, selected) => { if (selected) pick(code); }, cb, CairoFont.WhiteSmallText(), key);
         }
 
+        private readonly System.Collections.Generic.List<(string key, int value, int min, int max, int step, Func<int, string> text)> sliderValues = new();
+
+        /// <summary>A slider that sends its value when the mouse is let go, showing each value as <paramref name="text"/> gives it.</summary>
+        private void Slider(string label, string description, int value, int min, int max, int step, Func<int, string> text, Action<int> pick, string key)
+        {
+            var cb = Label(label, description);
+            composer.AddSlider(v => { pick(v); return true; }, cb.WithFixedHeight(20).WithFixedOffset(0, 4), key);
+            sliderValues.Add((key, value, min, max, step, text));
+        }
+
+        private static readonly System.Reflection.FieldInfo TriggerOnMouseUp = HarmonyLib.AccessTools.Field(typeof(GuiElementSlider), "triggerOnMouseUp");
+
         private void Compose()
         {
             var snap = core.ServerSettings;
             bool admin = snap?.IsAdmin == true;
             switchValues.Clear();
+            sliderValues.Clear();
             rows = 0;
             y = 35;
 
@@ -147,6 +160,10 @@ namespace ComplexNutrition.UI
                     WorldSettings.WildHarvestOptions, WorldSettings.WildHarvestOptions.Select(v => Lang.Get("worldconfig-" + WorldSettings.WildHarvestKey + "-" + v)).ToArray(),
                     snap.WildHarvest ?? WorldSettings.DefaultWildHarvest,
                     v => core.SendSetting(SettingKeys.WildHarvest, v), "wildharvest");
+                Slider(L("settings-maxfullness"), Lang.Get("worldattribute-" + WorldSettings.MaxFullnessKey + "-desc"),
+                    snap.MaxFullness, 0, WorldSettings.MaxFullnessTop, WorldSettings.MaxFullnessStep,
+                    v => v <= 0 ? L("settings-maxfullness-none") : L("settings-maxfullness-value", v),
+                    v => core.SendSetting(SettingKeys.MaxFullness, v.ToString(System.Globalization.CultureInfo.InvariantCulture)), "maxfullness");
                 Switch(L("settings-meatinpots"), Lang.Get("worldattribute-" + WorldSettings.MeatInPotsKey + "-desc"), snap.MeatInPots,
                     on => core.SendSetting(SettingKeys.MeatInPots, on ? "true" : "false"), "meatinpots");
 
@@ -172,6 +189,17 @@ namespace ComplexNutrition.UI
 
             SingleComposer = composer.EndChildElements().Compose();
             foreach (var (key, on) in switchValues) SingleComposer.GetSwitch(key)?.SetValue(on);
+            foreach (var (key, value, min, max, step, text) in sliderValues)
+            {
+                var slider = SingleComposer.GetSlider(key);
+                if (slider == null) continue;
+                // The game's own switch for this is internal: send the value once the mouse is let go, not on every step of a drag.
+                TriggerOnMouseUp?.SetValue(slider, true);
+                slider.OnSliderTooltip = v => text(v);
+                slider.OnSliderRestingText = v => text(v);
+                slider.ShowTextWhenResting = true;
+                slider.SetValues(value, min, max, step);
+            }
         }
 
         private static bool ModuleOn(SettingsSnapshot snap, string id) => snap.Modules != null && snap.Modules.TryGetValue(id, out var on) && on;

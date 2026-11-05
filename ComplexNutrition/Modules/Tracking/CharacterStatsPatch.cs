@@ -298,7 +298,7 @@ namespace ComplexNutrition.Modules.Tracking
         {
             var b = new StatsHover.Builder(title, StatsHover.Hex(color))
                 .Section(Lang.Get("complexnutrition:hover-status"), status)
-                .Section(Lang.Get("complexnutrition:hover-about"), StatsHover.Text(Lang.Get("complexnutrition:nutrient-" + code + "-role")));
+                .Section(Lang.Get("complexnutrition:hover-about"), StatsHover.Text(Lang.Get("complexnutrition:nutrient-" + code + "-role", RoleArg(code))));
             string key = "complexnutrition:nutrient-" + code + "-effect";
             if (!Lang.HasTranslation(key)) b.Note(Lang.Get("complexnutrition:effect-placeholder"));
             else b.Section(Lang.Get("complexnutrition:hover-ingame"), StatsHover.Text(Lang.Get(key)));
@@ -440,6 +440,32 @@ namespace ComplexNutrition.Modules.Tracking
 
         private static string Num(float v) => Fmt.Number(v);
 
+        /// <summary>A value an About text names: for fiber, the reserve its speed-up is fullest from (in the player's units).</summary>
+        private static string RoleArg(string code)
+        {
+            if (code != NutrientCodes.Fiber) return "";
+            var def = core?.Nutrients.Get(code);
+            float at = Digestion.Settings?.FiberBonusFullAt ?? 70f;
+            return def == null ? at + "%" : def.Format(at, core.ShowPercent);
+        }
+
+        /// <summary>
+        /// Fiber's gut line (v0.3.5), laid out like the carbs, fats and protein ones: what is digesting and how long it will take,
+        /// and with the advanced display the calories it will give and the rate. Empty when no fiber is digesting.
+        /// </summary>
+        private static string FiberGutLine(NutritionState st, NutrientDefinition def)
+        {
+            var s = Digestion.Settings;
+            float grams = st?.FiberGut ?? 0f;
+            if (s == null || grams <= DigestionPool.EmptyGrams) return StatsHover.Text(Lang.Get("complexnutrition:fiber-gut-empty"));
+            string hours = StatsHover.Text(NutrientDisplay.GutHoursText(st.GetGutHours(NutrientCodes.Fiber), def.ToPercent(grams)));
+            string amount = StatsHover.Text(def.FormatAmount(grams, core.ShowPercent));
+            if (!Digestion.AdvancedDisplay(capi?.World, st)) return StatsHover.Vtml("complexnutrition:gut-hover", amount, hours);
+            float rate = Math.Min(grams, DigestionSettings.FiberGutRate(def));
+            return StatsHover.Vtml("complexnutrition:gut-hover-advanced", amount, StatsHover.Text(Kcal(grams * s.FiberKcalPerGram)), hours,
+                StatsHover.Paint(Lang.Get("complexnutrition:gut-rate", def.FormatAmount(rate, core.ShowPercent), Kcal(rate * s.FiberKcalPerGram)), UnitColors.Rate));
+        }
+
         /// <summary>Fiber's hover line: the calories per hour it adds right now, its rate in red like the gut lines.</summary>
         private static string FiberBoostLine(float kcalPerHour) => kcalPerHour < 0.05f
             ? StatsHover.Text(Lang.Get("complexnutrition:fiber-boost-none"))
@@ -553,7 +579,7 @@ namespace ComplexNutrition.Modules.Tracking
                         float r = st?.GetReserve(code) ?? 0f;
                         string line = StatsHover.Vtml("complexnutrition:reserve-hover", Amount(def, r), StatsHover.Text(NutrientDisplay.DaysText(r)));
                         if (code == NutrientCodes.Fiber && Digestion.Settings != null && st != null)
-                            return NutrientHover(title, color, code, line, FiberBoostLine(Digestion.FiberKcalPerHour(Digestion.Settings, st, core.Nutrients)));
+                            return NutrientHover(title, color, code, line, FiberGutLine(st, def), FiberBoostLine(Digestion.FiberKcalPerHour(Digestion.Settings, st, core.Nutrients)));
                         return NutrientHover(title, color, code, line);
                     });
                 }

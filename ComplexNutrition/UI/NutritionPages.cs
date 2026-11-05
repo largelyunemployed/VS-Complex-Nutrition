@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Text;
 using ComplexNutrition.Core;
 using Vintagestory.API.Client;
 using Vintagestory.API.Config;
@@ -332,6 +333,17 @@ namespace ComplexNutrition.UI
             {
                 blocks.Add(new HeadingBlock(Lang.Get(fiber.LangKey)));
                 blocks.Add(ReserveBar(d, fiber));
+                // Fiber digesting (v0.3.5), at the fiber reserve's own steady rate, with no diminishing returns.
+                float fg = d.State.FiberGut;
+                if (fg > DigestionPool.EmptyGrams)
+                {
+                    float rate = Math.Min(fg, DigestionSettings.FiberGutRate(fiber));
+                    blocks.Add(new TextBlock(StatsHover.Vtml("complexnutrition:window-fiber-gut",
+                        StatsHover.Text(Amt(d, NutrientCodes.Fiber, fg)),
+                        StatsHover.Text(Kcal(d, fg * s.FiberKcalPerGram)),
+                        StatsHover.Text(NutrientDisplay.GutHoursText(d.State.GetGutHours(NutrientCodes.Fiber), fiber.ToPercent(fg))),
+                        StatsHover.Paint(L("gut-rate", Amt(d, NutrientCodes.Fiber, rate), Kcal(d, rate * s.FiberKcalPerGram)), UnitColors.Rate)), true));
+                }
                 string Bonus(string code)
                 {
                     var pool = s.Pool(code);
@@ -392,10 +404,6 @@ namespace ComplexNutrition.UI
             ["Unknown"] = new[] { 0.52, 0.52, 0.52, 1.0 },
         };
 
-        /// <summary>The nutrients the History tab can draw: the calorie reserve, fiber, and every vitamin and mineral (gut pools only hold food on its way through).</summary>
-        public static List<NutrientDefinition> HistoryNutrients(NutrientRegistry nutrients) =>
-            nutrients.All.Where(n => n.IsCalories || n.Code == NutrientCodes.Fiber || n.IsMicronutrient).ToList();
-
         private static float[] Stack(HistoryDay day)
         {
             var result = new float[Categories.Length];
@@ -420,13 +428,54 @@ namespace ComplexNutrition.UI
             return (float)(10 * p);
         }
 
-        /// <summary>The History tab's line, white so it stands apart from every food group's colour.</summary>
-        public static readonly double[] LineColor = { 0.95, 0.95, 0.95, 1.0 };
         public static readonly double[] GainedColor = { 0.45, 0.78, 0.40, 1.0 };
         public static readonly double[] BurnedColor = { 0.93, 0.42, 0.37, 1.0 };
 
-        /// <summary>The History tab: the last weeks of calories eaten (bars, by food category) and one nutrient's store (the line).</summary>
-        public static List<PageBlock> History(NutritionPageData d, string code)
+        /// <summary>The top of both History charts unless a day went past it, in kcal.</summary>
+        public const float ChartKcal = 5000f;
+
+        /// <summary>The colour of each chart's top value, in its top left corner.</summary>
+        public const string TopValueColor = "#ffd94a";
+
+        private static string TopValue(string plain) => "<font color=\"" + TopValueColor + "\">" + StatsHover.Esc(plain) + "</font>";
+
+        private static string Bold(string plain) => "<strong>" + StatsHover.Esc(plain) + "</strong>";
+
+        /// <summary>"Today", "Yesterday" or "N days ago".</summary>
+        private static string DayName(int daysAgo) => daysAgo <= 0 ? L("history-today") : daysAgo == 1 ? L("history-yesterday") : L("history-days-ago", daysAgo);
+
+        /// <summary>
+        /// The dashed line: the calories burned a day on average over the recorded days (up to 28), leaving out today while it is
+        /// still under way. Until something has been burned, a day's need. Returns the amount and its "i" hover.
+        /// </summary>
+        public static (float mark, string tip) BurnMark(NutritionPageData d, HistoryData h, NutrientDefinition cal)
+        {
+            var full = h.Days.Take(Math.Max(0, h.Days.Count - 1)).Where(day => day.Burned > 0).ToList();
+            if (full.Count == 0) full = h.Days.Where(day => day.Burned > 0).ToList();
+            if (full.Count == 0)
+                return (cal.DailyTarget, StatsHover.Text(L("history-mark-need", Kcal(d, cal.DailyTarget))));
+            float avg = full.Average(day => day.Burned);
+            return (avg, StatsHover.Text(full.Count == 1 ? L("history-mark-burn-one", Kcal(d, avg)) : L("history-mark-burn", Kcal(d, avg), full.Count)));
+        }
+
+        /// <summary>A food chart day's hover: the calories eaten in all and by food type.</summary>
+        private static string FoodTip(NutritionPageData d, float[] stack, int daysAgo)
+        {
+            var sb = new StringBuilder(Bold(DayName(daysAgo)));
+            float total = stack.Sum();
+            sb.Append("<br>").Append(StatsHover.Text(total > 0 ? L("history-tip-ate", Kcal(d, total)) : L("history-tip-ate-none")));
+            for (int i = 0; i < Categories.Length; i++)
+            {
+                if (stack[i] <= 0) continue;
+                string pct = Math.Round(stack[i] / total * 100f).ToString("0", CultureInfo.InvariantCulture);
+                sb.Append("<br>").Append("<font color=\"").Append(StatsHover.Hex(CategoryColors[Categories[i]], 0)).Append("\">\u25a0</font> ")
+                  .Append(StatsHover.Text(L("history-tip-category", L("history-cat-" + Categories[i].ToLowerInvariant()), Kcal(d, stack[i]), pct)));
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>The History tab: the last weeks of calories gained and burned (lines), and of calories eaten (bars, by food category).</summary>
+        public static List<PageBlock> History(NutritionPageData d)
         {
             if (d.State == null) return Off();
             var blocks = new List<PageBlock>();
@@ -438,36 +487,33 @@ namespace ComplexNutrition.UI
                 return blocks;
             }
 
-            var n = d.Nutrients.Get(code) ?? d.Nutrients.Get(NutrientCodes.Calories);
             var cal = d.Nutrients.Get(NutrientCodes.Calories);
-            if (n == null || cal == null) return blocks;
-            string name = Lang.Get(n.LangKey);
+            if (cal == null) return blocks;
 
             var stacks = h.Days.Select(Stack).ToArray();
-            float most = stacks.Length == 0 ? 0 : stacks.Max(st => st.Sum());
-            float barTop = Math.Max(most, cal.DailyTarget * 1.25f);
-            // A round top in the units the reader sees.
-            float barMax = d.ShowPercent ? NiceCeiling(cal.ToPercent(barTop)) / 100f * cal.DailyTarget : NiceCeiling(barTop);
-            var line = h.Days.Select(day => day.Reserves != null && day.Reserves.TryGetValue(n.Code, out float r) ? (float?)r : null).ToArray();
-            float lineTop = line.Where(v => v != null).Select(v => v.Value).DefaultIfEmpty(0).Max();
-            float lineMax = Math.Max(n.Cap, lineTop);
 
             // Calories into and out of the reserve.
             var gained = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Gained : null).ToArray();
             var burned = h.Days.Select(day => day.Gained > 0 || day.Burned > 0 ? (float?)day.Burned : null).ToArray();
-            float flowTop = h.Days.Select(day => Math.Max(day.Gained, day.Burned)).DefaultIfEmpty(0).Max();
-            float flowMax = d.ShowPercent ? NiceCeiling(cal.ToPercent(Math.Max(flowTop, cal.DailyTarget * 1.25f))) / 100f * cal.DailyTarget : NiceCeiling(Math.Max(flowTop, cal.DailyTarget * 1.25f));
+            // Both charts share one fixed scale (v0.3.5): 5,000kcal. A day past it reaches the top, and its hover gives the number.
+            float flowMax = ChartKcal, barMax = ChartKcal;
+            // The dashed line on both charts: the calories burned a day on average (v0.3.5), a day's need until anything was burned.
+            var (mark, markTip) = BurnMark(d, h, cal);
+
             blocks.Add(new HeadingBlock(L("history-heading-flow")));
-            blocks.Add(new TextBlock(StatsHover.Text(L("history-flow-intro", Kcal(d, flowMax))), true));
-            blocks.Add(new GapBlock(4));
+            blocks.Add(new GapBlock(2));
             blocks.Add(new ChartBlock
             {
                 BarMax = flowMax,
-                BarMark = cal.DailyTarget,
+                BarMark = mark,
+                MarkTip = markTip,
                 Line = gained,
                 LineMax = flowMax,
                 LineColor = GainedColor,
                 ExtraLines = { (burned, BurnedColor) },
+                TopLeft = TopValue(Kcal(d, flowMax)),
+                Tips = h.Days.Select((day, i) => gained[i] == null ? null
+                    : Bold(DayName(h.Days.Count - 1 - i)) + "<br>" + StatsHover.Text(L("history-tip-gained", Kcal(d, day.Gained))) + "<br>" + StatsHover.Text(L("history-tip-burned", Kcal(d, day.Burned)))).ToArray(),
                 BottomLeft = StatsHover.Text(L("history-days-ago", h.Days.Count - 1)),
                 BottomRight = StatsHover.Text(L("history-today")),
                 Legend = { (GainedColor, StatsHover.Esc(L("history-gained"))), (BurnedColor, StatsHover.Esc(L("history-burned"))) },
@@ -505,19 +551,17 @@ namespace ComplexNutrition.UI
             }
 
             blocks.Add(new HeadingBlock(L("history-heading-food")));
-            blocks.Add(new TextBlock(StatsHover.Text(L("history-intro", h.Days.Count, n.IsCalories ? L("history-energy") : JoinNames(new[] { name }))), true));
-            blocks.Add(new TextBlock(StatsHover.Text(L("history-scale", Kcal(d, barMax), NutrientDisplay.DaysText(lineMax))), true));
-            blocks.Add(new GapBlock(4));
+            blocks.Add(new GapBlock(2));
 
             var chart = new ChartBlock
             {
                 Bars = stacks,
                 SeriesColors = Categories.Select(c => CategoryColors[c]).ToArray(),
                 BarMax = barMax,
-                BarMark = cal.DailyTarget,
-                Line = line,
-                LineMax = lineMax,
-                LineColor = LineColor,
+                BarMark = mark,
+                MarkTip = markTip,
+                TopLeft = TopValue(Kcal(d, barMax)),
+                Tips = h.Days.Select((day, i) => FoodTip(d, stacks[i], h.Days.Count - 1 - i)).ToArray(),
                 BottomLeft = StatsHover.Text(L("history-days-ago", h.Days.Count - 1)),
                 BottomRight = StatsHover.Text(L("history-today")),
             };
@@ -527,15 +571,7 @@ namespace ComplexNutrition.UI
                 if (Categories[i] == "Unknown" && !any) continue;
                 chart.Legend.Add((CategoryColors[Categories[i]], StatsHover.Esc(L("history-cat-" + Categories[i].ToLowerInvariant()))));
             }
-            chart.Legend.Add((chart.LineColor, StatsHover.Esc(n.IsCalories ? L("history-line-legend-calories") : L("history-line-legend", name))));
             blocks.Add(chart);
-
-            float now = d.State.GetReserve(n.Code);
-            if (n.IsCalories) name = L("history-line-legend-calories");
-            float? weekAgo = h.Days.Count >= 8 ? line[h.Days.Count - 8] : null;
-            blocks.Add(new TextBlock(StatsHover.Text(weekAgo == null
-                ? L("history-store-now", name, NutrientDisplay.DaysText(now))
-                : L("history-store-week", name, NutrientDisplay.DaysText(now), NutrientDisplay.DaysText(weekAgo.Value)))));
             return blocks;
         }
     }
