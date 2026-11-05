@@ -190,6 +190,7 @@ namespace ComplexNutrition.UI
                 float perHp = d.Tracking.KcalPerHp((d.MaxHealth - d.Health) / d.MaxHealth);
                 float toFull = d.Tracking.KcalToHeal(d.Health, d.MaxHealth);
                 blocks.Add(new TextBlock(StatsHover.Text(L("window-healing", Kcal(d, perHp), Kcal(d, toFull))), true));
+                blocks.Add(new TextBlock(L("window-healing-tip"), true));
             }
 
             // How close the rolling totals are to where calories start falling off.
