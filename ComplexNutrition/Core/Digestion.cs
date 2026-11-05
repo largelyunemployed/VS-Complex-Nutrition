@@ -149,7 +149,7 @@ namespace ComplexNutrition.Core
         /// <summary>Fibre reserve (in % of a day's need) at which the fibre speed-up is at its full size.</summary>
         [JsonProperty("fiberBonusFullAt")] public float FiberBonusFullAt = 70;
 
-        /// <summary>Calories each gram of eaten fibre gives (since v0.3.4), added to the calorie reserve when it is eaten.</summary>
+        /// <summary>Calories each gram of eaten fibre gives (since v0.3.4). Since v0.3.5 it is digested like the macros, at the carbs pool's rate.</summary>
         [JsonProperty("fiberKcalPerGram")] public float FiberKcalPerGram = 2;
 
         /// <summary>Gut pools by nutrient code: carbohydrate (net of fibre), protein and fat.</summary>
@@ -393,6 +393,7 @@ namespace ComplexNutrition.Core
         {
             float coming = 0f, lost = 0f;
             if (s == null || state == null || nutrients == null) return (0f, 0f);
+            coming += Math.Max(0f, state.FiberGut) * s.FiberKcalPerGram;   // fiber has no diminishing returns
             foreach (var kv in s.Pools)
             {
                 var def = nutrients.Get(kv.Key);

@@ -259,6 +259,8 @@ namespace ComplexNutrition.Modules.Tracking
                 state.SetReserve(fiber.Code, 0f);
                 if (old != 0f) Core.PublishReserveChanged(player, fiber.Code, old, 0f);
             }
+            state.FiberGut = 0f;
+            state.SetGutHours(NutrientCodes.Fiber, 0f);
             state.Protein24 = 0f;
             state.ClearSitting();
             state.MarkDirty();
@@ -290,7 +292,6 @@ namespace ComplexNutrition.Modules.Tracking
             var history = NutrientHistory.Of(player.Entity);
             if (day != int.MinValue && day < today)
             {
-                history.RecordDay(day, Reserves(state));
                 Core.PublishDailyRollover(player, ledger.Get(day));
             }
             state.ClearToday();
@@ -321,7 +322,7 @@ namespace ComplexNutrition.Modules.Tracking
         {
             var state = player?.Entity == null || sapi == null ? null : StateOf(player.Entity);
             if (state == null) return null;
-            return NutrientHistory.Of(player.Entity).Build(DietLedger.Of(player.Entity), Reserves(state), Today, NowHours, Settings.LedgerDays);
+            return NutrientHistory.Of(player.Entity).Build(DietLedger.Of(player.Entity), Today, NowHours, Settings.LedgerDays);
         }
 
         private void OnTick(float dt)
@@ -485,6 +486,7 @@ namespace ComplexNutrition.Modules.Tracking
                 }
             }
             state.AbsorbedHour = hour;
+            kcal += DigestFiber(state, hours);
 
             var cal = Core.Nutrients.Get(NutrientCodes.Calories);
             if (cal != null && kcal > 0f)
@@ -536,7 +538,7 @@ namespace ComplexNutrition.Modules.Tracking
             var absorbed = new FoodAbsorbedInfo { Eaten = eaten };
             foreach (var n in Core.Nutrients.All)
             {
-                // Calories come from digestion, apart from fiber's (below), never straight from eating.
+                // Calories come from digestion only, never straight from eating (fiber's too, since v0.3.5).
                 if (n.IsCalories) continue;
                 var pool = Digest.Pool(n.Code);
                 if (pool != null)
@@ -566,27 +568,39 @@ namespace ComplexNutrition.Modules.Tracking
                 Core.PublishReserveChanged(player, n.Code, old, updated);
             }
 
-            AddFiberCalories(player, state, eaten.Get(NutrientCodes.Fiber));
+            AddFiberToGut(player, state, eaten.Get(NutrientCodes.Fiber));
             DietLedger.Of(player.Entity).Add(Today, eaten.KcalByCategory);
             state.MarkDirty();
             Core.PublishFoodAbsorbed(absorbed);
         }
 
-        /// <summary>Fiber's calories (since v0.3.4): each gram eaten adds fiberKcalPerGram to the calorie reserve straight away.</summary>
-        private void AddFiberCalories(IServerPlayer player, NutritionState state, float grams)
+        /// <summary>
+        /// Fiber's calories (v0.3.4; digested since v0.3.5): eaten fiber also goes into the gut, where it is digested at the carbs
+        /// pool's rate and gives fiberKcalPerGram calories a gram, with no diminishing returns. The fiber reserve fills as before.
+        /// </summary>
+        private void AddFiberToGut(IServerPlayer player, NutritionState state, float grams)
         {
-            var cal = Core.Nutrients.Get(NutrientCodes.Calories);
-            if (cal == null || grams <= 0f) return;
+            if (grams <= 0f || Digest.FiberKcalPerGram <= 0f) return;
             foreach (var m in Core.AbsorptionMultipliers(player, NutrientCodes.Fiber).Values) grams *= m;
-            float kcal = grams * Digest.FiberKcalPerGram;
-            if (kcal <= 0f) return;
-            float old = state.GetReserve(cal.Code);
-            float updated = Math.Max(old, Math.Min(cal.Cap, old + cal.ToPercent(kcal)));   // a full reserve wastes the rest
-            if (updated == old) return;
-            state.SetReserve(cal.Code, updated);
-            state.AddAbsorbedToday(cal.Code, updated - old);
-            NutrientHistory.Of(player.Entity).AddFlow(NowHours, Today, cal.FromPercent(updated - old), 0f);
-            Core.PublishReserveChanged(player, cal.Code, old, updated);
+            var carbs = Digest.Pool(NutrientCodes.Carbohydrate);
+            if (grams <= 0f || carbs == null) return;
+            float now = Math.Min(carbs.MaxGrams, state.FiberGut + grams);
+            state.FiberGut = now;
+            state.SetGutHours(NutrientCodes.Fiber, carbs.HoursToEmpty(now, FiberSpeed(state, carbs)));
+        }
+
+        /// <summary>Digests the fiber in the gut for <paramref name="hours"/>; returns the calories it gave.</summary>
+        private float DigestFiber(NutritionState state, float hours)
+        {
+            var carbs = Digest.Pool(NutrientCodes.Carbohydrate);
+            float inGut = state.FiberGut;
+            if (carbs == null || inGut <= 0f) return 0f;
+            float speed = FiberSpeed(state, carbs);
+            float left = carbs.Absorb(inGut, hours, speed);
+            if (left <= DigestionPool.EmptyGrams) left = 0f;
+            state.FiberGut = left;
+            state.SetGutHours(NutrientCodes.Fiber, left > 0f ? carbs.HoursToEmpty(left, speed) : 0f);
+            return (inGut - left) * Digest.FiberKcalPerGram;
         }
 
         /// <summary>Grams in a gut pool: its reserve, in grams.</summary>

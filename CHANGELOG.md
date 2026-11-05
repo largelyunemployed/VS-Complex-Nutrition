@@ -2,12 +2,13 @@
 
 ## v0.3.5
 
-- History charts answer when you hover them. Hover a day on the Calories Gained and Burned chart to see what digestion added to your reserve and what you burned that day. On the Calories by Food Type chart, a day shows what you ate in all, each food type with its share, and the picked store at the end of that day.
-- Both charts share one scale, 5,000kcal (raised to a round number only if a day goes past it), with the top value shown in yellow in each chart's top left corner (and the line's top in its top right), in place of the sentences that gave the scale.
+- History charts answer when you hover them. Hover a day on the Calories Gained and Burned chart to see what digestion added to your reserve and what you burned that day. On the Calories by Food Type chart, a day shows what you ate in all and each food type with its share.
+- Both charts share one fixed scale, 5,000kcal, with the top value shown in yellow in each chart's top left corner, in place of the sentences that gave the scale. A day past 5,000kcal reaches the top, and its hover gives the number.
 - The dashed line on both charts is now how many calories you burn a day on average over the last 28 days (or as long as you have played), leaving out today while it is still under way. Hover the white "i" at its left end, in the oldest day's column, to see the number. Until you have burned anything, it stays at a day's need.
 - Less text on the History tab: the two chart introductions are gone, since the legends and hovers now say the same.
+- The History tab's white line and its Line picker are gone. It drew one store against a scale of its own, which said little next to calories eaten, and it only had points for days that ended while you were playing. The server no longer records end-of-day reserves.
 - Pause game button in the nutrition window's title bar, beside its icons, in single player. It remembers your choice and is off by default.
-- Fiber's Stats panel hover is laid out like the carbs, fats and protein ones: with the advanced display it also shows the rate the reserve is being used up at. Its About text gives the reserve fiber's speed-up is fullest from in your units (21g, or 70% with percentages).
+- Fiber is digested like carbs, fats and protein: what you eat goes into your gut and gives its 2kcal a gram at the carbs pool's rate (with the fiber speed-up, and no diminishing returns), instead of all at once. Fiber's Stats panel hover and the Digestion tab show it like the other macros: how much is digesting, the calories still to come, the time left and the rate. Calories still to come on the Overview include it. Fiber's About text gives the reserve its speed-up is fullest from in your units (21g, or 70% with percentages).
 - New world setting, Max fullness: a slider from 0 to 1,500 (default 300, about 1kg of food), where 0 means no limit. Fullness still empties at 100 an hour, and it only decides how much you can eat at once. Admins can change it under World in the settings menu, and it takes effect straight away. The stomach was 600 before this version, so existing worlds move to 300 unless an admin sets it back. `fullnessMax` is gone from `digestion.json`.
 
 ## v0.3.4

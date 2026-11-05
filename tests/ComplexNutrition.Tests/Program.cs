@@ -354,15 +354,15 @@ namespace ComplexNutrition.Tests
         public static void HistoryKeepsDaysAndBuildsFourWeeks()
         {
             var history = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
-            for (int day = 1; day <= 40; day++) history.RecordDay(day, new Dictionary<string, float> { ["vitaminC"] = day });
+            for (int day = 1; day <= 40; day++) history.AddFlow(day * 24 + 1, day, day, 0f);
             history.Prune(41, 28);
-            Assert.Equal(0, history.DayReserves(13).Count, "day 13 pruned");
-            Assert.Near(14, history.DayReserves(14)["vitaminC"], 1e-6, "day 14 kept");
+            Assert.Equal(0f, history.DayFlow(13).gained, "day 13 pruned");
+            Assert.Near(14, history.DayFlow(14).gained, 1e-6, "day 14 kept");
 
-            var data = history.Build(null, new Dictionary<string, float> { ["vitaminC"] = 99 }, 41, 41 * 24 + 5, 28);
+            var data = history.Build(null, 41, 41 * 24 + 5, 28);
             Assert.Equal(28, data.Days.Count, "28 days");
             Assert.Equal(14, data.Days[0].Day, "oldest first");
-            Assert.Near(99, data.Days[^1].Reserves["vitaminC"], 1e-6, "today is now");
+            Assert.Near(14, data.Days[0].Gained, 1e-6, "each day's flow");
             Assert.True(data.DayAgo == null, "no hourly readings, no trend");
         }
 
