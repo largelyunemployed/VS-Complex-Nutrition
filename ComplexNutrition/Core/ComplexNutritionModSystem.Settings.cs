@@ -163,6 +163,7 @@ namespace ComplexNutrition.Core
             if (world == null) return;
             DigestionPool.DiminishingReturns = WorldSettings.DiminishingReturns(world);
             Vintagestory.GameContent.BlockCrop.WildCropDropMul = WorldSettings.WildHarvestShare(world);
+            Digestion.SetStomach(WorldSettings.MaxFullness(world));
         }
 
         private static bool IsAdmin(IServerPlayer player) => player != null && player.HasPrivilege(Privilege.controlserver);
@@ -181,6 +182,7 @@ namespace ComplexNutrition.Core
             DiminishingReturns = WorldSettings.DiminishingReturns(sapi.World),
             Discover = WorldSettings.Bool(sapi.World, WorldSettings.DiscoverKey),
             WildHarvest = (WorldSettings.WildHarvestShare(sapi.World) * 100f).ToString("0", System.Globalization.CultureInfo.InvariantCulture),
+            MaxFullness = WorldSettings.MaxFullness(sapi.World),
         };
 
         private void SendSettings(IServerPlayer player)
@@ -258,6 +260,12 @@ namespace ComplexNutrition.Core
                 case SettingKeys.WildHarvest:
                     if (Array.IndexOf(WorldSettings.WildHarvestOptions, value) < 0) return;
                     sapi.World.Config.SetString(WorldSettings.WildHarvestKey, value);
+                    ApplyWorldTweaks(sapi.World);
+                    saveConfig = false;
+                    break;
+                case SettingKeys.MaxFullness:
+                    if (!int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int fullness)) return;
+                    sapi.World.Config.SetInt(WorldSettings.MaxFullnessKey, Math.Clamp(fullness, 0, WorldSettings.MaxFullnessTop));
                     ApplyWorldTweaks(sapi.World);
                     saveConfig = false;
                     break;
@@ -348,6 +356,7 @@ namespace ComplexNutrition.Core
             if (snap == null) return;
             ServerSettings = snap;
             DigestionPool.DiminishingReturns = snap.DiminishingReturns;
+            Digestion.SetStomach(snap.MaxFullness);
 
             // The client follows the server's module switches, so a module switched on or off in the menu takes effect here too.
             foreach (var module in OrderByDependencies(modules).ToList())
@@ -363,6 +372,7 @@ namespace ComplexNutrition.Core
                 cfg.SetString(WorldSettings.DiscoverKey, snap.Discover ? "true" : "false");
                 cfg.SetString(WorldSettings.DiminishingReturnsKey, snap.DiminishingReturns ? "true" : "false");
                 cfg.SetString(WorldSettings.WildHarvestKey, snap.WildHarvest ?? WorldSettings.DefaultWildHarvest);
+                cfg.SetInt(WorldSettings.MaxFullnessKey, snap.MaxFullness);
                 if (snap.StartCalories != null) cfg.SetString(WorldSettings.StartConditionKey, snap.StartCalories);
                 if (snap.RespawnCalories != null) cfg.SetString(WorldSettings.RespawnConditionKey, snap.RespawnCalories);
             }

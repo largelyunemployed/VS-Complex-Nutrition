@@ -72,6 +72,12 @@ namespace ComplexNutrition.UI
         public string BottomLeft, BottomRight;
         /// <summary>Legend entries: a colour swatch and its VTML label.</summary>
         public List<(double[] color, string label)> Legend = new();
+        /// <summary>VTML in the plot's top corners (since v0.3.5): the bars' top in yellow on the left, the line's top on the right.</summary>
+        public string TopLeft, TopRight;
+        /// <summary>Per day, oldest first: what hovering that day shows (VTML), or null for nothing.</summary>
+        public string[] Tips;
+        /// <summary>What hovering the white "i" at the end of the dashed line shows (VTML); null for no "i".</summary>
+        public string MarkTip;
 
         public const double PlotHeight = 170;
 
@@ -88,12 +94,23 @@ namespace ComplexNutrition.UI
                     sb.Append('|');
                     foreach (var v in values) sb.Append(v == null ? "-" : Math.Round(v.Value).ToString()).Append(';');
                 }
-                sb.Append('|').Append(BottomLeft).Append('|').Append(BottomRight).Append('|');
+                sb.Append('|').Append(BottomLeft).Append('|').Append(BottomRight).Append('|').Append(TopLeft).Append('|').Append(TopRight).Append('|').Append(MarkTip).Append('|');
+                if (Tips != null) foreach (var t in Tips) sb.Append(t).Append(';');
                 foreach (var l in Legend) sb.Append(l.label).Append(';');
                 if (LineColor != null) sb.Append(string.Join(",", LineColor));
                 return sb.ToString();
             }
         }
+    }
+
+    /// <summary>A spot on a drawn page that shows a tooltip when hovered, in pixels from the page's top left.</summary>
+    public sealed class Hotspot
+    {
+        public double X, Y, W, H;
+        public string Vtml;
+        /// <summary>Lighten the spot while it is hovered (a chart's day).</summary>
+        public bool Highlight;
+        public bool Contains(double x, double y) => x >= X && x < X + W && y >= Y && y < Y + H;
     }
 
     public sealed class GapBlock : PageBlock
@@ -144,8 +161,11 @@ namespace ComplexNutrition.UI
             return text;
         }
 
-        /// <summary>Draws the page <paramref name="width"/> GUI units wide. The caller disposes the surface.</summary>
-        public static ImageSurface Render(ICoreClientAPI capi, IList<PageBlock> blocks, double width)
+        /// <summary>
+        /// Draws the page <paramref name="width"/> GUI units wide. The caller disposes the surface. When <paramref name="hotspots"/>
+        /// is given, it gets every spot that has a tooltip.
+        /// </summary>
+        public static ImageSurface Render(ICoreClientAPI capi, IList<PageBlock> blocks, double width, List<Hotspot> hotspots = null)
         {
             var placed = new List<Placed>();
             double y = 0;
@@ -227,7 +247,7 @@ namespace ComplexNutrition.UI
                         Draw(ctx, surface, p.Value, GuiElement.scaled(RightX), rowMid - Math.Min(p.Value.TotalHeight, GuiElement.scaled(RowHeight)) / 2.0);
                         if (b.Trend != null) DrawTrend(ctx, GuiElement.scaled(BarX - 13), rowMid, GuiElement.scaled(9), b.Trend.Value);
                     }
-                    if (p.Block is ChartBlock c) DrawChart(ctx, surface, p, c, GuiElement.scaled(width));
+                    if (p.Block is ChartBlock c) DrawChart(ctx, surface, p, c, GuiElement.scaled(width), hotspots, capi);
                 }
             }
             foreach (var p in placed)
@@ -281,7 +301,7 @@ namespace ComplexNutrition.UI
             ctx.Fill();
         }
 
-        private static void DrawChart(Context ctx, ImageSurface surface, Placed p, ChartBlock c, double width)
+        private static void DrawChart(Context ctx, ImageSurface surface, Placed p, ChartBlock c, double width, List<Hotspot> hotspots, ICoreClientAPI capi)
         {
             double top = p.Y + GuiElement.scaled(2);
             double plotH = GuiElement.scaled(ChartBlock.PlotHeight);
@@ -382,6 +402,43 @@ namespace ComplexNutrition.UI
                 }
                 Line(c.Line, c.LineColor);
                 foreach (var (values, color) in c.ExtraLines) Line(values, color);
+
+                // Each day's column shows its tooltip.
+                if (hotspots != null && c.Tips != null)
+                {
+                    for (int d = 0; d < days && d < c.Tips.Length; d++)
+                    {
+                        if (string.IsNullOrEmpty(c.Tips[d])) continue;
+                        hotspots.Add(new Hotspot { X = left + slot * d, Y = top, W = slot, H = plotH, Vtml = c.Tips[d], Highlight = true });
+                    }
+                }
+            }
+
+            // The white "i" at the dashed line's right end, which says what the line is.
+            if (c.MarkTip != null && c.BarMark > 0 && c.BarMark < c.BarMax)
+            {
+                double r = GuiElement.scaled(6);
+                double cx = right - r - GuiElement.scaled(4);
+                double cy = Math.Clamp(bottom - plotH * c.BarMark / c.BarMax, top + r + 1, bottom - r - 1);
+                DrawInfo(ctx, cx, cy, r);
+                // Listed after the days so it wins where they overlap.
+                hotspots?.Add(new Hotspot { X = cx - r - 2, Y = cy - r - 2, W = 2 * r + 4, H = 2 * r + 4, Vtml = c.MarkTip });
+            }
+
+            if (capi != null)
+            {
+                var detail = CairoFont.WhiteDetailText();
+                double pad = GuiElement.scaled(4);
+                if (!string.IsNullOrEmpty(c.TopLeft))
+                {
+                    using var tl = Rich(capi, c.TopLeft, detail, width / 2);
+                    Draw(ctx, surface, tl, left + pad, top + GuiElement.scaled(2));
+                }
+                if (!string.IsNullOrEmpty(c.TopRight))
+                {
+                    using var tr = Rich(capi, c.TopRight, detail, width / 2);
+                    Draw(ctx, surface, tr, right - pad - MeasureWidth(tr), top + GuiElement.scaled(2));
+                }
             }
 
             ctx.SetSourceRGBA(0, 0, 0, 0.6);
@@ -405,6 +462,50 @@ namespace ComplexNutrition.UI
                 ctx.Stroke();
                 Draw(ctx, surface, text, x + sw + GuiElement.scaled(5), ty);
             }
+        }
+
+        /// <summary>A white "i" in a circle, centred on (cx, cy), with a dark outline so it reads over the bars.</summary>
+        private static void DrawInfo(Context ctx, double cx, double cy, double r)
+        {
+            ctx.NewPath();
+            ctx.Arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.SetSourceRGBA(0.95, 0.95, 0.95, 1);
+            ctx.FillPreserve();
+            ctx.SetSourceRGBA(0, 0, 0, 0.7);
+            ctx.LineWidth = 1.0;
+            ctx.Stroke();
+            // The letter: a dot and a stem, drawn so no font is needed.
+            ctx.SetSourceRGBA(0.12, 0.12, 0.12, 1);
+            double w = Math.Max(1.5, r * 0.32);
+            ctx.Arc(cx, cy - r * 0.48, w * 0.62, 0, Math.PI * 2);
+            ctx.Fill();
+            ctx.Rectangle(cx - w / 2, cy - r * 0.18, w, r * 0.82);
+            ctx.Fill();
+        }
+
+        /// <summary>
+        /// A tooltip as the game draws its hovers: the VTML on a dark rounded box, at most <paramref name="maxWidth"/> GUI units
+        /// wide. The caller disposes the surface.
+        /// </summary>
+        public static ImageSurface RenderTip(ICoreClientAPI capi, string vtml, double maxWidth)
+        {
+            var font = CairoFont.WhiteSmallText().WithFontSize(14);
+            using var text = Rich(capi, vtml, font, maxWidth);
+            double pad = GuiElement.scaled(7);
+            double tw = Math.Min(GuiElement.scaled(maxWidth), MeasureWidth(text));
+            int w = (int)Math.Ceiling(tw + 2 * pad), h = (int)Math.Ceiling(text.TotalHeight + 2 * pad);
+            var surface = new ImageSurface(Format.Argb32, Math.Max(1, w), Math.Max(1, h));
+            using (var ctx = new Context(surface))
+            {
+                GuiElement.RoundRectangle(ctx, 0.5, 0.5, w - 1, h - 1, GuiElement.scaled(3));
+                ctx.SetSourceRGBA(GuiStyle.DialogStrongBgColor[0], GuiStyle.DialogStrongBgColor[1], GuiStyle.DialogStrongBgColor[2], 0.96);
+                ctx.FillPreserve();
+                ctx.SetSourceRGBA(GuiStyle.DialogLightBgColor[0] * 1.6, GuiStyle.DialogLightBgColor[1] * 1.6, GuiStyle.DialogLightBgColor[2] * 1.6, 1);
+                ctx.LineWidth = 1.0;
+                ctx.Stroke();
+                Draw(ctx, surface, text, pad, pad);
+            }
+            return surface;
         }
 
         private static void Draw(Context ctx, ImageSurface surface, GuiElementRichtext text, double x, double y)

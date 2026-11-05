@@ -34,6 +34,15 @@ namespace ComplexNutrition.UI
             this.core = core;
         }
 
+        /// <summary>The player's choice (since v0.3.5): pause a single player game while the window is open, like the handbook. Off by default.</summary>
+        public const string PauseSettingKey = "complexnutritionWindowPause";
+
+        private bool pausedByUs;
+
+        private bool CanPause => capi.IsSinglePlayer && !capi.OpenedToLan;
+
+        private bool PauseChosen => capi.Settings.Bool.Get(PauseSettingKey, false);
+
         public override string ToggleKeyCombinationCode => null;
 
         public override bool PrefersUngrabbedMouse => true;
@@ -55,9 +64,12 @@ namespace ComplexNutrition.UI
             ElementBounds pickLabelBounds = ElementBounds.Fixed(140.0, 0.0, 70.0, 25.0).FixedUnder(clipBounds, 22.0);
             ElementBounds pickBounds = ElementBounds.Fixed(210.0, 0.0, 170.0, 25.0).FixedUnder(clipBounds, 17.0);
 
+            // Top right, above the tabs, where the handbook has its own.
+            ElementBounds pauseBounds = ElementBounds.Fixed(ContentWidth - 75.0, 4.0, 100.0, 22.0);
+
             ElementBounds bgBounds = ElementBounds.Fill.WithFixedPadding(GuiStyle.ElementToDialogPadding);
             bgBounds.BothSizing = ElementSizing.FitToChildren;
-            bgBounds.WithChildren(tabBounds, settingsBounds, insetBounds, clipBounds, scrollBounds, closeBounds, pickLabelBounds, pickBounds);
+            bgBounds.WithChildren(tabBounds, settingsBounds, insetBounds, clipBounds, scrollBounds, closeBounds, pickLabelBounds, pickBounds, pauseBounds);
 
             ElementBounds dialogBounds = ElementStdBounds.AutosizedMainDialog
                 .WithAlignment(EnumDialogArea.CenterFixed).WithFixedPosition(0.0, 70.0);
@@ -78,6 +90,7 @@ namespace ComplexNutrition.UI
                     .AddVerticalScrollbar(OnScroll, scrollBounds, "scrollbar")
                     .AddSmallButton(Lang.Get("complexnutrition:window-settings"), OnSettings, settingsBounds, EnumButtonStyle.Normal, "settings")
                     .AddSmallButton(Lang.Get("complexnutrition:window-close"), () => { TryClose(); return true; }, closeBounds, EnumButtonStyle.Normal);
+            if (CanPause) composer.AddToggleButton(Lang.Get("Pause game"), CairoFont.WhiteDetailText(), OnTogglePause, pauseBounds, "pausegame");
             if (tab == HistoryTab)
             {
                 var choices = NutritionPages.HistoryNutrients(core.Nutrients);
@@ -90,6 +103,7 @@ namespace ComplexNutrition.UI
             }
             SingleComposer = composer.EndChildElements().Compose();
             SingleComposer.GetHorizontalTabs("tabs").activeElement = tab;
+            SingleComposer.GetToggleButton("pausegame")?.SetValue(PauseChosen);
             Refresh(true);
         }
 
@@ -108,6 +122,14 @@ namespace ComplexNutrition.UI
             var bar = SingleComposer?.GetScrollbar("scrollbar");
             if (bar != null) bar.CurrentYPosition = 0;
             Refresh(true);
+        }
+
+        private void OnTogglePause(bool on)
+        {
+            capi.Settings.Bool[PauseSettingKey] = on;
+            if (!CanPause) return;
+            capi.PauseGame(on);
+            pausedByUs = on;
         }
 
         private void OnPick(string code, bool selected)
@@ -156,6 +178,11 @@ namespace ComplexNutrition.UI
         {
             base.OnGuiOpened();
             Compose();
+            if (CanPause && PauseChosen)
+            {
+                capi.PauseGame(true);
+                pausedByUs = true;
+            }
             core.RequestHistory();
             ticks = 0;
             ticker = capi.Event.RegisterGameTickListener(_ =>
@@ -168,8 +195,16 @@ namespace ComplexNutrition.UI
         public override void OnGuiClosed()
         {
             base.OnGuiClosed();
+            if (pausedByUs) capi.PauseGame(false);
+            pausedByUs = false;
             if (ticker != 0) capi.Event.UnregisterGameTickListener(ticker);
             ticker = 0;
+        }
+
+        public override void OnRenderGUI(float deltaTime)
+        {
+            base.OnRenderGUI(deltaTime);
+            page?.RenderTooltip();
         }
 
         private void OnTitleBarClose() => TryClose();

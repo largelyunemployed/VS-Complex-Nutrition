@@ -118,7 +118,7 @@ static class P
         history.Burned24 = 2410;
 
         bool percent = a.Length > 1 && a[1] == "percent";   // second argument "percent": amounts in % of a day
-        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 600, Health = 9, MaxHealth = 15, Known = known, ShowPercent = percent, History = history };
+        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 300, Health = 9, MaxHealth = 15, Known = known, ShowPercent = percent, History = history };
         Console.WriteLine("writing to " + System.IO.Path.GetFullPath(outDir));
         var tabs = new[] { ("overview", NutritionPages.Overview(data)), ("digestion", NutritionPages.DigestionPage(data)), ("vitamins", NutritionPages.Vitamins(data)), ("minerals", NutritionPages.Minerals(data)),
             ("history", NutritionPages.History(data, "calories")), ("history-vitaminA", NutritionPages.History(data, "vitaminA")) };
@@ -127,6 +127,23 @@ static class P
         {
             using var page = PageRenderer.Render(capi, tabs[t].Item2, GuiDialogNutrition.ContentWidth - 4);
             Frame(page, names, Math.Min(t, 4), System.IO.Path.Combine(outDir, "window-" + tabs[t].Item1 + ".png"));
+        }
+        // Hover tooltips (v0.3.5): a day on each History chart and the dashed line's "i", drawn where the mouse would be.
+        {
+            var spots = new List<Hotspot>();
+            using var page = PageRenderer.Render(capi, NutritionPages.History(data, "calories"), GuiDialogNutrition.ContentWidth - 4, spots);
+            using var ctx = new Context(page);
+            var days = spots.Where(sp => sp.Highlight).ToList();
+            var picks = new List<Hotspot> { days[days.Count / 2 - 3], days[^2], spots.First(sp => !sp.Highlight) };
+            foreach (var sp in picks)
+            {
+                if (sp.Highlight) { ctx.SetSourceRGBA(1, 1, 1, 28 / 255.0); ctx.Rectangle(sp.X, sp.Y, sp.W, sp.H); ctx.Fill(); }
+                using var tip = PageRenderer.RenderTip(capi, sp.Vtml, GuiElementNutritionPage.TipWidth);
+                double tx = Math.Min(sp.X + sp.W / 2 + S(14), page.Width - tip.Width - 2);
+                ctx.SetSourceSurface(tip, (int)tx, (int)(sp.Y + sp.H / 2 + S(14))); ctx.Paint();
+            }
+            page.WriteToPng(System.IO.Path.Combine(outDir, "window-history-tips.png"));
+            Console.WriteLine("hotspots: " + spots.Count);
         }
         // The running-low icon in its three states, side by side.
         using (var icons = new ImageSurface(Format.Argb32, (int)S(3 * 40), (int)S(40)))

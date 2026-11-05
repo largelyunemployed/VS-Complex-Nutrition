@@ -54,6 +54,20 @@ namespace ComplexNutrition.Core
         /// <summary>The wild harvest a world gets when it has none: half a farmed crop, twice vanilla's quarter.</summary>
         public const string DefaultWildHarvest = "50";
 
+        /// <summary>The stomach's size in fullness (since v0.3.5): 0 to 1,500, where 0 means no limit.</summary>
+        public const string MaxFullnessKey = "complexnutritionMaxFullness";
+        public const int DefaultMaxFullness = 300;
+        /// <summary>The slider's top, and the fullness bar's top when there is no limit.</summary>
+        public const int MaxFullnessTop = 1500;
+        public const int MaxFullnessStep = 50;
+
+        /// <summary>The world's Max fullness, 0 (no limit) to 1,500; 300 for worlds without the setting.</summary>
+        public static int MaxFullness(IWorldAccessor world)
+        {
+            float v = Number(Text(world, MaxFullnessKey)) ?? DefaultMaxFullness;
+            return (int)Math.Clamp(Math.Round(v), 0, MaxFullnessTop);
+        }
+
         /// <summary>
         /// The start conditions, best first, also used for respawning. Each is the calorie reserve in % of a day; vitamins and
         /// minerals start at the same share of their own stores (Full 100%, Easy 70%, ... Rock Bottom 0.1%).

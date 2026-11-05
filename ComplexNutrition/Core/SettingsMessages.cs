@@ -23,6 +23,7 @@ namespace ComplexNutrition.Core
         public bool DiminishingReturns = true;
         public bool Discover;
         public string WildHarvest = WorldSettings.DefaultWildHarvest;
+        public int MaxFullness = WorldSettings.DefaultMaxFullness;
 
         [JsonIgnore] public bool ShowPercent => string.Equals(DisplayUnits, "percent", System.StringComparison.OrdinalIgnoreCase);
     }
@@ -78,6 +79,7 @@ namespace ComplexNutrition.Core
         public const string DiminishingReturns = "diminishingReturns";
         public const string WildHarvest = "wildHarvest";
         public const string Discover = "discover";
+        public const string MaxFullness = "maxFullness";
         /// <summary>Prefix for a module switch: "module:tracking".</summary>
         public const string ModulePrefix = "module:";
     }

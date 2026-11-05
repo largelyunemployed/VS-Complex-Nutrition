@@ -197,6 +197,23 @@ namespace ComplexNutrition.Tests
         }
 
         [Test]
+        public static void MaxFullnessSetsTheStomach()
+        {
+            var s = new DigestionSettings();
+            try
+            {
+                Assert.Near(300f, s.FullnessMax, 1e-4, "300 fullness by default");
+                Digestion.SetStomach(800);
+                Assert.Near(800f, s.FullnessMax, 1e-4, "the world's size");
+                Assert.True(!Digestion.NoFullnessLimit, "800 is a limit");
+                Digestion.SetStomach(0);
+                Assert.True(Digestion.NoFullnessLimit, "0 is no limit");
+                Assert.Near(WorldSettings.MaxFullnessTop, s.FullnessMax, 1e-4, "with no limit the bar runs to the slider's top");
+            }
+            finally { Digestion.SetStomach(WorldSettings.DefaultMaxFullness); }
+        }
+
+        [Test]
         public static void DiscoveryTeachesTheFoodItself()
         {
             var berry = new Vintagestory.API.Common.Item { Code = new Vintagestory.API.Common.AssetLocation("game:fruit-blueberry") };
@@ -304,6 +321,15 @@ namespace ComplexNutrition.Tests
             foreach (var v in WorldSettings.WildHarvestOptions)
                 Assert.True(lang["worldconfig-" + WorldSettings.WildHarvestKey + "-" + v] != null, "worldconfig-en.json names wild harvest " + v);
             Assert.Equal("true", (string)attrs.First(a => (string)a["code"] == WorldSettings.DiminishingReturnsKey)["default"], "diminishing returns on by default");
+
+            // v0.3.5: max fullness, a slider from 0 (no limit) to 1,500.
+            var full = attrs.First(a => (string)a["code"] == WorldSettings.MaxFullnessKey);
+            Assert.Equal("intrange", (string)full["dataType"], "max fullness is a slider");
+            Assert.Equal(0, (int)full["min"], "max fullness min");
+            Assert.Equal(WorldSettings.MaxFullnessTop, (int)full["max"], "max fullness max");
+            Assert.Equal(WorldSettings.MaxFullnessStep, (int)full["step"], "max fullness step");
+            Assert.Equal(WorldSettings.DefaultMaxFullness.ToString(), (string)full["default"], "max fullness default");
+            Assert.True(lang["worldattribute-" + WorldSettings.MaxFullnessKey] != null && lang["worldattribute-" + WorldSettings.MaxFullnessKey + "-desc"] != null, "worldconfig-en.json names and describes max fullness");
 
         }
 

@@ -120,8 +120,11 @@ namespace ComplexNutrition.Core
     {
         public const string AssetPath = "config/digestion.json";
 
-        /// <summary>The fullness (vanilla satiety) maximum while tracking runs.</summary>
-        [JsonProperty("fullnessMax")] public float FullnessMax = 600;
+        /// <summary>
+        /// The fullness (vanilla satiety) maximum while tracking runs: the world's Max fullness setting since v0.3.5
+        /// (<see cref="Digestion.StomachSize"/>), or the largest the slider allows when the world has no limit.
+        /// </summary>
+        [JsonIgnore] public float FullnessMax => Digestion.NoFullnessLimit ? WorldSettings.MaxFullnessTop : Digestion.StomachSize;
 
         /// <summary>Vanilla's own maximum, restored when tracking is switched off.</summary>
         [JsonProperty("vanillaFullnessMax")] public float VanillaFullnessMax = 1500;
@@ -230,6 +233,33 @@ namespace ComplexNutrition.Core
     {
         /// <summary>The rules in force, or null while tracking does not run. Set by the tracking module.</summary>
         public static DigestionSettings Settings { get; set; }
+
+        /// <summary>The stomach's size in fullness: the world's Max fullness setting (since v0.3.5, default 300).</summary>
+        public static float StomachSize = WorldSettings.DefaultMaxFullness;
+
+        /// <summary>The world's Max fullness is 0: there is no limit, and the fullness bar runs up to the slider's top.</summary>
+        public static bool NoFullnessLimit;
+
+        /// <summary>Puts the world's Max fullness setting into effect for everything that reads <see cref="DigestionSettings.FullnessMax"/>.</summary>
+        public static void SetStomach(int maxFullness)
+        {
+            NoFullnessLimit = maxFullness <= 0;
+            StomachSize = NoFullnessLimit ? WorldSettings.MaxFullnessTop : maxFullness;
+        }
+
+        /// <summary>
+        /// Keeps a tracked player's stomach the world's size: when Max fullness changes, the stomach takes the new maximum and
+        /// keeps what it holds, up to that maximum. Does nothing for players on vanilla's scale.
+        /// </summary>
+        public static void FitStomach(Entity entity, DigestionSettings s)
+        {
+            var hunger = entity?.GetBehavior<EntityBehaviorHunger>();
+            var tree = entity?.WatchedAttributes.GetTreeAttribute(NutritionState.TreeKey);
+            if (hunger == null || tree == null || s == null || !tree.GetBool(ScaledKey)) return;
+            if (Math.Abs(hunger.MaxSaturation - s.FullnessMax) < 0.01f) return;
+            hunger.MaxSaturation = s.FullnessMax;
+            if (hunger.Saturation > s.FullnessMax) hunger.Saturation = s.FullnessMax;
+        }
 
         /// <summary>True when our fullness rules apply to this entity: tracking runs and has picked the player up.</summary>
         public static bool IsActiveFor(Entity entity)
@@ -393,7 +423,7 @@ namespace ComplexNutrition.Core
         private const string SavedFullnessKey = "savedFullness";
 
         /// <summary>
-        /// Puts a player on our fullness scale (max 600). A player coming back from vanilla gets back the fullness
+        /// Puts a player on our fullness scale (the world's Max fullness). A player coming back from vanilla gets back the fullness
         /// they had when tracking was switched off, whatever they ate since; anyone else has their stomach scaled
         /// to match. Safe to call again.
         /// </summary>
@@ -407,6 +437,12 @@ namespace ComplexNutrition.Core
                 hunger.MaxSaturation = s.FullnessMax;
                 hunger.Saturation = Math.Clamp(tree.GetFloat(SavedFullnessKey), 0f, s.FullnessMax);
                 tree.RemoveAttribute(SavedFullnessKey);
+            }
+            else if (tree.GetBool(ScaledKey))
+            {
+                // Already on our scale (the world's Max fullness may have changed): keep what the stomach holds.
+                hunger.MaxSaturation = s.FullnessMax;
+                hunger.Saturation = Math.Min(s.FullnessMax, hunger.Saturation);
             }
             else
             {

@@ -376,6 +376,7 @@ namespace ComplexNutrition.Modules.Tracking
                     }
 
                     var hunger = player.Entity.GetBehavior<EntityBehaviorHunger>();
+                    Digestion.FitStomach(player.Entity, Digest);
                     if (hunger != null)
                     {
                         float full = hunger.Saturation;
