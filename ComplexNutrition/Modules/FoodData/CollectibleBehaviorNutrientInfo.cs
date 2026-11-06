@@ -62,11 +62,8 @@ namespace ComplexNutrition.Modules.FoodData
         {
             string header = MealHeader(meal);
 
-            string footer = Lang.Get(meal.Cooked ? "complexnutrition:tooltip-meal-cooked" : "complexnutrition:tooltip-meal-uncooked");
-            if (meal.UnknownIngredients > 0)
-            {
-                footer += "\n" + Lang.Get("complexnutrition:tooltip-meal-unknown", meal.UnknownIngredients);
-            }
+            // v0.3.6g: no "sum of its ingredients" line; only a warning when some ingredients have no data.
+            string footer = meal.UnknownIngredients > 0 ? Lang.Get("complexnutrition:tooltip-meal-unknown", meal.UnknownIngredients) : null;
             return BuildBlock(nutrients, header, code => meal.Totals.TryGetValue(code, out var v) ? v : 0f, percent, withDebugInfo, footer, meal.Fullness, brief);
         }
 
