@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.3.6
+
+A simpler Overview tab.
+
+- The calorie reserve bar has a trend arrow. Hover it for the calories still to come from your gut, how many are lost to diminishing returns, and the calories you burned in the last hour, day and week, which used to sit under the bars.
+- Fullness has a trend arrow too. Its hover says fullness goes down by 100 every hour and that you cannot eat while too full.
+- Carbs, fats, protein and fiber all show the last 24 hours: carbs out of 600g (their 300g in 12 hours, scaled to the day), fats out of 70g, protein out of the 64g you need, and fiber out of the 30g a day your gut digests. This only changes what you see.
+- Each of those bars gives the calories it digested in the last 24 hours in brackets, with a hover that says so. With diminishing returns on, the number turns red once they start taking calories from that macro, and the hover says how many were lost, with a tip to space out your meals.
+- Hovering the fiber speed-up line lists the extra calories an hour it adds to carbs, fats and protein.
+- The Your Diet section is gone, since it repeated Running Low. Running Low now lists everything that is low, not only three, and leaves out calories, which have their own bar and warning.
+- The server keeps a 24-hour log of the calories each macro gave (and of fiber digested), so the new readouts start filling from this version on.
+
 ## v0.3.5
 
 - History charts answer when you hover them. Hover a day on the Calories Gained and Burned chart to see what digestion added to your reserve and what you burned that day. On the Calories by Food Type chart, a day shows what you ate in all and each food type with its share.

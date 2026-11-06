@@ -36,9 +36,11 @@ namespace ComplexNutrition.UI
         public int? Trend;
         /// <summary>What hovering the trend arrow shows (VTML, since v0.3.6); null for no hover.</summary>
         public string TrendTip;
+        /// <summary>What hovering the value right of the bar shows (VTML, since v0.3.6); null for no hover.</summary>
+        public string RightTip;
 
         // Rounded so a bar that moved by less than a pixel doesn't count as a change.
-        public override string Key => "B|" + Label + "|" + Math.Round(Max <= 0 ? 0 : Value / Max * 400) + "|" + Max + "|" + LineInterval + "|" + Right + "|" + Trend + "|" + TrendTip;
+        public override string Key => "B|" + Label + "|" + Math.Round(Max <= 0 ? 0 : Value / Max * 400) + "|" + Max + "|" + LineInterval + "|" + Right + "|" + Trend + "|" + TrendTip + "|" + RightTip;
     }
 
     /// <summary>A paragraph of VTML, wrapped to the page width.</summary>
@@ -47,8 +49,10 @@ namespace ComplexNutrition.UI
         public string Vtml;
         /// <summary>Drawn in the smaller detail font.</summary>
         public bool Small;
-        public TextBlock(string vtml, bool small = false) { Vtml = vtml; Small = small; }
-        public override string Key => "T|" + (Small ? "s|" : "|") + Vtml;
+        /// <summary>What hovering the paragraph shows (VTML, since v0.3.6); null for no hover.</summary>
+        public string Tip;
+        public TextBlock(string vtml, bool small = false, string tip = null) { Vtml = vtml; Small = small; Tip = tip; }
+        public override string Key => "T|" + (Small ? "s|" : "|") + Vtml + "|" + Tip;
     }
 
     /// <summary>
@@ -241,12 +245,16 @@ namespace ComplexNutrition.UI
                 foreach (var p in placed)
                 {
                     if (p.Text != null) Draw(ctx, surface, p.Text, 0, p.Y);
+                    if (p.Block is TextBlock tb && !string.IsNullOrEmpty(tb.Tip))
+                        hotspots?.Add(new Hotspot { X = 0, Y = p.Y, W = Math.Max(1, MeasureWidth(p.Text)), H = p.Text.TotalHeight, Vtml = tb.Tip });
                     if (p.Block is BarBlock b)
                     {
                         double rowMid = p.Y + GuiElement.scaled(RowHeight) / 2.0;
                         Draw(ctx, surface, p.Label, 0, rowMid - p.Label.TotalHeight / 2.0);
                         DrawBar(ctx, GuiElement.scaled(BarX), rowMid - GuiElement.scaled(BarHeight) / 2.0, GuiElement.scaled(BarWidth), GuiElement.scaled(BarHeight), b);
                         Draw(ctx, surface, p.Value, GuiElement.scaled(RightX), rowMid - Math.Min(p.Value.TotalHeight, GuiElement.scaled(RowHeight)) / 2.0);
+                        if (!string.IsNullOrEmpty(b.RightTip))
+                            hotspots?.Add(new Hotspot { X = GuiElement.scaled(RightX), Y = p.Y, W = Math.Max(1, MeasureWidth(p.Value)), H = p.Height, Vtml = b.RightTip });
                         if (b.Trend != null) DrawTrend(ctx, GuiElement.scaled(BarX - 13), rowMid, GuiElement.scaled(9), b.Trend.Value);
                         if (b.Trend != null && !string.IsNullOrEmpty(b.TrendTip))
                         {

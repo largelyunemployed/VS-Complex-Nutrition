@@ -200,74 +200,98 @@ namespace ComplexNutrition.UI
                 blocks.Add(new TextBlock(L("window-healing-tip"), true));
             }
 
-            // How close the rolling totals are to where calories start falling off.
+            // v0.3.6: every macro over the same last 24 hours, with the calories it gave (red once diminishing returns cut in).
             var s = d.Digest;
             if (s != null)
             {
                 blocks.Add(new HeadingBlock(L("window-heading-macros")));
-                foreach (var code in new[] { NutrientCodes.Carbohydrate, NutrientCodes.Fat })
+                foreach (var code in new[] { NutrientCodes.Carbohydrate, NutrientCodes.Fat, NutrientCodes.Protein })
                 {
                     var pool = s.Pool(code);
                     var n = d.Nutrients.Get(code);
                     if (pool == null || n == null) continue;
-                    float window = Digestion.WindowGrams(d.State, code, pool);
-                    blocks.Add(new BarBlock
-                    {
-                        Label = StatsHover.Esc(L("window-macro-label", Lang.Get(n.LangKey), pool.WindowHours)),
-                        Value = window,
-                        Max = Math.Max(pool.DiminishingAboveGrams, window),
-                        Color = ColorOf(n),
-                        Right = StatsHover.Text(L("window-macro-value", Amt(d, code, window), Amt(d, code, pool.DiminishingAboveGrams))),
-                    });
+                    bool protein = code == NutrientCodes.Protein;
+                    // Carbs' 12-hour limit, scaled to the 24 hours shown (300g -> 600g); a visual match only.
+                    float limit = protein ? s.ProteinNeedGrams : pool.DiminishingAboveGrams * 24f / Math.Clamp(pool.WindowHours, 1, 24);
+                    float grams = Digestion.Last24(d.State, code);
+                    float kcal = Digestion.Last24(d.State, Digestion.KcalLogKey(code));
+                    float lost = kcal > 0f ? Math.Max(0f, grams * pool.KcalPerGram - kcal) : 0f;
+                    blocks.Add(MacroBar(d, n, grams, protein ? s.ProteinMaxGrams : limit, protein ? s.ProteinNeedGrams : 0f,
+                        L("window-macro-value", Amt(d, code, grams), Amt(d, code, limit)), kcal,
+                        DigestionPool.DiminishingReturns && lost >= 0.5f ? lost : 0f));
                 }
-                var protein = d.Nutrients.Get(NutrientCodes.Protein);
-                if (protein != null)
+                var fiber = d.Nutrients.Get(NutrientCodes.Fiber);
+                if (fiber != null)
                 {
-                    float p24 = d.State.Protein24;
-                    blocks.Add(new BarBlock
-                    {
-                        Label = StatsHover.Esc(L("window-macro-label", Lang.Get(protein.LangKey), 24)),
-                        Value = p24,
-                        Max = Math.Max(s.ProteinMaxGrams, p24),
-                        LineInterval = s.ProteinNeedGrams,
-                        Color = ColorOf(protein),
-                        Right = StatsHover.Text(L("window-protein-value", Amt(d, protein.Code, p24), Amt(d, protein.Code, s.ProteinNeedGrams))),
-                    });
+                    float grams = Digestion.Last24(d.State, NutrientCodes.Fiber);
+                    float limit = DigestionSettings.FiberGutRate(fiber) * 24f;
+                    blocks.Add(MacroBar(d, fiber, grams, limit, 0f,
+                        L("window-macro-value", Amt(d, fiber.Code, grams), Amt(d, fiber.Code, limit)),
+                        Digestion.Last24(d.State, Digestion.KcalLogKey(fiber.Code)), 0f));
                 }
-                blocks.Add(new TextBlock(StatsHover.Text(DigestionPool.DiminishingReturns
-                    ? L("window-macros-note", Amt(d, NutrientCodes.Protein, s.ProteinMaxGrams))
-                    : L("window-macros-note-off")), true));
-                blocks.Add(new TextBlock(FiberBoost(d), true));
+                if (!DigestionPool.DiminishingReturns) blocks.Add(new TextBlock(StatsHover.Text(L("window-macros-note-off")), true));
+                blocks.Add(new TextBlock(FiberBoost(d), true, FiberBoostTip(d)));
             }
 
+            // Every slow nutrient running low (the calorie reserve has its own bar above).
             blocks.Add(new HeadingBlock(L("window-heading-low")));
-            var low = RunningLow(d);
+            var low = RunningLow(d).Where(n => !n.IsCalories).ToList();
             if (low.Count == 0)
             {
                 blocks.Add(new TextBlock(StatsHover.Text(L("window-low-none"))));
             }
             else
             {
-                foreach (var n in low.Take(3))
+                foreach (var n in low)
                 {
                     blocks.Add(ReserveBar(d, n));
                     blocks.Add(new TextBlock(BestFoods(d, n), true));
                 }
             }
-
-            blocks.Add(new HeadingBlock(L("window-heading-diet")));
-            blocks.Add(new TextBlock(StatsHover.Text(low.Count == 0
-                ? L("window-diet-fine")
-                : L("window-diet-short", JoinNames(low.Select(n => Lang.Get(n.LangKey)).ToList())))));
             return blocks;
         }
 
-        /// <summary>"vitamin A", "vitamin A and calcium", "vitamin A, iron and calcium". Calories stay capitalised as a heading word.</summary>
-        public static string JoinNames(IList<string> names)
+        /// <summary>
+        /// One macro's 24-hour bar: "{grams} of {limit} ({kcal})", the calories red with a diminishing-returns line in their hover
+        /// when <paramref name="lost"/> is above 0.
+        /// </summary>
+        private static BarBlock MacroBar(NutritionPageData d, NutrientDefinition n, float grams, float max, float line, string value, float kcal, float lost)
         {
-            var lower = names.Select(n => n.StartsWith("Vitamin ") ? "v" + n.Substring(1) : n.StartsWith("B vitamins") ? "the B vitamins" : n.ToLowerInvariant()).ToList();
-            if (lower.Count == 1) return lower[0];
-            return string.Join(", ", lower.Take(lower.Count - 1)) + " " + L("window-and") + " " + lower[^1];
+            string name = Lang.Get(n.LangKey);
+            string kcalText = StatsHover.Text(Kcal(d, kcal));
+            if (lost > 0f) kcalText = "<font color=\"" + UnitColors.Rate + "\">" + StatsHover.Esc(Kcal(d, kcal)) + "</font>";
+            string tip = StatsHover.Text(L("window-macro-kcal-tip", name, Kcal(d, kcal)));
+            if (lost > 0f)
+            {
+                tip += "<br>" + StatsHover.Paint(L("window-macro-lost", Kcal(d, lost)), UnitColors.Rate);
+                tip += "<br><br><font color=\"#a0a0a0\">" + StatsHover.Text(L("window-macro-dr-tip")) + "</font>";
+            }
+            return new BarBlock
+            {
+                Label = StatsHover.Esc(L("window-macro-label", name, 24)),
+                Value = grams,
+                Max = Math.Max(max, grams),
+                LineInterval = line,
+                Color = ColorOf(n),
+                Right = StatsHover.Text(value) + " (" + kcalText + ")",
+                RightTip = tip,
+            };
+        }
+
+        /// <summary>The hover of fiber's speed-up line: the extra calories an hour it adds to each gut pool.</summary>
+        private static string FiberBoostTip(NutritionPageData d)
+        {
+            var by = Digestion.FiberKcalPerHourByPool(d.Digest, d.State, d.Nutrients);
+            if (by.Count == 0) return null;
+            var lines = new List<string> { StatsHover.Text(L("fiber-boost-tip")) };
+            foreach (var code in new[] { NutrientCodes.Carbohydrate, NutrientCodes.Fat, NutrientCodes.Protein })
+            {
+                if (!by.TryGetValue(code, out float kcal)) continue;
+                var n = d.Nutrients.Get(code);
+                if (n == null) continue;
+                lines.Add("• " + StatsHover.Text(Lang.Get(n.LangKey) + ": ") + StatsHover.Paint(Kcal(d, kcal), UnitColors.Rate));
+            }
+            return string.Join("<br>", lines);
         }
 
         // ---- Digestion ----

@@ -419,6 +419,45 @@ namespace ComplexNutrition.Core
             return (coming, lost);
         }
 
+        /// <summary>The absorbed-log key for a pool's calories (after diminishing returns, since v0.3.6), beside its grams.</summary>
+        public static string KcalLogKey(string code) => code + "-kcal";
+
+        /// <summary>The sum of a 24-hour absorbed log (grams, or calories for a "-kcal" key); 0 when nothing was logged yet.</summary>
+        public static float Last24(NutritionState state, string key)
+        {
+            if (state == null || state.AbsorbedHour == long.MinValue) return 0f;
+            float sum = 0f;
+            foreach (var v in state.GetAbsorbedLog(key)) sum += v;
+            return sum;
+        }
+
+        /// <summary>
+        /// The extra calories per in-game hour fiber's speed-up adds to each gut pool right now (v0.3.6, for the breakdown in the
+        /// hover of <see cref="FiberKcalPerHour"/>'s line), by pool code.
+        /// </summary>
+        public static Dictionary<string, float> FiberKcalPerHourByPool(DigestionSettings s, NutritionState state, NutrientRegistry nutrients)
+        {
+            var result = new Dictionary<string, float>();
+            if (s == null || state == null || nutrients == null) return result;
+            foreach (var kv in s.Pools)
+            {
+                var def = nutrients.Get(kv.Key);
+                var pool = kv.Value;
+                if (def == null) continue;
+                float grams = def.FromPercent(state.GetReserve(def.Code));
+                float extra = 0f;
+                if (grams > DigestionPool.EmptyGrams)
+                {
+                    float window = WindowGrams(state, kv.Key, pool);
+                    float fast = pool.Effective(window, pool.Rate(grams, FiberSpeed(s, state, pool)));
+                    float plain = pool.Effective(window, pool.Rate(grams, 1f));
+                    extra = Math.Max(0f, fast - plain) * pool.KcalPerGram;
+                }
+                result[kv.Key] = extra;
+            }
+            return result;
+        }
+
         public static float WindowGrams(NutritionState state, string code, DigestionPool pool)
         {
             var log = state.GetAbsorbedLog(code);
