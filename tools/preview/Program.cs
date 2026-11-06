@@ -165,6 +165,17 @@ static class P
                 all.WriteToPng(System.IO.Path.Combine(outDir, "window-overview-macro-tips.png"));
             }
         }
+        // Every Digestion tab hover (v0.3.6l), stacked on their own.
+        {
+            var spots = new List<Hotspot>();
+            using var page = PageRenderer.Render(capi, NutritionPages.DigestionPage(data), GuiDialogNutrition.ContentWidth - 4, spots);
+            var tips = spots.Select(sp => PageRenderer.RenderTip(capi, sp.Vtml, GuiElementNutritionPage.TipWidth)).ToList();
+            using var all = new ImageSurface(Format.Argb32, (int)tips.Max(t => t.Width) + 8, (int)tips.Sum(t => t.Height + 8));
+            using var actx = new Context(all);
+            double ty = 0;
+            foreach (var t in tips) { actx.SetSourceSurface(t, 4, (int)ty); actx.Paint(); ty += t.Height + 8; t.Dispose(); }
+            all.WriteToPng(System.IO.Path.Combine(outDir, "window-digestion-tips.png"));
+        }
         // The running-low icon in its three states, side by side.
         using (var icons = new ImageSurface(Format.Argb32, (int)S(3 * 40), (int)S(40)))
         using (var ictx = new Context(icons))

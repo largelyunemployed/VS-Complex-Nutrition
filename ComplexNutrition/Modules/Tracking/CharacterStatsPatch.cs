@@ -284,6 +284,12 @@ namespace ComplexNutrition.Modules.Tracking
                 if (bar == null) continue;
                 float reserve = state.GetReserve(n.Code);
                 float max = Math.Max(n.Cap, reserve);
+                if (n.Code == NutrientCodes.Fiber && Digestion.Settings != null)
+                {
+                    // Fiber's bar shows its gut, like carbs, fats and protein (v0.3.6l); its reserve is in the hover.
+                    reserve = n.ToPercent(state.FiberGut);
+                    max = Math.Max(n.ToPercent(Digestion.Settings.FiberGutMaxGrams), reserve);
+                }
                 bar.SetLineInterval(100);   // one block per day of storage, or per day's need for a gut pool
                 SetBar(bar, reserve, max, now);
             }
@@ -457,10 +463,9 @@ namespace ComplexNutrition.Modules.Tracking
         {
             var s = Digestion.Settings;
             float grams = st?.FiberGut ?? 0f;
-            if (s == null || grams <= DigestionPool.EmptyGrams) return StatsHover.Text(Lang.Get("complexnutrition:fiber-gut-empty"));
             string hours = StatsHover.Text(NutrientDisplay.GutHoursText(st.GetGutHours(NutrientCodes.Fiber), def.ToPercent(grams)));
             string amount = StatsHover.Text(def.FormatAmount(grams, core.ShowPercent));
-            if (!Digestion.AdvancedDisplay(capi?.World, st)) return StatsHover.Vtml("complexnutrition:gut-hover", amount, hours);
+            if (s == null || grams <= DigestionPool.EmptyGrams || !Digestion.AdvancedDisplay(capi?.World, st)) return StatsHover.Vtml("complexnutrition:gut-hover", amount, hours);
             float rate = Math.Min(grams, DigestionSettings.FiberGutRate(def));
             return StatsHover.Vtml("complexnutrition:gut-hover-advanced", amount, StatsHover.Text(Kcal(grams * s.FiberKcalPerGram)), hours,
                 StatsHover.Paint(Lang.Get("complexnutrition:gut-rate", def.FormatAmount(rate, core.ShowPercent), Kcal(rate * s.FiberKcalPerGram)), UnitColors.Rate));
@@ -579,7 +584,9 @@ namespace ComplexNutrition.Modules.Tracking
                         float r = st?.GetReserve(code) ?? 0f;
                         string line = StatsHover.Vtml("complexnutrition:reserve-hover", Amount(def, r), StatsHover.Text(NutrientDisplay.DaysText(r)));
                         if (code == NutrientCodes.Fiber && Digestion.Settings != null && st != null)
-                            return NutrientHover(title, color, code, line, FiberGutLine(st, def), FiberBoostLine(Digestion.FiberKcalPerHour(Digestion.Settings, st, core.Nutrients)));
+                            return NutrientHover(title, color, code, FiberGutLine(st, def),
+                                StatsHover.Vtml("complexnutrition:window-fiber-stored", line),
+                                FiberBoostLine(Digestion.FiberKcalPerHour(Digestion.Settings, st, core.Nutrients)));
                         return NutrientHover(title, color, code, line);
                     });
                 }

@@ -48,6 +48,13 @@ A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ..
 - Vitamins and minerals follow the amounts or percentages display setting, like everything else: real amounts by default ("Ca 1,775mg"), or % of a day's need (with the grey key) when percentages are on.
 - Carbs in the tooltip are the carbs that go into your gut, not counting fiber, which has its own figure.
 
+### 0.3.6l: fiber like the other macros
+
+- Fixed: the Stats panel showed "complexnutrition:stats-gut-carbohydrate" and "...-fat" in place of Carbs and Fats (0.3.6j removed two strings it still used). A test now checks them.
+- Fiber is shown exactly like carbs, fats and protein. On the Digestion tab its bar shows the fiber digesting in your gut (grams turning into calories, up to 60g) with the same grey line under it, built by the same code as the others. On the Stats panel its bar shows its gut too. Its reserve moves into the hover: "Fiber stored: ...".
+- Each macro's hover on the Digestion tab is laid out like the vitamins' and minerals': what it does (carbs are fast energy, fats slow energy, protein builds and maintains muscle, fiber keeps digestion moving), then "Digesting: 94g of 500g.", the diminishing-returns limit, and the best sources you've discovered. How much you digested lately is left to the History tab. The Digestion tab gets the same hover hint at the top, and the Overview's macro names give the same hover.
+- Fiber's boost hover reads "Fiber is helping you absorb an extra:", and its grey tip "Tip: You'll get the full boost when fiber reserves are above 21g."
+
 ### 0.3.6k: cooked meat and macro colours
 
 - Cooking also brings raw meat, fish and eggs back to their full value (they give 80% raw), and raw or soaked cassava too (30% and 80% raw). So a stew counts its meat in full. Cider and other fermented drinks keep their 90%, since that isn't a raw cut.
