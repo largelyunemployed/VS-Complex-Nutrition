@@ -110,6 +110,7 @@
 	"window-healing-tip": "<i>Tip: Using healing items to heal instead will save you energy!</i>",
 	"window-burned": "Calories burned: {0} in the last hour, {1} in the last 24 hours and {2} in the last 7 days.",
 	"window-outlook-empty": "Your gut is empty, so nothing more is on its way to your calorie reserve.",
+	"window-fullness-trend": "Fullness goes down by {0} every hour, whatever you are doing.",
 	"window-fullness-value": "{0} of {1} fullness",
 	"window-heading-macros": "Carbs, Fats and Protein",
 	"window-macro-label": "{0}, last {1} hours",

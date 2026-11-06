@@ -177,15 +177,21 @@ namespace ComplexNutrition.UI
             {
                 var bar = ReserveBar(d, cal);
                 bar.Max = Math.Max(cal.Cap, d.State.GetReserve(cal.Code));
+                // v0.3.6: what is on its way and what was burned live in the arrow's hover, not under the bars.
+                bar.Trend = TrendOf(d, cal) ?? 0;
+                string tip = GutOutlookText(d);
+                if (d.History != null)
+                {
+                    float week = d.History.Days.Skip(Math.Max(0, d.History.Days.Count - 7)).Sum(day => day.Burned);
+                    tip += "<br><br>" + StatsHover.Text(L("window-burned", Kcal(d, d.History.BurnedHour), Kcal(d, d.History.Burned24), Kcal(d, week)));
+                }
+                bar.TrendTip = tip;
                 blocks.Add(bar);
             }
-            blocks.Add(FullnessBar(d));
-            blocks.Add(new TextBlock(GutOutlookText(d), true));
-            if (d.History != null)
-            {
-                float week = d.History.Days.Skip(Math.Max(0, d.History.Days.Count - 7)).Sum(day => day.Burned);
-                blocks.Add(new TextBlock(StatsHover.Text(L("window-burned", Kcal(d, d.History.BurnedHour), Kcal(d, d.History.Burned24), Kcal(d, week))), true));
-            }
+            var full = FullnessBar(d);
+            full.Trend = d.Fullness >= 0.5f ? -1 : 0;
+            full.TrendTip = StatsHover.Text(L("window-fullness-trend", Num(d.Digest?.FullnessDrainPerHour ?? 100f)));
+            blocks.Add(full);
             if (d.MaxHealth > 0 && d.Health < d.MaxHealth - 0.01f && d.Tracking != null)
             {
                 float perHp = d.Tracking.KcalPerHp((d.MaxHealth - d.Health) / d.MaxHealth);

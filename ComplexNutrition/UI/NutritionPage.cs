@@ -34,9 +34,11 @@ namespace ComplexNutrition.UI
         public string Right;
         /// <summary>An arrow just left of the bar: 1 rising, 0 steady, -1 falling; null for none.</summary>
         public int? Trend;
+        /// <summary>What hovering the trend arrow shows (VTML, since v0.3.6); null for no hover.</summary>
+        public string TrendTip;
 
         // Rounded so a bar that moved by less than a pixel doesn't count as a change.
-        public override string Key => "B|" + Label + "|" + Math.Round(Max <= 0 ? 0 : Value / Max * 400) + "|" + Max + "|" + LineInterval + "|" + Right + "|" + Trend;
+        public override string Key => "B|" + Label + "|" + Math.Round(Max <= 0 ? 0 : Value / Max * 400) + "|" + Max + "|" + LineInterval + "|" + Right + "|" + Trend + "|" + TrendTip;
     }
 
     /// <summary>A paragraph of VTML, wrapped to the page width.</summary>
@@ -246,6 +248,11 @@ namespace ComplexNutrition.UI
                         DrawBar(ctx, GuiElement.scaled(BarX), rowMid - GuiElement.scaled(BarHeight) / 2.0, GuiElement.scaled(BarWidth), GuiElement.scaled(BarHeight), b);
                         Draw(ctx, surface, p.Value, GuiElement.scaled(RightX), rowMid - Math.Min(p.Value.TotalHeight, GuiElement.scaled(RowHeight)) / 2.0);
                         if (b.Trend != null) DrawTrend(ctx, GuiElement.scaled(BarX - 13), rowMid, GuiElement.scaled(9), b.Trend.Value);
+                        if (b.Trend != null && !string.IsNullOrEmpty(b.TrendTip))
+                        {
+                            double hs = GuiElement.scaled(9);
+                            hotspots?.Add(new Hotspot { X = GuiElement.scaled(BarX - 13) - hs, Y = rowMid - hs, W = 2 * hs, H = 2 * hs, Vtml = b.TrendTip });
+                        }
                     }
                     if (p.Block is ChartBlock c) DrawChart(ctx, surface, p, c, GuiElement.scaled(width), hotspots, capi);
                 }

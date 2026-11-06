@@ -137,6 +137,20 @@ static class P
             page.WriteToPng(System.IO.Path.Combine(outDir, "window-history-tips.png"));
             Console.WriteLine("hotspots: " + spots.Count);
         }
+        // Trend arrow hovers on the Overview (v0.3.6): the calories and fullness arrows' tooltips.
+        {
+            var spots = new List<Hotspot>();
+            using var page = PageRenderer.Render(capi, NutritionPages.Overview(data), GuiDialogNutrition.ContentWidth - 4, spots);
+            using var ctx = new Context(page);
+            double y = 0;
+            foreach (var sp in spots.Take(2))
+            {
+                using var tip = PageRenderer.RenderTip(capi, sp.Vtml, GuiElementNutritionPage.TipWidth);
+                ctx.SetSourceSurface(tip, (int)(sp.X + sp.W + S(6)), (int)Math.Max(y, sp.Y + sp.H)); ctx.Paint();
+                y = sp.Y + sp.H + tip.Height + S(4);
+            }
+            page.WriteToPng(System.IO.Path.Combine(outDir, "window-overview-tips.png"));
+        }
         // The running-low icon in its three states, side by side.
         using (var icons = new ImageSurface(Format.Argb32, (int)S(3 * 40), (int)S(40)))
         using (var ictx = new Context(icons))
