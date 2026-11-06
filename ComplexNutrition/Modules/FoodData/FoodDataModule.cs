@@ -143,7 +143,7 @@ namespace ComplexNutrition.Modules.FoodData
                 container.SetContents("meatystew", dish, stacks.ToArray(), servings);
             }
 
-            var meal = MealNutrition.Compute(core, sapi.World, dish);
+            var meal = MealNutrition.Compute(core, sapi.World, dish)?.AllServings();
             if (meal == null) return TextCommandResult.Error("Could not work out that dish.");
             return TextCommandResult.Success($"{containerCode} with {ingredientList}:" + CollectibleBehaviorNutrientInfo.BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, false));
         }

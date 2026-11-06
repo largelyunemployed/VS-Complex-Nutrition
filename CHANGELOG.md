@@ -2,7 +2,9 @@
 
 ## v0.3.6
 
-A simpler Overview tab.
+A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ...), and each change is listed under the build it arrived in.
+
+### 0.3.6a: Overview
 
 - The calorie reserve bar has a trend arrow. Hover it for the calories still to come from your gut, how many are lost to diminishing returns, and the calories you burned in the last hour, day and week, which used to sit under the bars.
 - Fullness has a trend arrow too. Its hover says fullness goes down by 100 every hour and that you cannot eat while too full.
@@ -10,10 +12,24 @@ A simpler Overview tab.
 - Each of those bars gives the calories it digested in the last 24 hours in brackets, with a hover that says so. With diminishing returns on, the number turns red once they start taking calories from that macro, and the hover says how many were lost, with a tip to space out your meals.
 - Hovering the fiber speed-up line lists the extra calories an hour it adds to carbs, fats and protein.
 - The Your Diet section is gone, since it repeated Running Low. Running Low now lists everything that is low, not only three, and leaves out calories, which have their own bar and warning.
+- The server keeps a 24-hour log of the calories each macro gave (and of fiber digested), so the new readouts start filling from this version on.
+
+### 0.3.6b: Digestion and History tabs
+
 - The Digestion tab is laid out like the Vitamins and Minerals tabs: Fullness, Carbs, Fats, Protein and Fiber each have their own heading (the Stomach and In Your Gut headings are gone), and every bar has a trend arrow. Fiber's speed-up is given as the extra calories an hour it adds to carbs, fats and protein instead of percentages.
 - History: the "The last 7 days" heading and the line on what digestion added are gone. The summary now reads "You gained ... and burned ... a day on average", matching the chart's Gained and Burned.
-- A bowl, pot or crock's tooltip shows everything it holds instead of one serving: a pot of 10 servings shows the whole pot, under "Nutrition for all of it (10 servings)", and a partly eaten bowl shows what is left, under "Nutrition for what is left (0.3 of a serving)" (it used to show a full serving). A single serving still reads "Nutrition per serving". Eating was already counted correctly.
-- The server keeps a 24-hour log of the calories each macro gave (and of fiber digested), so the new readouts start filling from this version on.
+
+### 0.3.6c: partly eaten bowls
+
+- A bowl with less than one serving left showed a full serving's nutrition in its tooltip. It now shows what is left. Eating was already counted correctly.
+
+### 0.3.6d: whole pots
+
+- A pot or crock of several servings shows everything it holds instead of one serving.
+
+### 0.3.6e: tooltip headers
+
+- Bowls, pots and crocks head their tooltip "Total Nutrition (10 servings):", or "Total Nutrition (1 serving):" for a single serving, in place of "Nutrition per serving", "Nutrition for what is left" and "Nutrition for all of it". The /cnutrition meal command shows the same totals.
 
 ## v0.3.5
 

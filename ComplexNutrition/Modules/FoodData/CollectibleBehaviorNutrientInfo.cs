@@ -77,9 +77,8 @@ namespace ComplexNutrition.Modules.FoodData
 
         private static string MealHeader(MealNutritionResult meal) => meal.IsPie
             ? Lang.Get("complexnutrition:tooltip-header-pie", meal.PieSlices)
-            : meal.Scaled
-                ? Lang.Get(meal.Servings < 1f ? "complexnutrition:tooltip-header-left" : "complexnutrition:tooltip-header-all", Fmt.Number(meal.Servings))
-                : Lang.Get("complexnutrition:tooltip-header-serving");
+            : Lang.Get(Math.Abs(meal.Servings - 1f) < 0.001f ? "complexnutrition:tooltip-header-serving" : "complexnutrition:tooltip-header-servings",
+                Fmt.Number(meal.Servings <= 0f ? 1f : meal.Servings));
 
         /// <summary>
         /// Discover Nutrition (v0.3.4): the block for a food the player hasn't eaten yet. Its nutrients are "???", but how filling
