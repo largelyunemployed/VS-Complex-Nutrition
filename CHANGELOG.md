@@ -41,6 +41,13 @@ A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ..
 - The grey key under the vitamins and minerals is just "% of a day's need", without the mineral names.
 - Bowls, pots and pies no longer say "Sum of its ingredients, with cooking applied". The warning about ingredients without data stays.
 
+### 0.3.6h: tooltip fixes
+
+- Bowls, pots, crocks and pies no longer end their tooltip with vanilla's "Nutrition Facts" block, which only repeated the fullness. It still shows when tracking is off, and when looking at a placed pot.
+- Item tooltips can grow wider (up to 600 instead of 415), so each nutrient line fits on one line. Shorter tooltips still shrink to fit.
+- Vitamins and minerals follow the amounts or percentages display setting, like everything else: real amounts by default ("Ca 1,775mg"), or % of a day's need (with the grey key) when percentages are on.
+- Carbs in the tooltip are the carbs that go into your gut, not counting fiber, which has its own figure.
+
 ## v0.3.5
 
 - History charts answer when you hover them. Hover a day on the Calories Gained and Burned chart to see what digestion added to your reserve and what you burned that day. On the Calories by Food Type chart, a day shows what you ate in all and each food type with its share.

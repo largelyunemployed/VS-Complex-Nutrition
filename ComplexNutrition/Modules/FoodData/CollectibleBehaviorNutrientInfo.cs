@@ -114,7 +114,11 @@ namespace ComplexNutrition.Modules.FoodData
             System.Func<string, float> amount = digest == null
                 ? rawAmount
                 : code => code == NutrientCodes.Calories ? digest.KcalFromMacros(rawAmount) : rawAmount(code);
-            string Macro(string code) => nutrients.Get(code)?.FormatAmount(amount(code), percent) ?? "0";
+            // Carbs as the gut takes them (v0.3.6h): net of fiber, which has its own figure.
+            float Shown(string code) => code == NutrientCodes.Carbohydrate
+                ? Math.Max(0f, amount(code) - amount(NutrientCodes.Fiber))
+                : amount(code);
+            string Macro(string code) => nutrients.Get(code)?.FormatAmount(Shown(code), percent) ?? "0";
             if (brief)
             {
                 string fills = digest != null && fullness > 0f
@@ -146,9 +150,10 @@ namespace ComplexNutrition.Modules.FoodData
                 .Select(n => Short(n) + " " + Macro(n.Code));
             sb.AppendLine(UnitColors.Paint(string.Join(" · ", macros)));
 
-            // Vitamins and minerals always as % of a day's need, so each fits in a few characters.
+            // Vitamins and minerals in the reader's choice of real amounts or % of a day's need (v0.3.6h; 0.3.6f always used %).
             string Dv(NutrientDefinition n)
             {
+                if (!percent) return Short(n) + " " + UnitColors.Paint(n.FormatAmount(amount(n.Code), false));
                 float dv = n.ToPercent(amount(n.Code));
                 string text = dv > 0f && dv < 0.5f ? "<1%" : Math.Round(dv).ToString("#,##0") + "%";
                 return Short(n) + " <font color=\"" + UnitColors.Micro + "\">" + text + "</font>";
@@ -159,7 +164,7 @@ namespace ComplexNutrition.Modules.FoodData
                 sb.AppendLine(Lang.Get("complexnutrition:tooltip-vit") + " " + string.Join(" · ", vitamins.Select(Dv)));
             if (minerals.Count > 0)
                 sb.AppendLine(string.Join(" · ", minerals.Select(Dv)));
-            if (vitamins.Count + minerals.Count > 0) sb.AppendLine(Lang.Get("complexnutrition:tooltip-legend"));
+            if (percent && vitamins.Count + minerals.Count > 0) sb.AppendLine(Lang.Get("complexnutrition:tooltip-legend"));
             if (footer != null) sb.AppendLine(footer);
             return sb.ToString();
         }
