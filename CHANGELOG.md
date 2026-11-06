@@ -31,6 +31,11 @@ A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ..
 
 - Bowls, pots and crocks head their tooltip "Total Nutrition (10 servings):", or "Total Nutrition (1 serving):" for a single serving, in place of "Nutrition per serving", "Nutrition for what is left" and "Nutrition for all of it". The /cnutrition meal command shows the same totals.
 
+### 0.3.6f: food tooltip layout
+
+- The long food tooltip (hold Ctrl) shows every nutrient in four short lines instead of only the top three vitamins and minerals: calories and how much it fills you, then "Carb · Fat · Prot · Fib" in grams, then "Vit A · B · C · D · E · K" and "Ca · Fe · K" as % of a day's need, with a grey key for the mineral symbols. Foods like flax no longer hide their calcium.
+- With Max fullness set to no limit, the tooltip says "fills 75" instead of "fills 75 of 1500".
+
 ## v0.3.5
 
 - History charts answer when you hover them. Hover a day on the Calories Gained and Burned chart to see what digestion added to your reserve and what you burned that day. On the Calories by Food Type chart, a day shows what you ate in all and each food type with its share.

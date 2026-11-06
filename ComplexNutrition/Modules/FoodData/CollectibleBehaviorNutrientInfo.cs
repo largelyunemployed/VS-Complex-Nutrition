@@ -10,7 +10,6 @@ namespace ComplexNutrition.Modules.FoodData
     /// <summary>Tooltip block showing a food's nutrients per portion, or a dish's per serving.</summary>
     public class CollectibleBehaviorNutrientInfo : CollectibleBehavior
     {
-        private const int TopMicronutrients = 3;
         private readonly ComplexNutritionModSystem core;
 
         public CollectibleBehaviorNutrientInfo(CollectibleObject collObj, ComplexNutritionModSystem core) : base(collObj)
@@ -130,31 +129,40 @@ namespace ComplexNutrition.Modules.FoodData
                 sb.AppendLine(Lang.Get("complexnutrition:tooltip-short-hint"));
                 return sb.ToString();
             }
-            // Amounts in their unit colours (grams green, kcal orange, mg and mcg yellow), as on the Stats panel.
-            sb.AppendLine(UnitColors.Paint(Lang.Get(percent ? "complexnutrition:tooltip-macros-percent" : "complexnutrition:tooltip-macros",
-                Macro(NutrientCodes.Calories),
-                Macro(NutrientCodes.Protein),
-                Macro(NutrientCodes.Carbohydrate),
-                Macro(NutrientCodes.Fat),
-                Macro(NutrientCodes.Fiber))));
-
-            // The micronutrients that cover the most of a day's need, shown in the same units as the reserves.
-            var top = nutrients.All
-                .Where(n => n.IsMicronutrient)
-                .Select(n => (def: n, amount: amount(n.Code), dv: n.ToPercent(amount(n.Code))))
-                .Where(t => t.dv >= 1f)
-                .OrderByDescending(t => t.dv)
-                .Take(withDebugInfo ? int.MaxValue : TopMicronutrients)
-                .Select(t => Lang.Get("complexnutrition:tooltip-dv", Lang.Get(t.def.LangKey), t.def.FormatAmount(t.amount, percent)))
-                .ToList();
-            if (top.Count > 0)
-            {
-                sb.AppendLine(UnitColors.Paint(Lang.Get(percent ? "complexnutrition:tooltip-richin" : "complexnutrition:tooltip-richin-amount", string.Join(", ", top))));
-            }
+            // v0.3.6 layout (Miles's pick, "A"): calories and fullness, then every macro, vitamin and mineral on three short lines.
+            // Amounts keep their unit colours (grams green, kcal orange, vitamins and minerals yellow), as on the Stats panel.
+            string Short(NutrientDefinition n) => Lang.HasTranslation("complexnutrition:nutrient-" + n.Code + "-short")
+                ? Lang.Get("complexnutrition:nutrient-" + n.Code + "-short")
+                : Lang.Get(n.LangKey);
+            string first = Macro(NutrientCodes.Calories);
             if (digest != null && fullness > 0f)
             {
-                sb.AppendLine(Lang.Get("complexnutrition:tooltip-fullness", Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0"), Math.Round(digest.FullnessMax)));
+                string fill = Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0");
+                first += " · " + (Digestion.NoFullnessLimit
+                    ? Lang.Get("complexnutrition:tooltip-fills-nolimit", fill)
+                    : Lang.Get("complexnutrition:tooltip-fills", fill, Math.Round(digest.FullnessMax)));
             }
+            sb.AppendLine(UnitColors.Paint(first));
+
+            var macros = new[] { NutrientCodes.Carbohydrate, NutrientCodes.Fat, NutrientCodes.Protein, NutrientCodes.Fiber }
+                .Select(c => nutrients.Get(c)).Where(n => n != null)
+                .Select(n => Short(n) + " " + Macro(n.Code));
+            sb.AppendLine(UnitColors.Paint(string.Join(" · ", macros)));
+
+            // Vitamins and minerals always as % of a day's need, so each fits in a few characters.
+            string Dv(NutrientDefinition n)
+            {
+                float dv = n.ToPercent(amount(n.Code));
+                string text = dv > 0f && dv < 0.5f ? "<1%" : Math.Round(dv).ToString("#,##0") + "%";
+                return Short(n) + " <font color=\"" + UnitColors.Micro + "\">" + text + "</font>";
+            }
+            var vitamins = nutrients.All.Where(n => n.IsMicronutrient && n.Group != "Mineral").OrderBy(Short, StringComparer.Ordinal).ToList();
+            var minerals = nutrients.All.Where(n => n.Group == "Mineral").ToList();
+            if (vitamins.Count > 0)
+                sb.AppendLine(Lang.Get("complexnutrition:tooltip-vit") + " " + string.Join(" · ", vitamins.Select(Dv)));
+            if (minerals.Count > 0)
+                sb.AppendLine(string.Join(" · ", minerals.Select(Dv)));
+            if (vitamins.Count + minerals.Count > 0) sb.AppendLine(Lang.Get("complexnutrition:tooltip-legend"));
             if (footer != null) sb.AppendLine(footer);
             return sb.ToString();
         }
