@@ -22,6 +22,29 @@ namespace ComplexNutrition.Core
 
         /// <summary>Fullness of what <see cref="Totals"/> covers (a serving, or the pie), before spoilage; 0 while digestion is off.</summary>
         public float Fullness;
+
+        /// <summary>
+        /// True when this result has been scaled to a partly eaten serving (a bowl under 1 serving left), by <see cref="LeftOfServing"/>.
+        /// </summary>
+        public bool PartServing;
+
+        /// <summary>
+        /// For the tooltip (v0.3.6): a bowl or pot with less than one serving left shows what is left, not a full serving.
+        /// Returns a scaled copy; eating keeps using the per-serving amounts.
+        /// </summary>
+        public MealNutritionResult LeftOfServing()
+        {
+            if (IsPie || Servings <= 0f || Servings >= 0.999f) return this;
+            float k = Servings;
+            var copy = (MealNutritionResult)MemberwiseClone();
+            copy.Totals = new Dictionary<string, float>();
+            foreach (var kv in Totals) copy.Totals[kv.Key] = kv.Value * k;
+            copy.KcalByCategory = new Dictionary<string, float>();
+            foreach (var kv in KcalByCategory) copy.KcalByCategory[kv.Key] = kv.Value * k;
+            copy.Fullness = Fullness * k;
+            copy.PartServing = true;
+            return copy;
+        }
     }
 
     /// <summary>

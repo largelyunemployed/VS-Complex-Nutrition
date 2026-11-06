@@ -25,7 +25,7 @@ namespace ComplexNutrition.Modules.FoodData
 
             if (MealNutrition.IsMealContainer(collObj))
             {
-                var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack);
+                var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack)?.LeftOfServing();
                 if (meal == null) return;
                 dsc.Append(core.CanSeeNutrients(world, inSlot?.Itemstack)
                     ? BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo, core.ShortTooltipNow(withDebugInfo))
@@ -77,7 +77,9 @@ namespace ComplexNutrition.Modules.FoodData
 
         private static string MealHeader(MealNutritionResult meal) => meal.IsPie
             ? Lang.Get("complexnutrition:tooltip-header-pie", meal.PieSlices)
-            : Lang.Get("complexnutrition:tooltip-header-serving");
+            : meal.PartServing
+                ? Lang.Get("complexnutrition:tooltip-header-left", Fmt.Number(meal.Servings))
+                : Lang.Get("complexnutrition:tooltip-header-serving");
 
         /// <summary>
         /// Discover Nutrition (v0.3.4): the block for a food the player hasn't eaten yet. Its nutrients are "???", but how filling

@@ -35,6 +35,7 @@
 	"tooltip-richin": "Daily value: {0}",
 	"tooltip-richin-amount": "Vitamins and minerals: {0}",
 	"tooltip-header-serving": "<font color=\"#c8b48c\">Nutrition per serving:</font>",
+	"tooltip-header-left": "<font color=\"#c8b48c\">Nutrition for what is left ({0} of a serving):</font>",
 	"tooltip-header-pie": "<font color=\"#c8b48c\">Nutrition for this pie ({0} of 4 slices):</font>",
 	"tooltip-meal-cooked": "<font color=\"#a0a0a0\">Sum of its ingredients, with cooking applied</font>",
 	"tooltip-meal-uncooked": "<font color=\"#a0a0a0\">Sum of its ingredients</font>",

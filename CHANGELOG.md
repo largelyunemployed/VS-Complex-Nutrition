@@ -12,6 +12,7 @@ A simpler Overview tab.
 - The Your Diet section is gone, since it repeated Running Low. Running Low now lists everything that is low, not only three, and leaves out calories, which have their own bar and warning.
 - The Digestion tab is laid out like the Vitamins and Minerals tabs: Fullness, Carbs, Fats, Protein and Fiber each have their own heading (the Stomach and In Your Gut headings are gone), and every bar has a trend arrow. Fiber's speed-up is given as the extra calories an hour it adds to carbs, fats and protein instead of percentages.
 - History: the "The last 7 days" heading and the line on what digestion added are gone. The summary now reads "You gained ... and burned ... a day on average", matching the chart's Gained and Burned.
+- Fix: a bowl (or pot) with less than one serving left showed a full serving's nutrition in its tooltip. It now shows what is left, under "Nutrition for what is left (0.3 of a serving)". Eating was already counted correctly.
 - The server keeps a 24-hour log of the calories each macro gave (and of fiber digested), so the new readouts start filling from this version on.
 
 ## v0.3.5
