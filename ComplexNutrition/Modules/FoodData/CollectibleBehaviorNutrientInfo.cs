@@ -25,7 +25,7 @@ namespace ComplexNutrition.Modules.FoodData
 
             if (MealNutrition.IsMealContainer(collObj))
             {
-                var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack)?.LeftOfServing();
+                var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack)?.AllServings();
                 if (meal == null) return;
                 dsc.Append(core.CanSeeNutrients(world, inSlot?.Itemstack)
                     ? BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo, core.ShortTooltipNow(withDebugInfo))
@@ -77,8 +77,8 @@ namespace ComplexNutrition.Modules.FoodData
 
         private static string MealHeader(MealNutritionResult meal) => meal.IsPie
             ? Lang.Get("complexnutrition:tooltip-header-pie", meal.PieSlices)
-            : meal.PartServing
-                ? Lang.Get("complexnutrition:tooltip-header-left", Fmt.Number(meal.Servings))
+            : meal.Scaled
+                ? Lang.Get(meal.Servings < 1f ? "complexnutrition:tooltip-header-left" : "complexnutrition:tooltip-header-all", Fmt.Number(meal.Servings))
                 : Lang.Get("complexnutrition:tooltip-header-serving");
 
         /// <summary>

@@ -23,18 +23,16 @@ namespace ComplexNutrition.Core
         /// <summary>Fullness of what <see cref="Totals"/> covers (a serving, or the pie), before spoilage; 0 while digestion is off.</summary>
         public float Fullness;
 
-        /// <summary>
-        /// True when this result has been scaled to a partly eaten serving (a bowl under 1 serving left), by <see cref="LeftOfServing"/>.
-        /// </summary>
-        public bool PartServing;
+        /// <summary>True when this result has been scaled from one serving to all the servings held, by <see cref="AllServings"/>.</summary>
+        public bool Scaled;
 
         /// <summary>
-        /// For the tooltip (v0.3.6): a bowl or pot with less than one serving left shows what is left, not a full serving.
-        /// Returns a scaled copy; eating keeps using the per-serving amounts.
+        /// For the tooltip (v0.3.6): a bowl, pot or crock shows everything it holds, so 10 servings show ten times a serving and a
+        /// partly eaten bowl shows what is left. Returns a scaled copy; eating keeps using the per-serving amounts.
         /// </summary>
-        public MealNutritionResult LeftOfServing()
+        public MealNutritionResult AllServings()
         {
-            if (IsPie || Servings <= 0f || Servings >= 0.999f) return this;
+            if (IsPie || Servings <= 0f || Math.Abs(Servings - 1f) < 0.001f) return this;
             float k = Servings;
             var copy = (MealNutritionResult)MemberwiseClone();
             copy.Totals = new Dictionary<string, float>();
@@ -42,7 +40,7 @@ namespace ComplexNutrition.Core
             copy.KcalByCategory = new Dictionary<string, float>();
             foreach (var kv in KcalByCategory) copy.KcalByCategory[kv.Key] = kv.Value * k;
             copy.Fullness = Fullness * k;
-            copy.PartServing = true;
+            copy.Scaled = true;
             return copy;
         }
     }
