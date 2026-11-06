@@ -520,7 +520,7 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>Burns calories as vanilla burns satiety, so activity, cold and the hunger-rate stat all count.</summary>
-        internal void BurnSatiety(IServerPlayer player, float satiety) => BurnCalories(player, satiety * Digest.KcalPerSatiety);
+        internal void BurnSatiety(IServerPlayer player, float satiety) => BurnCalories(player, satiety * Digest.KcalPerSatiety * Digest.ActivityBurnMultiplier);
 
         internal void BurnCalories(IServerPlayer player, float kcal)
         {

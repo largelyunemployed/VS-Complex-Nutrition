@@ -48,6 +48,19 @@ A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ..
 - Vitamins and minerals follow the amounts or percentages display setting, like everything else: real amounts by default ("Ca 1,775mg"), or % of a day's need (with the grey key) when percentages are on.
 - Carbs in the tooltip are the carbs that go into your gut, not counting fiber, which has its own figure.
 
+### 0.3.6j: balance and matching text
+
+- Cooked grain and dough give their full value. Raw grain still gives 60% and dough 80% when eaten as they are, but in a cooked dish (porridge, stew) or a baked pie they count in full, before the cooking multipliers. Bread was already at 100%. Set in `rawIngredientFactors` in `cooking.json`.
+- Every activity burns 5% fewer calories (`activityBurnMultiplier` 0.95 in `digestion.json`), so standing still burns about 665kcal a day and moving all day about 2,660kcal. Healing costs are unchanged.
+- The same thing is now worded the same way everywhere:
+  - The Overview, Digestion tab and Stats panel all say "Fiber is boosting digestion by ... an hour", and show the same grey line when fiber isn't boosting anything.
+  - Each food tooltip ends its first line with "· fills N of M", whether it is the full tooltip, the short one or an undiscovered food.
+  - Tooltip headers: "Nutrition per Portion", "Nutrition per Litre", and "Total Nutrition (N of 4 slices)" for pies, like pots and bowls.
+  - The grey line under each Digestion bar reads "Empty in about N hours", for fullness and for each macro.
+  - Every nutrient hover says "Best sources you've discovered", like the hint above it.
+  - Fiber's Stats panel line reads "Nothing left to digest." like the macros.
+  - History hovers read "Ate: ..." like "Gained: ..." and "Burned: ...".
+
 ### 0.3.6i: window pages
 
 - Overview: "Calorie Reserve" replaces "Calories", and fullness loses its arrow (it only ever goes down); hover the fullness for how fast it empties. The four macro bars become one Last 24 Hours table (digested, limit, calories given, and a total), with the calories in red and a hover as before. "Fiber is adding ... an hour", with its per-macro hover. Running Low is a row of chips with days left; hover one for what it does and the best sources you have discovered.

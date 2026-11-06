@@ -100,6 +100,8 @@ namespace ComplexNutrition.Core
                 {
                     portions = ingredient.StackSize;
                 }
+                // Raw grain and dough carry a gameplay cut that cooking undoes (v0.3.6j).
+                if (result.Cooked) portions *= core.Cooking.CookedRestore(ingredient.Collectible.Code);
 
                 foreach (var n in core.Nutrients.All)
                 {

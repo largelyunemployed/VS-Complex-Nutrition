@@ -88,16 +88,20 @@ namespace ComplexNutrition.Modules.FoodData
             string fill = digest != null && fullness > 0f ? (Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0")) : null;
             if (brief)
             {
-                sb.AppendLine(header + " " + Lang.Get("complexnutrition:tooltip-short", "???", fill == null ? "" : Lang.Get("complexnutrition:tooltip-short-fills", fill)));
+                sb.AppendLine(header + " " + Lang.Get("complexnutrition:tooltip-short", "???", fill == null ? "" : " · " + FillsText(fill)));
                 sb.AppendLine(Lang.Get("complexnutrition:tooltip-undiscovered-hint"));
                 return sb.ToString();
             }
             sb.AppendLine(header);
-            sb.AppendLine(Lang.Get("complexnutrition:tooltip-undiscovered"));
-            if (fill != null) sb.AppendLine(Lang.Get("complexnutrition:tooltip-fullness", fill, Math.Round(digest.FullnessMax)));
+            sb.AppendLine("???" + (fill == null ? "" : " · " + FillsText(fill)));
             sb.AppendLine(Lang.Get("complexnutrition:tooltip-undiscovered-hint"));
             return sb.ToString();
         }
+
+        /// <summary>"fills N of M" (or "fills N" with no fullness limit), worded the same on every food tooltip (v0.3.6j).</summary>
+        private static string FillsText(string fill) => Digestion.NoFullnessLimit || Digestion.Settings == null
+            ? Lang.Get("complexnutrition:tooltip-fills-nolimit", fill)
+            : Lang.Get("complexnutrition:tooltip-fills", fill, Math.Round(Digestion.Settings.FullnessMax));
 
         /// <summary>
         /// The block: a header, the macros, the richest vitamins and minerals, fullness and a footer. With <paramref name="brief"/>
@@ -122,7 +126,7 @@ namespace ComplexNutrition.Modules.FoodData
             if (brief)
             {
                 string fills = digest != null && fullness > 0f
-                    ? Lang.Get("complexnutrition:tooltip-short-fills", Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0"))
+                    ? " · " + FillsText(Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0"))
                     : "";
                 sb.Clear();
                 sb.AppendLine();
@@ -139,9 +143,7 @@ namespace ComplexNutrition.Modules.FoodData
             if (digest != null && fullness > 0f)
             {
                 string fill = Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0");
-                first += " · " + (Digestion.NoFullnessLimit
-                    ? Lang.Get("complexnutrition:tooltip-fills-nolimit", fill)
-                    : Lang.Get("complexnutrition:tooltip-fills", fill, Math.Round(digest.FullnessMax)));
+                first += " · " + FillsText(fill);
             }
             sb.AppendLine(UnitColors.Paint(first));
 

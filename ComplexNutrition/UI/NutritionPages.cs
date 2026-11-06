@@ -248,10 +248,7 @@ namespace ComplexNutrition.UI
                 table.Tips.Add(new[] { null, null, null, StatsHover.Text(L("window-total-tip", Kcal(d, total))) });
                 blocks.Add(table);
                 if (!DigestionPool.DiminishingReturns) blocks.Add(new TextBlock(StatsHover.Text(L("window-macros-note-off")), true));
-                float boost = Digestion.FiberKcalPerHour(d.Digest, d.State, d.Nutrients);
-                blocks.Add(new TextBlock(boost < 0.05f
-                    ? StatsHover.Text(L("fiber-boost-none"))
-                    : StatsHover.Vtml("complexnutrition:window-fiber-adding", StatsHover.Paint(Kcal(d, boost), UnitColors.Rate)), true, FiberBoostTip(d)));
+                blocks.Add(new TextBlock(FiberBoost(d), true, FiberBoostTip(d)));
             }
 
             // Every slow nutrient running low, as chips with their best foods in the hover (v0.3.6i).
@@ -405,10 +402,7 @@ namespace ComplexNutrition.UI
                 }
                 else fbar.Tip = StatsHover.Text(L("fiber-gut-empty"));
                 blocks.Add(fbar);
-                float boost = Digestion.FiberKcalPerHour(s, d.State, d.Nutrients);
-                blocks.Add(new TextBlock(boost < 0.05f
-                    ? Grey(L("fiber-boost-none"))
-                    : StatsHover.Vtml("complexnutrition:window-fiber-boosting", StatsHover.Paint(Kcal(d, boost), UnitColors.Rate)), true, FiberBoostTip(d)));
+                blocks.Add(new TextBlock(FiberBoost(d), true, FiberBoostTip(d)));
             }
             return blocks;
         }

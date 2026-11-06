@@ -1,5 +1,5 @@
 {
-	"_comment": "Cooked dishes (soups, stews and porridges from a cooking pot, served in a bowl, pot or crock) add up their ingredients' nutrients per serving and then apply cookedMultipliers. Pies add up their contents and apply cookedMultipliers times their bake-state factor; raw pies get no cooking multipliers. Crocks with no recipe (pickles, for example) are summed as they are.",
+	"_comment": "Cooked dishes (soups, stews and porridges from a cooking pot, served in a bowl, pot or crock) add up their ingredients' nutrients per serving and then apply cookedMultipliers. Pies add up their contents and apply cookedMultipliers times their bake-state factor; raw pies get no cooking multipliers. Crocks with no recipe (pickles, for example) are summed as they are. rawIngredientFactors (since v0.3.6j) lists the gameplay factor an ingredient's raw profile carries (raw grain 60%, dough 80%); in a cooked dish or baked pie that ingredient is brought back to its full value before cookedMultipliers apply.",
 	"cookedMultipliers": {
 		"calories": 1.2,
 		"protein": 1.1,
@@ -15,6 +15,10 @@
 		"calcium": 1.0,
 		"iron": 1.0,
 		"potassium": 0.9
+	},
+	"rawIngredientFactors": {
+		"game:grain-*": 0.6,
+		"game:dough-*": 0.8
 	},
 	"pieStateFactors": {
 		"raw": 1.0,

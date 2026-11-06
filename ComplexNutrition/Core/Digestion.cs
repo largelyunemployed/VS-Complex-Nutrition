@@ -186,6 +186,12 @@ namespace ComplexNutrition.Core
         /// <summary>Calories per point of vanilla satiety: vanilla's satiety burn costs this many kcal, and switching tracking off turns the reserve back into satiety at this rate.</summary>
         [JsonProperty("kcalPerSatiety")] public float KcalPerSatiety = 1f;
 
+        /// <summary>
+        /// Multiplier on the calories every activity burns (vanilla's satiety burn), since v0.3.6j: 0.95 cuts it by 5% to help players
+        /// until metabolic adaptation is modelled. Healing costs are not affected.
+        /// </summary>
+        [JsonProperty("activityBurnMultiplier")] public float ActivityBurnMultiplier = 0.95f;
+
         /// <summary>Damage dealt every <see cref="StarvationSeconds"/> while the calorie reserve is empty (vanilla: 0.125 HP every 6 s).</summary>
         [JsonProperty("starvationDamage")] public float StarvationDamage = 0.125f;
 
