@@ -48,6 +48,12 @@ A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ..
 - Vitamins and minerals follow the amounts or percentages display setting, like everything else: real amounts by default ("Ca 1,775mg"), or % of a day's need (with the grey key) when percentages are on.
 - Carbs in the tooltip are the carbs that go into your gut, not counting fiber, which has its own figure.
 
+### 0.3.6i: window pages
+
+- Overview: "Calorie Reserve" replaces "Calories", and fullness loses its arrow (it only ever goes down); hover the fullness for how fast it empties. The four macro bars become one Last 24 Hours table (digested, limit, calories given, and a total), with the calories in red and a hover as before. "Fiber is adding ... an hour", with its per-macro hover. Running Low is a row of chips with days left; hover one for what it does and the best sources you have discovered.
+- Digestion: each macro has one bar, in its own colour (carbs blue, fats orange, protein green, fiber amber), showing grams turning into calories, and one grey line with the time left and the rate. The diminishing-returns totals move into the bar's hover. "Fiber is boosting digestion by ... an hour", with its per-macro hover. Fullness has no arrow.
+- Vitamins and Minerals: one row each, so each tab fits on one screen; hover a row for what it does and the best sources you have discovered.
+
 ## v0.3.5
 
 - History charts answer when you hover them. Hover a day on the Calories Gained and Burned chart to see what digestion added to your reserve and what you burned that day. On the Calories by Food Type chart, a day shows what you ate in all and each food type with its share.
