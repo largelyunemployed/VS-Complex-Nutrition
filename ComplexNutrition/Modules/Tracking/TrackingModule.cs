@@ -251,6 +251,7 @@ namespace ComplexNutrition.Modules.Tracking
                     if (old != 0f) Core.PublishReserveChanged(player, def.Code, old, 0f);
                 }
                 state.SetAbsorbedLog(kv.Key, new float[24]);
+                state.SetAbsorbedLog(Digestion.KcalLogKey(kv.Key), new float[24]);
             }
             var fiber = Core.Nutrients.Get(NutrientCodes.Fiber);
             if (fiber != null)
@@ -261,6 +262,8 @@ namespace ComplexNutrition.Modules.Tracking
             }
             state.FiberGut = 0f;
             state.SetGutHours(NutrientCodes.Fiber, 0f);
+            state.SetAbsorbedLog(NutrientCodes.Fiber, new float[24]);
+            state.SetAbsorbedLog(Digestion.KcalLogKey(NutrientCodes.Fiber), new float[24]);
             state.Protein24 = 0f;
             state.ClearSitting();
             state.MarkDirty();
@@ -431,6 +434,14 @@ namespace ComplexNutrition.Modules.Tracking
         /// <summary>Speed of digestion from the fibre reserve: 1 at an empty reserve, 1 + the pool's bonus at the full-bonus line or above.</summary>
         public float FiberSpeed(NutritionState state, DigestionPool pool) => Digestion.FiberSpeed(Digest, state, pool);
 
+        /// <summary>Clears the hours of a 24-hour log that passed since <paramref name="lastHour"/>, ready for <paramref name="hour"/>.</summary>
+        private static float[] Roll(float[] log, long hour, long lastHour)
+        {
+            if (lastHour == long.MinValue || hour - lastHour >= 24 || hour < lastHour) Array.Clear(log, 0, 24);
+            else for (long h = lastHour + 1; h <= hour; h++) log[(int)(h % 24)] = 0f;
+            return log;
+        }
+
         /// <summary>
         /// One digestion step: each gut batch is absorbed at its own rate (faster with fibre), absorbed grams
         /// become calories after diminishing returns over each pool's rolling window, and the pools' bars,
@@ -446,15 +457,9 @@ namespace ComplexNutrition.Modules.Tracking
             {
                 string code = kv.Key;
                 var pool = kv.Value;
-                var log = state.GetAbsorbedLog(code);
-                if (lastHour == long.MinValue || hour - lastHour >= 24 || hour < lastHour)
-                {
-                    Array.Clear(log, 0, 24);
-                }
-                else
-                {
-                    for (long h = lastHour + 1; h <= hour; h++) log[(int)(h % 24)] = 0f;
-                }
+                var log = Roll(state.GetAbsorbedLog(code), hour, lastHour);
+                // The calories each hour's absorption gave after diminishing returns (v0.3.6, for the Overview's 24-hour readouts).
+                var kcalLog = Roll(state.GetAbsorbedLog(Digestion.KcalLogKey(code)), hour, lastHour);
 
                 // The pool absorbs as a whole, faster the more it holds, up to its fastest rate.
                 var def = Core.Nutrients.Get(code);
@@ -474,10 +479,13 @@ namespace ComplexNutrition.Modules.Tracking
                     float window = 0f;
                     int span = Math.Clamp(pool.WindowHours, 1, 24);
                     for (int k = 0; k < span; k++) window += log[(int)(((hour - k) % 24 + 24) % 24)];
-                    kcal += pool.Effective(window, absorbed) * pool.KcalPerGram;
+                    float got = pool.Effective(window, absorbed) * pool.KcalPerGram;
+                    kcal += got;
                     log[(int)(hour % 24)] += absorbed;
+                    kcalLog[(int)(hour % 24)] += got;
                 }
                 state.SetAbsorbedLog(code, log);
+                state.SetAbsorbedLog(Digestion.KcalLogKey(code), kcalLog);
                 if (code == NutrientCodes.Protein)
                 {
                     float total = 0f;
@@ -485,8 +493,19 @@ namespace ComplexNutrition.Modules.Tracking
                     state.Protein24 = Math.Min(total, Digest.ProteinMaxGrams);   // the bar's top
                 }
             }
+            // Fiber's own 24-hour logs (v0.3.6): grams digested and the calories they gave.
+            var fiberLog = Roll(state.GetAbsorbedLog(NutrientCodes.Fiber), hour, lastHour);
+            var fiberKcalLog = Roll(state.GetAbsorbedLog(Digestion.KcalLogKey(NutrientCodes.Fiber)), hour, lastHour);
+            float fiberKcal = DigestFiber(state, hours);
+            if (fiberKcal > 0f)
+            {
+                fiberKcalLog[(int)(hour % 24)] += fiberKcal;
+                fiberLog[(int)(hour % 24)] += fiberKcal / Math.Max(0.01f, Digest.FiberKcalPerGram);
+            }
+            state.SetAbsorbedLog(NutrientCodes.Fiber, fiberLog);
+            state.SetAbsorbedLog(Digestion.KcalLogKey(NutrientCodes.Fiber), fiberKcalLog);
+            kcal += fiberKcal;
             state.AbsorbedHour = hour;
-            kcal += DigestFiber(state, hours);
 
             var cal = Core.Nutrients.Get(NutrientCodes.Calories);
             if (cal != null && kcal > 0f)
@@ -501,7 +520,7 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>Burns calories as vanilla burns satiety, so activity, cold and the hunger-rate stat all count.</summary>
-        internal void BurnSatiety(IServerPlayer player, float satiety) => BurnCalories(player, satiety * Digest.KcalPerSatiety);
+        internal void BurnSatiety(IServerPlayer player, float satiety) => BurnCalories(player, satiety * Digest.KcalPerSatiety * Digest.ActivityBurnMultiplier);
 
         internal void BurnCalories(IServerPlayer player, float kcal)
         {

@@ -1,5 +1,84 @@
 # Changelog
 
+## v0.3.6
+
+A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ...), and each change is listed under the build it arrived in.
+
+### 0.3.6a: Overview
+
+- The calorie reserve bar has a trend arrow. Hover it for the calories still to come from your gut, how many are lost to diminishing returns, and the calories you burned in the last hour, day and week, which used to sit under the bars.
+- Fullness has a trend arrow too. Its hover says fullness goes down by 100 every hour and that you cannot eat while too full.
+- Carbs, fats, protein and fiber all show the last 24 hours: carbs out of 600g (their 300g in 12 hours, scaled to the day), fats out of 70g, protein out of the 64g you need, and fiber out of the 30g a day your gut digests. This only changes what you see.
+- Each of those bars gives the calories it digested in the last 24 hours in brackets, with a hover that says so. With diminishing returns on, the number turns red once they start taking calories from that macro, and the hover says how many were lost, with a tip to space out your meals.
+- Hovering the fiber speed-up line lists the extra calories an hour it adds to carbs, fats and protein.
+- The Your Diet section is gone, since it repeated Running Low. Running Low now lists everything that is low, not only three, and leaves out calories, which have their own bar and warning.
+- The server keeps a 24-hour log of the calories each macro gave (and of fiber digested), so the new readouts start filling from this version on.
+
+### 0.3.6b: Digestion and History tabs
+
+- The Digestion tab is laid out like the Vitamins and Minerals tabs: Fullness, Carbs, Fats, Protein and Fiber each have their own heading (the Stomach and In Your Gut headings are gone), and every bar has a trend arrow. Fiber's speed-up is given as the extra calories an hour it adds to carbs, fats and protein instead of percentages.
+- History: the "The last 7 days" heading and the line on what digestion added are gone. The summary now reads "You gained ... and burned ... a day on average", matching the chart's Gained and Burned.
+
+### 0.3.6c: partly eaten bowls
+
+- A bowl with less than one serving left showed a full serving's nutrition in its tooltip. It now shows what is left. Eating was already counted correctly.
+
+### 0.3.6d: whole pots
+
+- A pot or crock of several servings shows everything it holds instead of one serving.
+
+### 0.3.6e: tooltip headers
+
+- Bowls, pots and crocks head their tooltip "Total Nutrition (10 servings):", or "Total Nutrition (1 serving):" for a single serving, in place of "Nutrition per serving", "Nutrition for what is left" and "Nutrition for all of it". The /cnutrition meal command shows the same totals.
+
+### 0.3.6f: food tooltip layout
+
+- The long food tooltip (hold Ctrl) shows every nutrient in four short lines instead of only the top three vitamins and minerals: calories and how much it fills you, then "Carb · Fat · Prot · Fib" in grams, then "Vit A · B · C · D · E · K" and "Ca · Fe · K" as % of a day's need, with a grey key for the mineral symbols. Foods like flax no longer hide their calcium.
+- With Max fullness set to no limit, the tooltip says "fills 75" instead of "fills 75 of 1500".
+
+### 0.3.6g: shorter tooltip
+
+- The grey key under the vitamins and minerals is just "% of a day's need", without the mineral names.
+- Bowls, pots and pies no longer say "Sum of its ingredients, with cooking applied". The warning about ingredients without data stays.
+
+### 0.3.6h: tooltip fixes
+
+- Bowls, pots, crocks and pies no longer end their tooltip with vanilla's "Nutrition Facts" block, which only repeated the fullness. It still shows when tracking is off, and when looking at a placed pot.
+- Item tooltips can grow wider (up to 600 instead of 415), so each nutrient line fits on one line. Shorter tooltips still shrink to fit.
+- Vitamins and minerals follow the amounts or percentages display setting, like everything else: real amounts by default ("Ca 1,775mg"), or % of a day's need (with the grey key) when percentages are on.
+- Carbs in the tooltip are the carbs that go into your gut, not counting fiber, which has its own figure.
+
+### 0.3.6l: fiber like the other macros
+
+- Fixed: the Stats panel showed "complexnutrition:stats-gut-carbohydrate" and "...-fat" in place of Carbs and Fats (0.3.6j removed two strings it still used). A test now checks them.
+- Fiber is shown exactly like carbs, fats and protein. On the Digestion tab its bar shows the fiber digesting in your gut (grams turning into calories, up to 60g) with the same grey line under it, built by the same code as the others. On the Stats panel its bar shows its gut too. Its reserve moves into the hover: "Fiber stored: ...".
+- Each macro's hover on the Digestion tab is laid out like the vitamins' and minerals': what it does (carbs are fast energy, fats slow energy, protein builds and maintains muscle, fiber keeps digestion moving), then "Digesting: 94g of 500g.", the diminishing-returns limit, and the best sources you've discovered. How much you digested lately is left to the History tab. The Digestion tab gets the same hover hint at the top, and the Overview's macro names give the same hover.
+- Fiber's boost hover reads "Fiber is helping you absorb an extra:", and its grey tip "Tip: You'll get the full boost when fiber reserves are above 21g."
+
+### 0.3.6k: cooked meat and macro colours
+
+- Cooking also brings raw meat, fish and eggs back to their full value (they give 80% raw), and raw or soaked cassava too (30% and 80% raw). So a stew counts its meat in full. Cider and other fermented drinks keep their 90%, since that isn't a raw cut.
+- The Stats panel's carbs, fats, protein and fiber bars use the same colours as the nutrition window (carbs blue, fats orange, protein green, fiber amber).
+
+### 0.3.6j: balance and matching text
+
+- Cooked grain and dough give their full value. Raw grain still gives 60% and dough 80% when eaten as they are, but in a cooked dish (porridge, stew) or a baked pie they count in full, before the cooking multipliers. Bread was already at 100%. Set in `rawIngredientFactors` in `cooking.json`.
+- Every activity burns 5% fewer calories (`activityBurnMultiplier` 0.95 in `digestion.json`), so standing still burns about 665kcal a day and moving all day about 2,660kcal. Healing costs are unchanged.
+- The same thing is now worded the same way everywhere:
+  - The Overview, Digestion tab and Stats panel all say "Fiber is boosting digestion by ... an hour", and show the same grey line when fiber isn't boosting anything.
+  - Each food tooltip ends its first line with "· fills N of M", whether it is the full tooltip, the short one or an undiscovered food.
+  - Tooltip headers: "Nutrition per Portion", "Nutrition per Litre", and "Total Nutrition (N of 4 slices)" for pies, like pots and bowls.
+  - The grey line under each Digestion bar reads "Empty in about N hours", for fullness and for each macro.
+  - Every nutrient hover says "Best sources you've discovered", like the hint above it.
+  - Fiber's Stats panel line reads "Nothing left to digest." like the macros.
+  - History hovers read "Ate: ..." like "Gained: ..." and "Burned: ...".
+
+### 0.3.6i: window pages
+
+- Overview: "Calorie Reserve" replaces "Calories", and fullness loses its arrow (it only ever goes down); hover the fullness for how fast it empties. The four macro bars become one Last 24 Hours table (digested, limit, calories given, and a total), with the calories in red and a hover as before. "Fiber is adding ... an hour", with its per-macro hover. Running Low is a row of chips with days left; hover one for what it does and the best sources you have discovered.
+- Digestion: each macro has one bar, in its own colour (carbs blue, fats orange, protein green, fiber amber), showing grams turning into calories, and one grey line with the time left and the rate. The diminishing-returns totals move into the bar's hover. "Fiber is boosting digestion by ... an hour", with its per-macro hover. Fullness has no arrow.
+- Vitamins and Minerals: one row each, so each tab fits on one screen; hover a row for what it does and the best sources you have discovered.
+
 ## v0.3.5
 
 - History charts answer when you hover them. Hover a day on the Calories Gained and Burned chart to see what digestion added to your reserve and what you burned that day. On the Calories by Food Type chart, a day shows what you ate in all and each food type with its share.

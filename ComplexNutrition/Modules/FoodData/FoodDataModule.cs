@@ -50,6 +50,7 @@ namespace ComplexNutrition.Modules.FoodData
                 }
                 api.Logger.Notification("[complexnutrition] Nutrient info added to {0} foods and meal containers.", patched.Count);
                 PieTooltipPatch.Apply(core);
+                NutritionFactsPatch.Apply(core);
                 TooltipCtrlPatch.Apply((Vintagestory.API.Client.ICoreClientAPI)api, core);
             }
 
@@ -71,6 +72,7 @@ namespace ComplexNutrition.Modules.FoodData
             if (api.Side == EnumAppSide.Client)
             {
                 PieTooltipPatch.Remove();
+                NutritionFactsPatch.Remove();
                 TooltipCtrlPatch.Remove();
             }
             IsEnabled = false;
@@ -143,7 +145,7 @@ namespace ComplexNutrition.Modules.FoodData
                 container.SetContents("meatystew", dish, stacks.ToArray(), servings);
             }
 
-            var meal = MealNutrition.Compute(core, sapi.World, dish);
+            var meal = MealNutrition.Compute(core, sapi.World, dish)?.AllServings();
             if (meal == null) return TextCommandResult.Error("Could not work out that dish.");
             return TextCommandResult.Success($"{containerCode} with {ingredientList}:" + CollectibleBehaviorNutrientInfo.BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, false));
         }

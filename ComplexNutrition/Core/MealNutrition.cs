@@ -22,6 +22,27 @@ namespace ComplexNutrition.Core
 
         /// <summary>Fullness of what <see cref="Totals"/> covers (a serving, or the pie), before spoilage; 0 while digestion is off.</summary>
         public float Fullness;
+
+        /// <summary>True when this result has been scaled from one serving to all the servings held, by <see cref="AllServings"/>.</summary>
+        public bool Scaled;
+
+        /// <summary>
+        /// For the tooltip (v0.3.6): a bowl, pot or crock shows everything it holds, so 10 servings show ten times a serving and a
+        /// partly eaten bowl shows what is left. Returns a scaled copy; eating keeps using the per-serving amounts.
+        /// </summary>
+        public MealNutritionResult AllServings()
+        {
+            if (IsPie || Servings <= 0f || Math.Abs(Servings - 1f) < 0.001f) return this;
+            float k = Servings;
+            var copy = (MealNutritionResult)MemberwiseClone();
+            copy.Totals = new Dictionary<string, float>();
+            foreach (var kv in Totals) copy.Totals[kv.Key] = kv.Value * k;
+            copy.KcalByCategory = new Dictionary<string, float>();
+            foreach (var kv in KcalByCategory) copy.KcalByCategory[kv.Key] = kv.Value * k;
+            copy.Fullness = Fullness * k;
+            copy.Scaled = true;
+            return copy;
+        }
     }
 
     /// <summary>
@@ -79,6 +100,8 @@ namespace ComplexNutrition.Core
                 {
                     portions = ingredient.StackSize;
                 }
+                // Raw grain and dough carry a gameplay cut that cooking undoes (v0.3.6j).
+                if (result.Cooked) portions *= core.Cooking.CookedRestore(ingredient.Collectible.Code);
 
                 foreach (var n in core.Nutrients.All)
                 {

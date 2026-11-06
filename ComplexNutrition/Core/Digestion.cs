@@ -186,6 +186,12 @@ namespace ComplexNutrition.Core
         /// <summary>Calories per point of vanilla satiety: vanilla's satiety burn costs this many kcal, and switching tracking off turns the reserve back into satiety at this rate.</summary>
         [JsonProperty("kcalPerSatiety")] public float KcalPerSatiety = 1f;
 
+        /// <summary>
+        /// Multiplier on the calories every activity burns (vanilla's satiety burn), since v0.3.6j: 0.95 cuts it by 5% to help players
+        /// until metabolic adaptation is modelled. Healing costs are not affected.
+        /// </summary>
+        [JsonProperty("activityBurnMultiplier")] public float ActivityBurnMultiplier = 0.95f;
+
         /// <summary>Damage dealt every <see cref="StarvationSeconds"/> while the calorie reserve is empty (vanilla: 0.125 HP every 6 s).</summary>
         [JsonProperty("starvationDamage")] public float StarvationDamage = 0.125f;
 
@@ -417,6 +423,45 @@ namespace ComplexNutrition.Core
                 lost += Math.Max(0f, full - got);
             }
             return (coming, lost);
+        }
+
+        /// <summary>The absorbed-log key for a pool's calories (after diminishing returns, since v0.3.6), beside its grams.</summary>
+        public static string KcalLogKey(string code) => code + "-kcal";
+
+        /// <summary>The sum of a 24-hour absorbed log (grams, or calories for a "-kcal" key); 0 when nothing was logged yet.</summary>
+        public static float Last24(NutritionState state, string key)
+        {
+            if (state == null || state.AbsorbedHour == long.MinValue) return 0f;
+            float sum = 0f;
+            foreach (var v in state.GetAbsorbedLog(key)) sum += v;
+            return sum;
+        }
+
+        /// <summary>
+        /// The extra calories per in-game hour fiber's speed-up adds to each gut pool right now (v0.3.6, for the breakdown in the
+        /// hover of <see cref="FiberKcalPerHour"/>'s line), by pool code.
+        /// </summary>
+        public static Dictionary<string, float> FiberKcalPerHourByPool(DigestionSettings s, NutritionState state, NutrientRegistry nutrients)
+        {
+            var result = new Dictionary<string, float>();
+            if (s == null || state == null || nutrients == null) return result;
+            foreach (var kv in s.Pools)
+            {
+                var def = nutrients.Get(kv.Key);
+                var pool = kv.Value;
+                if (def == null) continue;
+                float grams = def.FromPercent(state.GetReserve(def.Code));
+                float extra = 0f;
+                if (grams > DigestionPool.EmptyGrams)
+                {
+                    float window = WindowGrams(state, kv.Key, pool);
+                    float fast = pool.Effective(window, pool.Rate(grams, FiberSpeed(s, state, pool)));
+                    float plain = pool.Effective(window, pool.Rate(grams, 1f));
+                    extra = Math.Max(0f, fast - plain) * pool.KcalPerGram;
+                }
+                result[kv.Key] = extra;
+            }
+            return result;
         }
 
         public static float WindowGrams(NutritionState state, string code, DigestionPool pool)

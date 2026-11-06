@@ -70,6 +70,11 @@ static class P
         var logC = new float[24]; var logF = new float[24]; var logP = new float[24];
         for (int i = 0; i < 8; i++) { logC[i] = 21; logF[i] = 3; logP[i] = 5; }
         st.SetAbsorbedLog("carbohydrate", logC); st.SetAbsorbedLog("fat", logF); st.SetAbsorbedLog("protein", logP);
+        // v0.3.6 kcal logs: fats past their limit lose some to diminishing returns, so the preview shows the red readout.
+        var kC = new float[24]; var kF = new float[24]; var kP = new float[24]; var gFi = new float[24]; var kFi = new float[24];
+        for (int i = 0; i < 8; i++) { kC[i] = 84; kF[i] = 22; kP[i] = 20; gFi[i] = 1.2f; kFi[i] = 2.4f; }
+        st.SetAbsorbedLog("carbohydrate-kcal", kC); st.SetAbsorbedLog("fat-kcal", kF); st.SetAbsorbedLog("protein-kcal", kP);
+        st.SetAbsorbedLog("fiber", gFi); st.SetAbsorbedLog("fiber-kcal", kFi);
         st.AbsorbedHour = 7;
 
         var known = new List<KnownFood>();
@@ -136,6 +141,40 @@ static class P
             }
             page.WriteToPng(System.IO.Path.Combine(outDir, "window-history-tips.png"));
             Console.WriteLine("hotspots: " + spots.Count);
+        }
+        // Trend arrow hovers on the Overview (v0.3.6): the calories and fullness arrows' tooltips.
+        {
+            var spots = new List<Hotspot>();
+            using var page = PageRenderer.Render(capi, NutritionPages.Overview(data), GuiDialogNutrition.ContentWidth - 4, spots);
+            using var ctx = new Context(page);
+            double y = 0;
+            foreach (var sp in spots.Take(2))
+            {
+                using var tip = PageRenderer.RenderTip(capi, sp.Vtml, GuiElementNutritionPage.TipWidth);
+                ctx.SetSourceSurface(tip, (int)(sp.X + sp.W + S(6)), (int)Math.Max(y, sp.Y + sp.H)); ctx.Paint();
+                y = sp.Y + sp.H + tip.Height + S(4);
+            }
+            page.WriteToPng(System.IO.Path.Combine(outDir, "window-overview-tips.png"));
+            // The macro readouts' and fiber line's hovers (v0.3.6), stacked on their own.
+            var tips = spots.Skip(2).Select(sp => PageRenderer.RenderTip(capi, sp.Vtml, GuiElementNutritionPage.TipWidth)).ToList();
+            using (var all = new ImageSurface(Format.Argb32, (int)tips.Max(t => t.Width) + 8, (int)tips.Sum(t => t.Height + 8)))
+            using (var actx = new Context(all))
+            {
+                double ty = 0;
+                foreach (var t in tips) { actx.SetSourceSurface(t, 4, (int)ty); actx.Paint(); ty += t.Height + 8; t.Dispose(); }
+                all.WriteToPng(System.IO.Path.Combine(outDir, "window-overview-macro-tips.png"));
+            }
+        }
+        // Every Digestion tab hover (v0.3.6l), stacked on their own.
+        {
+            var spots = new List<Hotspot>();
+            using var page = PageRenderer.Render(capi, NutritionPages.DigestionPage(data), GuiDialogNutrition.ContentWidth - 4, spots);
+            var tips = spots.Select(sp => PageRenderer.RenderTip(capi, sp.Vtml, GuiElementNutritionPage.TipWidth)).ToList();
+            using var all = new ImageSurface(Format.Argb32, (int)tips.Max(t => t.Width) + 8, (int)tips.Sum(t => t.Height + 8));
+            using var actx = new Context(all);
+            double ty = 0;
+            foreach (var t in tips) { actx.SetSourceSurface(t, 4, (int)ty); actx.Paint(); ty += t.Height + 8; t.Dispose(); }
+            all.WriteToPng(System.IO.Path.Combine(outDir, "window-digestion-tips.png"));
         }
         // The running-low icon in its three states, side by side.
         using (var icons = new ImageSurface(Format.Argb32, (int)S(3 * 40), (int)S(40)))

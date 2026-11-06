@@ -11,7 +11,7 @@
 Complex Nutrition expands Vintage Story's nutrition system. Every food gets real-world calories, macronutrients (fats, protein, carbohydrate, fiber), vitamins and minerals. Your body tracks reserves of each, and a balanced diet over in-game weeks earns buffs while a narrow one slowly costs you.
 
 **Target game version:** 1.22.7 (latest stable)
-**Status:** design stage, no playable release yet.
+**Status:** in development. Test builds (v0.3) are playable: nutrient tracking, digestion, the nutrition window and tooltips work, and diet effects come in v0.4.
 **VS Mod DB page:** [placeholder]
 
 **Designed by:** Largely Unemployed - https://www.youtube.com/@LargelyUnemployed
@@ -31,22 +31,22 @@ Complex Nutrition expands Vintage Story's nutrition system. Every food gets real
 It has only been tested on Vintage Story 1.22.7 so far. Other versions might work, or might not.
 
 - **Multiplayer:** install it on the server. Players need it too; the game normally offers to download a server's missing mods when you join, or they can install it the same way.
-- **Settings:** the first launch creates `VintagestoryData/ModConfig/complexnutrition.json`. Each module has a `true`/`false` switch under `Modules`, and `ShowTooltip` turns the nutrition lines in item tooltips on or off. Restart the game (or server) after editing it.
-- **Removing it:** v0.1 doesn't save anything into your world, so you can take it out of the Mods folder at any time and carry on as if nothing happened. Later versions will store your body's nutrient reserves, and the mod page will say so when that changes.
+- **Settings:** open the nutrition window (Left Alt + N) and press Settings for every toggle: modules, display choices and world settings (admins only). A new world's start options are also on the Complex Nutrition tab when you create it. The first launch also creates `VintagestoryData/ModConfig/complexnutrition.json`, which holds the same module switches.
+- **Removing it:** since v0.2 the mod stores your body's nutrient reserves in the world. Taking it out leaves that data unused and brings back the vanilla food bars. To be safe, switch Tracking off in the settings menu before removing it, which turns your calorie reserve back into vanilla satiety.
 - **Building it yourself:** see [docs/DEVELOPING.md](docs/DEVELOPING.md).
 
 ## Roadmap
 
 - **v0.1:** nutrient data for all vanilla foods, mod feasibility testing, VS Mod DB thumbnail, description, and roadmap drafts.
 - **v0.2:** nutrient tracking and an in-game handbook guide for all implemented systems (will expand with each update).
-- **v0.3:** nutrition UI
+- **v0.3:** nutrition UI: a nutrition window with Overview, Digestion, Vitamins, Minerals and History tabs, a settings menu, food tooltips showing every nutrient, and a calorie rebalance (finished in v0.3.6)
 - **v0.4:** diet tiers and effects
 - **v0.5:** health and effects UI
 - **v0.6:** hidden food allergies (optional, off by default)
 - **v0.7:** body composition
 - **v0.8:** exercise and fitness
 - **v0.9:** nutrient uptake modifiers
-- **v1.0:** settings menu
+- **v1.0:** graphical UI overhaul and the Complex Nutrition Guide
 - **After 1.0:** Who knows! (Suggestions welcome)
 
 ## Modular by design
@@ -58,13 +58,13 @@ Turning one module off never breaks the others, and with all modules off the gam
 | --- | --- | --- |
 | Food data | v0.1 | Real-world nutrient profiles for every vanilla food |
 | Tracking | v0.2 | Per-nutrient body reserves; replaces the vanilla category bars |
-| Nutrition UI | v0.3 | Nutrition window, tooltips and optional HUD indicator |
+| Nutrition UI | v0.3 | Nutrition window, settings menu, tooltips and optional HUD indicator |
 | Effects | v0.4 | Five diet tiers (Thriving to Malnourished) with buffs and debuffs |
 | Health UI | v0.5 | Shows your diet tier, active effects and what to eat next |
 | Allergies | v0.6 | Optional, off by default: 0 to 3 hidden food allergies per character, found by tasting; reactions hurt and slow you but never kill |
-| Settings menu | v1.0 | In-game sliders and toggles for every module |
-| Modifiers | v1.01 | Body temperature, injury and illness change nutrient uptake |
-| Exercise | v1.02 | Activity plus good diet gives slow, permanent fitness gains |
+| Body composition | v0.7 | A lean-to-heavy build driven by calorie surplus or deficit and activity |
+| Exercise | v0.8 | Activity plus good diet gives slow, permanent fitness gains |
+| Modifiers | v0.9 | Body temperature, injury and illness change nutrient uptake |
 
 ## Tracked nutrients (default set)
 

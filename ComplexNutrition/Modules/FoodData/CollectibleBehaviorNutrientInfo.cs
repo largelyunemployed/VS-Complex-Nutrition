@@ -10,7 +10,6 @@ namespace ComplexNutrition.Modules.FoodData
     /// <summary>Tooltip block showing a food's nutrients per portion, or a dish's per serving.</summary>
     public class CollectibleBehaviorNutrientInfo : CollectibleBehavior
     {
-        private const int TopMicronutrients = 3;
         private readonly ComplexNutritionModSystem core;
 
         public CollectibleBehaviorNutrientInfo(CollectibleObject collObj, ComplexNutritionModSystem core) : base(collObj)
@@ -25,7 +24,7 @@ namespace ComplexNutrition.Modules.FoodData
 
             if (MealNutrition.IsMealContainer(collObj))
             {
-                var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack);
+                var meal = MealNutrition.Compute(core, world, inSlot?.Itemstack)?.AllServings();
                 if (meal == null) return;
                 dsc.Append(core.CanSeeNutrients(world, inSlot?.Itemstack)
                     ? BuildMealTooltip(core.Nutrients, meal, core.ShowPercent, withDebugInfo, core.ShortTooltipNow(withDebugInfo))
@@ -63,11 +62,8 @@ namespace ComplexNutrition.Modules.FoodData
         {
             string header = MealHeader(meal);
 
-            string footer = Lang.Get(meal.Cooked ? "complexnutrition:tooltip-meal-cooked" : "complexnutrition:tooltip-meal-uncooked");
-            if (meal.UnknownIngredients > 0)
-            {
-                footer += "\n" + Lang.Get("complexnutrition:tooltip-meal-unknown", meal.UnknownIngredients);
-            }
+            // v0.3.6g: no "sum of its ingredients" line; only a warning when some ingredients have no data.
+            string footer = meal.UnknownIngredients > 0 ? Lang.Get("complexnutrition:tooltip-meal-unknown", meal.UnknownIngredients) : null;
             return BuildBlock(nutrients, header, code => meal.Totals.TryGetValue(code, out var v) ? v : 0f, percent, withDebugInfo, footer, meal.Fullness, brief);
         }
 
@@ -77,7 +73,8 @@ namespace ComplexNutrition.Modules.FoodData
 
         private static string MealHeader(MealNutritionResult meal) => meal.IsPie
             ? Lang.Get("complexnutrition:tooltip-header-pie", meal.PieSlices)
-            : Lang.Get("complexnutrition:tooltip-header-serving");
+            : Lang.Get(Math.Abs(meal.Servings - 1f) < 0.001f ? "complexnutrition:tooltip-header-serving" : "complexnutrition:tooltip-header-servings",
+                Fmt.Number(meal.Servings <= 0f ? 1f : meal.Servings));
 
         /// <summary>
         /// Discover Nutrition (v0.3.4): the block for a food the player hasn't eaten yet. Its nutrients are "???", but how filling
@@ -91,16 +88,20 @@ namespace ComplexNutrition.Modules.FoodData
             string fill = digest != null && fullness > 0f ? (Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0")) : null;
             if (brief)
             {
-                sb.AppendLine(header + " " + Lang.Get("complexnutrition:tooltip-short", "???", fill == null ? "" : Lang.Get("complexnutrition:tooltip-short-fills", fill)));
+                sb.AppendLine(header + " " + Lang.Get("complexnutrition:tooltip-short", "???", fill == null ? "" : " · " + FillsText(fill)));
                 sb.AppendLine(Lang.Get("complexnutrition:tooltip-undiscovered-hint"));
                 return sb.ToString();
             }
             sb.AppendLine(header);
-            sb.AppendLine(Lang.Get("complexnutrition:tooltip-undiscovered"));
-            if (fill != null) sb.AppendLine(Lang.Get("complexnutrition:tooltip-fullness", fill, Math.Round(digest.FullnessMax)));
+            sb.AppendLine("???" + (fill == null ? "" : " · " + FillsText(fill)));
             sb.AppendLine(Lang.Get("complexnutrition:tooltip-undiscovered-hint"));
             return sb.ToString();
         }
+
+        /// <summary>"fills N of M" (or "fills N" with no fullness limit), worded the same on every food tooltip (v0.3.6j).</summary>
+        private static string FillsText(string fill) => Digestion.NoFullnessLimit || Digestion.Settings == null
+            ? Lang.Get("complexnutrition:tooltip-fills-nolimit", fill)
+            : Lang.Get("complexnutrition:tooltip-fills", fill, Math.Round(Digestion.Settings.FullnessMax));
 
         /// <summary>
         /// The block: a header, the macros, the richest vitamins and minerals, fullness and a footer. With <paramref name="brief"/>
@@ -117,11 +118,15 @@ namespace ComplexNutrition.Modules.FoodData
             System.Func<string, float> amount = digest == null
                 ? rawAmount
                 : code => code == NutrientCodes.Calories ? digest.KcalFromMacros(rawAmount) : rawAmount(code);
-            string Macro(string code) => nutrients.Get(code)?.FormatAmount(amount(code), percent) ?? "0";
+            // Carbs as the gut takes them (v0.3.6h): net of fiber, which has its own figure.
+            float Shown(string code) => code == NutrientCodes.Carbohydrate
+                ? Math.Max(0f, amount(code) - amount(NutrientCodes.Fiber))
+                : amount(code);
+            string Macro(string code) => nutrients.Get(code)?.FormatAmount(Shown(code), percent) ?? "0";
             if (brief)
             {
                 string fills = digest != null && fullness > 0f
-                    ? Lang.Get("complexnutrition:tooltip-short-fills", Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0"))
+                    ? " · " + FillsText(Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0"))
                     : "";
                 sb.Clear();
                 sb.AppendLine();
@@ -129,31 +134,39 @@ namespace ComplexNutrition.Modules.FoodData
                 sb.AppendLine(Lang.Get("complexnutrition:tooltip-short-hint"));
                 return sb.ToString();
             }
-            // Amounts in their unit colours (grams green, kcal orange, mg and mcg yellow), as on the Stats panel.
-            sb.AppendLine(UnitColors.Paint(Lang.Get(percent ? "complexnutrition:tooltip-macros-percent" : "complexnutrition:tooltip-macros",
-                Macro(NutrientCodes.Calories),
-                Macro(NutrientCodes.Protein),
-                Macro(NutrientCodes.Carbohydrate),
-                Macro(NutrientCodes.Fat),
-                Macro(NutrientCodes.Fiber))));
-
-            // The micronutrients that cover the most of a day's need, shown in the same units as the reserves.
-            var top = nutrients.All
-                .Where(n => n.IsMicronutrient)
-                .Select(n => (def: n, amount: amount(n.Code), dv: n.ToPercent(amount(n.Code))))
-                .Where(t => t.dv >= 1f)
-                .OrderByDescending(t => t.dv)
-                .Take(withDebugInfo ? int.MaxValue : TopMicronutrients)
-                .Select(t => Lang.Get("complexnutrition:tooltip-dv", Lang.Get(t.def.LangKey), t.def.FormatAmount(t.amount, percent)))
-                .ToList();
-            if (top.Count > 0)
-            {
-                sb.AppendLine(UnitColors.Paint(Lang.Get(percent ? "complexnutrition:tooltip-richin" : "complexnutrition:tooltip-richin-amount", string.Join(", ", top))));
-            }
+            // v0.3.6 layout (Miles's pick, "A"): calories and fullness, then every macro, vitamin and mineral on three short lines.
+            // Amounts keep their unit colours (grams green, kcal orange, vitamins and minerals yellow), as on the Stats panel.
+            string Short(NutrientDefinition n) => Lang.HasTranslation("complexnutrition:nutrient-" + n.Code + "-short")
+                ? Lang.Get("complexnutrition:nutrient-" + n.Code + "-short")
+                : Lang.Get(n.LangKey);
+            string first = Macro(NutrientCodes.Calories);
             if (digest != null && fullness > 0f)
             {
-                sb.AppendLine(Lang.Get("complexnutrition:tooltip-fullness", Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0"), Math.Round(digest.FullnessMax)));
+                string fill = Math.Round(fullness) < 1 ? "<1" : Math.Round(fullness).ToString("0");
+                first += " · " + FillsText(fill);
             }
+            sb.AppendLine(UnitColors.Paint(first));
+
+            var macros = new[] { NutrientCodes.Carbohydrate, NutrientCodes.Fat, NutrientCodes.Protein, NutrientCodes.Fiber }
+                .Select(c => nutrients.Get(c)).Where(n => n != null)
+                .Select(n => Short(n) + " " + Macro(n.Code));
+            sb.AppendLine(UnitColors.Paint(string.Join(" · ", macros)));
+
+            // Vitamins and minerals in the reader's choice of real amounts or % of a day's need (v0.3.6h; 0.3.6f always used %).
+            string Dv(NutrientDefinition n)
+            {
+                if (!percent) return Short(n) + " " + UnitColors.Paint(n.FormatAmount(amount(n.Code), false));
+                float dv = n.ToPercent(amount(n.Code));
+                string text = dv > 0f && dv < 0.5f ? "<1%" : Math.Round(dv).ToString("#,##0") + "%";
+                return Short(n) + " <font color=\"" + UnitColors.Micro + "\">" + text + "</font>";
+            }
+            var vitamins = nutrients.All.Where(n => n.IsMicronutrient && n.Group != "Mineral").OrderBy(Short, StringComparer.Ordinal).ToList();
+            var minerals = nutrients.All.Where(n => n.Group == "Mineral").ToList();
+            if (vitamins.Count > 0)
+                sb.AppendLine(Lang.Get("complexnutrition:tooltip-vit") + " " + string.Join(" · ", vitamins.Select(Dv)));
+            if (minerals.Count > 0)
+                sb.AppendLine(string.Join(" · ", minerals.Select(Dv)));
+            if (percent && vitamins.Count + minerals.Count > 0) sb.AppendLine(Lang.Get("complexnutrition:tooltip-legend"));
             if (footer != null) sb.AppendLine(footer);
             return sb.ToString();
         }

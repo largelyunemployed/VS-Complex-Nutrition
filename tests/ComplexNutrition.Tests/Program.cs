@@ -493,6 +493,9 @@ namespace ComplexNutrition.Tests
                     if (lang[key] == null) missing.Add(Path.GetFileName(file) + ": " + key);
                 }
             }
+            // Keys built from a prefix and a nutrient code (the Stats panel's gut rows, since a v0.3.6j clean-up removed them by mistake).
+            foreach (var code in new[] { "carbohydrate", "fat" })
+                if (lang["stats-gut-" + code] == null) missing.Add("CharacterStatsPatch.cs: stats-gut-" + code);
             Assert.True(missing.Count == 0, "missing in en.json: " + string.Join(", ", missing));
         }
 

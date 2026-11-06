@@ -34,9 +34,53 @@ namespace ComplexNutrition.UI
         public string Right;
         /// <summary>An arrow just left of the bar: 1 rising, 0 steady, -1 falling; null for none.</summary>
         public int? Trend;
+        /// <summary>What hovering the trend arrow shows (VTML, since v0.3.6); null for no hover.</summary>
+        public string TrendTip;
+        /// <summary>What hovering the value right of the bar shows (VTML, since v0.3.6); null for no hover.</summary>
+        public string RightTip;
+        /// <summary>What hovering the row's label and bar shows (VTML, since v0.3.6i); null for no hover.</summary>
+        public string Tip;
 
         // Rounded so a bar that moved by less than a pixel doesn't count as a change.
-        public override string Key => "B|" + Label + "|" + Math.Round(Max <= 0 ? 0 : Value / Max * 400) + "|" + Max + "|" + LineInterval + "|" + Right + "|" + Trend;
+        public override string Key => "B|" + Label + "|" + Math.Round(Max <= 0 ? 0 : Value / Max * 400) + "|" + Max + "|" + LineInterval + "|" + Right + "|" + Trend + "|" + TrendTip + "|" + RightTip + "|" + Tip;
+    }
+
+    /// <summary>
+    /// A small table (since v0.3.6i): columns start at <see cref="Columns"/> (GUI units from the left), the first row drawn as
+    /// a header with a line under it. Each cell is VTML and may have a hover.
+    /// </summary>
+    public sealed class TableBlock : PageBlock
+    {
+        public double[] Columns = new double[0];
+        public List<string[]> Rows = new();
+        /// <summary>Per row and column, what hovering the cell shows; null entries (or a null array) for none.</summary>
+        public List<string[]> Tips = new();
+        public bool HeaderRow = true;
+        public override string Key
+        {
+            get
+            {
+                var sb = new StringBuilder("TB|");
+                foreach (var r in Rows) sb.Append(string.Join("\t", r)).Append('\n');
+                foreach (var t in Tips) if (t != null) sb.Append(string.Join("\t", t)).Append('\n');
+                return sb.ToString();
+            }
+        }
+    }
+
+    /// <summary>A row of rounded chips that wraps (since v0.3.6i), each VTML with an optional hover.</summary>
+    public sealed class ChipsBlock : PageBlock
+    {
+        public List<(string vtml, string tip)> Chips = new();
+        public override string Key
+        {
+            get
+            {
+                var sb = new StringBuilder("CH|");
+                foreach (var (v, t) in Chips) sb.Append(v).Append('\t').Append(t).Append('\n');
+                return sb.ToString();
+            }
+        }
     }
 
     /// <summary>A paragraph of VTML, wrapped to the page width.</summary>
@@ -45,8 +89,10 @@ namespace ComplexNutrition.UI
         public string Vtml;
         /// <summary>Drawn in the smaller detail font.</summary>
         public bool Small;
-        public TextBlock(string vtml, bool small = false) { Vtml = vtml; Small = small; }
-        public override string Key => "T|" + (Small ? "s|" : "|") + Vtml;
+        /// <summary>What hovering the paragraph shows (VTML, since v0.3.6); null for no hover.</summary>
+        public string Tip;
+        public TextBlock(string vtml, bool small = false, string tip = null) { Vtml = vtml; Small = small; Tip = tip; }
+        public override string Key => "T|" + (Small ? "s|" : "|") + Vtml + "|" + Tip;
     }
 
     /// <summary>
@@ -151,6 +197,8 @@ namespace ComplexNutrition.UI
             public GuiElementRichtext Value;     // bar value
             public GuiElementRichtext Left, Right2;   // chart bottom labels
             public List<(double[] color, GuiElementRichtext text, double x, double y)> Legend;
+            public List<(GuiElementRichtext text, double x, double y, double w, double h, string tip)> Cells;   // table cells, chips
+            public List<double> RuleY;   // lines under table headers
         }
 
         private static GuiElementRichtext Rich(ICoreClientAPI capi, string vtml, CairoFont font, double width)
@@ -197,6 +245,49 @@ namespace ComplexNutrition.UI
                     case GapBlock g:
                         p.Height = GuiElement.scaled(g.Height);
                         break;
+                    case TableBlock tbl:
+                    {
+                        p.Cells = new List<(GuiElementRichtext, double, double, double, double, string)>();
+                        p.RuleY = new List<double>();
+                        double ry = 0;
+                        for (int r = 0; r < tbl.Rows.Count; r++)
+                        {
+                            var row = tbl.Rows[r];
+                            var tips = r < tbl.Tips.Count ? tbl.Tips[r] : null;
+                            double rowH = 0;
+                            var cells = new List<(GuiElementRichtext, double, double, double, double, string)>();
+                            for (int c = 0; c < row.Length && c < tbl.Columns.Length; c++)
+                            {
+                                double cx = tbl.Columns[c];
+                                double cw = (c + 1 < tbl.Columns.Length ? tbl.Columns[c + 1] : width) - cx - 4;
+                                var text = Rich(capi, row[c], detail, Math.Max(10, cw));
+                                rowH = Math.Max(rowH, text.TotalHeight);
+                                cells.Add((text, GuiElement.scaled(cx), ry, MeasureWidth(text), text.TotalHeight, tips != null && c < tips.Length ? tips[c] : null));
+                            }
+                            p.Cells.AddRange(cells);
+                            ry += rowH + GuiElement.scaled(3);
+                            if (r == 0 && tbl.HeaderRow) { p.RuleY.Add(ry - GuiElement.scaled(1)); ry += GuiElement.scaled(3); }
+                        }
+                        p.Height = ry + GuiElement.scaled(2);
+                        break;
+                    }
+                    case ChipsBlock ch:
+                    {
+                        p.Cells = new List<(GuiElementRichtext, double, double, double, double, string)>();
+                        double cx = 0, cy = GuiElement.scaled(2), rowH = 0, pad = GuiElement.scaled(7);
+                        foreach (var (vtml, tip) in ch.Chips)
+                        {
+                            var text = Rich(capi, vtml, detail, width);
+                            double tw = MeasureWidth(text) + 2 * pad;
+                            double th = text.TotalHeight + GuiElement.scaled(4);
+                            if (cx > 0 && cx + tw > GuiElement.scaled(width)) { cx = 0; cy += rowH + GuiElement.scaled(4); rowH = 0; }
+                            p.Cells.Add((text, cx, cy, tw, th, tip));
+                            cx += tw + GuiElement.scaled(6);
+                            rowH = Math.Max(rowH, th);
+                        }
+                        p.Height = cy + rowH + GuiElement.scaled(4);
+                        break;
+                    }
                     case ChartBlock c:
                     {
                         p.Left = Rich(capi, c.BottomLeft, detail, width / 2);
@@ -239,13 +330,53 @@ namespace ComplexNutrition.UI
                 foreach (var p in placed)
                 {
                     if (p.Text != null) Draw(ctx, surface, p.Text, 0, p.Y);
+                    if (p.Block is TextBlock tb && !string.IsNullOrEmpty(tb.Tip))
+                        hotspots?.Add(new Hotspot { X = 0, Y = p.Y, W = Math.Max(1, MeasureWidth(p.Text)), H = p.Text.TotalHeight, Vtml = tb.Tip });
+                    if (p.Block is TableBlock)
+                    {
+                        foreach (var ry in p.RuleY)
+                        {
+                            ctx.SetSourceRGBA(0.85, 0.77, 0.55, 0.35);
+                            ctx.Rectangle(0, Math.Round(p.Y + ry), GuiElement.scaled(width), 1);
+                            ctx.Fill();
+                        }
+                        foreach (var (text, x, cy, cw, ch, tip) in p.Cells)
+                        {
+                            Draw(ctx, surface, text, x, p.Y + cy);
+                            if (!string.IsNullOrEmpty(tip)) hotspots?.Add(new Hotspot { X = x, Y = p.Y + cy, W = Math.Max(1, cw), H = ch, Vtml = tip });
+                        }
+                    }
+                    if (p.Block is ChipsBlock)
+                    {
+                        double pad = GuiElement.scaled(7);
+                        foreach (var (text, x, cy, cw, ch, tip) in p.Cells)
+                        {
+                            GuiElement.RoundRectangle(ctx, x, p.Y + cy, cw, ch, ch / 2);
+                            ctx.SetSourceRGBA(0.23, 0.18, 0.14, 1);
+                            ctx.FillPreserve();
+                            ctx.SetSourceRGBA(0.45, 0.37, 0.27, 1);
+                            ctx.LineWidth = 1;
+                            ctx.Stroke();
+                            Draw(ctx, surface, text, x + pad, p.Y + cy + GuiElement.scaled(2));
+                            if (!string.IsNullOrEmpty(tip)) hotspots?.Add(new Hotspot { X = x, Y = p.Y + cy, W = cw, H = ch, Vtml = tip });
+                        }
+                    }
                     if (p.Block is BarBlock b)
                     {
                         double rowMid = p.Y + GuiElement.scaled(RowHeight) / 2.0;
+                        if (!string.IsNullOrEmpty(b.Tip))
+                            hotspots?.Add(new Hotspot { X = 0, Y = p.Y, W = GuiElement.scaled(BarX + BarWidth), H = p.Height, Vtml = b.Tip });
                         Draw(ctx, surface, p.Label, 0, rowMid - p.Label.TotalHeight / 2.0);
                         DrawBar(ctx, GuiElement.scaled(BarX), rowMid - GuiElement.scaled(BarHeight) / 2.0, GuiElement.scaled(BarWidth), GuiElement.scaled(BarHeight), b);
                         Draw(ctx, surface, p.Value, GuiElement.scaled(RightX), rowMid - Math.Min(p.Value.TotalHeight, GuiElement.scaled(RowHeight)) / 2.0);
+                        if (!string.IsNullOrEmpty(b.RightTip))
+                            hotspots?.Add(new Hotspot { X = GuiElement.scaled(RightX), Y = p.Y, W = Math.Max(1, MeasureWidth(p.Value)), H = p.Height, Vtml = b.RightTip });
                         if (b.Trend != null) DrawTrend(ctx, GuiElement.scaled(BarX - 13), rowMid, GuiElement.scaled(9), b.Trend.Value);
+                        if (b.Trend != null && !string.IsNullOrEmpty(b.TrendTip))
+                        {
+                            double hs = GuiElement.scaled(9);
+                            hotspots?.Add(new Hotspot { X = GuiElement.scaled(BarX - 13) - hs, Y = rowMid - hs, W = 2 * hs, H = 2 * hs, Vtml = b.TrendTip });
+                        }
                     }
                     if (p.Block is ChartBlock c) DrawChart(ctx, surface, p, c, GuiElement.scaled(width), hotspots, capi);
                 }
@@ -258,6 +389,7 @@ namespace ComplexNutrition.UI
                 p.Left?.Dispose();
                 p.Right2?.Dispose();
                 if (p.Legend != null) foreach (var l in p.Legend) l.text.Dispose();
+                if (p.Cells != null) foreach (var c in p.Cells) c.text.Dispose();
             }
             return surface;
         }
