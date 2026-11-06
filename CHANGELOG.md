@@ -10,6 +10,8 @@ A simpler Overview tab.
 - Each of those bars gives the calories it digested in the last 24 hours in brackets, with a hover that says so. With diminishing returns on, the number turns red once they start taking calories from that macro, and the hover says how many were lost, with a tip to space out your meals.
 - Hovering the fiber speed-up line lists the extra calories an hour it adds to carbs, fats and protein.
 - The Your Diet section is gone, since it repeated Running Low. Running Low now lists everything that is low, not only three, and leaves out calories, which have their own bar and warning.
+- The Digestion tab is laid out like the Vitamins and Minerals tabs: Fullness, Carbs, Fats, Protein and Fiber each have their own heading (the Stomach and In Your Gut headings are gone), and every bar has a trend arrow. Fiber's speed-up is given as the extra calories an hour it adds to carbs, fats and protein instead of percentages.
+- History: the "The last 7 days" heading and the line on what digestion added are gone. The summary now reads "You gained ... and burned ... a day on average", matching the chart's Gained and Burned.
 - The server keeps a 24-hour log of the calories each macro gave (and of fiber digested), so the new readouts start filling from this version on.
 
 ## v0.3.5

@@ -302,8 +302,13 @@ namespace ComplexNutrition.UI
             var blocks = new List<PageBlock>();
             var s = d.Digest;
 
-            blocks.Add(new HeadingBlock(L("window-heading-stomach")));
-            blocks.Add(FullnessBar(d));
+            // v0.3.6: one heading per bar, laid out like the Vitamins and Minerals tabs.
+            blocks.Add(new HeadingBlock(L("stats-fullness")));
+            var full = FullnessBar(d);
+            full.Label = StatsHover.Esc(L("window-now"));
+            full.Trend = d.Fullness >= 0.5f ? -1 : 0;
+            full.TrendTip = StatsHover.Text(L("window-fullness-trend", Num(s?.FullnessDrainPerHour ?? 100f)));
+            blocks.Add(full);
             if (s != null)
             {
                 float hours = s.FullnessDrainPerHour > 0 ? d.Fullness / s.FullnessDrainPerHour : 0f;
@@ -313,7 +318,6 @@ namespace ComplexNutrition.UI
             }
             if (s == null) return blocks;
 
-            blocks.Add(new HeadingBlock(L("window-heading-gut")));
             foreach (var code in new[] { NutrientCodes.Carbohydrate, NutrientCodes.Fat, NutrientCodes.Protein })
             {
                 var pool = s.Pool(code);
@@ -321,9 +325,11 @@ namespace ComplexNutrition.UI
                 if (pool == null || n == null) continue;
                 float reserve = d.State.GetReserve(code);
                 float grams = reserve / 100f * n.DailyTarget;
+                blocks.Add(new HeadingBlock(Lang.Get(n.LangKey)));
                 blocks.Add(new BarBlock
                 {
-                    Label = StatsHover.Esc(Lang.Get(n.LangKey)),
+                    Label = StatsHover.Esc(L("window-digesting")),
+                    Trend = TrendOf(d, n),
                     Value = grams,
                     Max = Math.Max(pool.MaxGrams, grams),
                     LineInterval = n.DailyTarget,
@@ -355,14 +361,15 @@ namespace ComplexNutrition.UI
                     : (dr ? L("window-gut-window", pool.WindowHours, Amt(d, code, window), Amt(d, code, pool.DiminishingAboveGrams))
                           : L("window-gut-window-off", pool.WindowHours, Amt(d, code, window)));
                 blocks.Add(new TextBlock(StatsHover.Text(limits), true));
-                blocks.Add(new GapBlock(4));
             }
 
             var fiber = d.Nutrients.Get(NutrientCodes.Fiber);
             if (fiber != null)
             {
                 blocks.Add(new HeadingBlock(Lang.Get(fiber.LangKey)));
-                blocks.Add(ReserveBar(d, fiber));
+                var fbar = ReserveBar(d, fiber, L("window-stored"));
+                fbar.Trend = TrendOf(d, fiber);
+                blocks.Add(fbar);
                 // Fiber digesting (v0.3.5), at the fiber reserve's own steady rate, with no diminishing returns.
                 float fg = d.State.FiberGut;
                 if (fg > DigestionPool.EmptyGrams)
@@ -374,13 +381,15 @@ namespace ComplexNutrition.UI
                         StatsHover.Text(NutrientDisplay.GutHoursText(d.State.GetGutHours(NutrientCodes.Fiber), fiber.ToPercent(fg))),
                         StatsHover.Paint(L("gut-rate", Amt(d, NutrientCodes.Fiber, rate), Kcal(d, rate * s.FiberKcalPerGram)), UnitColors.Rate)), true));
                 }
-                string Bonus(string code)
-                {
-                    var pool = s.Pool(code);
-                    return pool == null ? "0" : Math.Round((Digestion.FiberSpeed(s, d.State, pool) - 1f) * 100f).ToString("0", CultureInfo.InvariantCulture);
-                }
-                blocks.Add(new TextBlock(StatsHover.Text(L("window-fiber-speed", Bonus(NutrientCodes.Carbohydrate), Bonus(NutrientCodes.Fat), Bonus(NutrientCodes.Protein),
-                    fiber.Format(s.FiberBonusFullAt, d.ShowPercent))), true));
+                // v0.3.6: the speed-up as the extra calories an hour it gives each macro, not as percentages.
+                var by = Digestion.FiberKcalPerHourByPool(s, d.State, d.Nutrients);
+                string Extra(string code) => StatsHover.Paint(Kcal(d, by.TryGetValue(code, out float v) ? v : 0f), UnitColors.Rate);
+                float total = by.Values.Sum();
+                blocks.Add(new TextBlock(total < 0.05f
+                    ? StatsHover.Text(L("fiber-boost-none"))
+                    : StatsHover.Vtml("complexnutrition:window-fiber-speed", StatsHover.Paint(Kcal(d, total), UnitColors.Rate),
+                        Extra(NutrientCodes.Carbohydrate), Extra(NutrientCodes.Fat), Extra(NutrientCodes.Protein)), true));
+                blocks.Add(new TextBlock(StatsHover.Text(L("window-fiber-best", fiber.Format(s.FiberBonusFullAt, d.ShowPercent))), true));
             }
             return blocks;
         }
@@ -550,7 +559,6 @@ namespace ComplexNutrition.UI
             });
 
             // The last week in words.
-            blocks.Add(new HeadingBlock(L("history-heading-week")));
             var week = h.Days.Skip(Math.Max(0, h.Days.Count - 8)).Take(Math.Min(7, Math.Max(0, h.Days.Count - 1))).ToList();
             var flowWeek = week.Where(day => day.Gained > 0 || day.Burned > 0).ToList();
             var eaten = week.Where(day => day.TotalKcal > 0).ToList();
@@ -572,12 +580,8 @@ namespace ComplexNutrition.UI
                 string pct = Math.Round(share).ToString("0", CultureInfo.InvariantCulture);
                 string from = L("history-from-" + Categories[top].ToLowerInvariant());
                 blocks.Add(new TextBlock(StatsHover.Text(flowWeek.Count > 0
-                    ? L("history-week-eaten-spent", Kcal(d, avg), Kcal(d, flowWeek.Average(day => day.Burned)), week.Count, pct, from)
+                    ? L("history-week-gained-burned", Kcal(d, flowWeek.Average(day => day.Gained)), Kcal(d, flowWeek.Average(day => day.Burned)), week.Count, pct, from)
                     : L("history-week-eaten", Kcal(d, avg), week.Count, pct, from))));
-            }
-            if (flowWeek.Count > 0)
-            {
-                blocks.Add(new TextBlock(StatsHover.Text(L("history-week-gained", Kcal(d, flowWeek.Average(day => day.Gained))))));
             }
 
             blocks.Add(new HeadingBlock(L("history-heading-food")));
