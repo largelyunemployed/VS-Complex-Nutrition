@@ -48,6 +48,11 @@ A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ..
 - Vitamins and minerals follow the amounts or percentages display setting, like everything else: real amounts by default ("Ca 1,775mg"), or % of a day's need (with the grey key) when percentages are on.
 - Carbs in the tooltip are the carbs that go into your gut, not counting fiber, which has its own figure.
 
+### 0.3.6k: cooked meat and macro colours
+
+- Cooking also brings raw meat, fish and eggs back to their full value (they give 80% raw), and raw or soaked cassava too (30% and 80% raw). So a stew counts its meat in full. Cider and other fermented drinks keep their 90%, since that isn't a raw cut.
+- The Stats panel's carbs, fats, protein and fiber bars use the same colours as the nutrition window (carbs blue, fats orange, protein green, fiber amber).
+
 ### 0.3.6j: balance and matching text
 
 - Cooked grain and dough give their full value. Raw grain still gives 60% and dough 80% when eaten as they are, but in a cooked dish (porridge, stew) or a baked pie they count in full, before the cooking multipliers. Bread was already at 100%. Set in `rawIngredientFactors` in `cooking.json`.

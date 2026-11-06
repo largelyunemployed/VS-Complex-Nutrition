@@ -167,15 +167,8 @@ namespace ComplexNutrition.UI
         // ---- Overview ----
 
         /// <summary>Each macro's own colour (v0.3.6i), so carbs, fats, protein and fiber can be told apart at a glance.</summary>
-        public static readonly Dictionary<string, double[]> MacroColors = new()
-        {
-            [NutrientCodes.Carbohydrate] = new[] { 0.224, 0.529, 0.898, 1.0 },   // #3987e5
-            [NutrientCodes.Fat] = new[] { 0.851, 0.349, 0.149, 1.0 },            // #d95926
-            [NutrientCodes.Protein] = new[] { 0.098, 0.620, 0.439, 1.0 },        // #199e70
-            [NutrientCodes.Fiber] = new[] { 0.788, 0.522, 0.0, 1.0 },            // #c98500
-        };
 
-        private static double[] MacroColor(NutrientDefinition n) => MacroColors.TryGetValue(n.Code, out var c) ? c : ColorOf(n);
+        private static double[] MacroColor(NutrientDefinition n) => ColorOf(n);
 
         private static readonly string[] Macros = { NutrientCodes.Carbohydrate, NutrientCodes.Fat, NutrientCodes.Protein, NutrientCodes.Fiber };
 

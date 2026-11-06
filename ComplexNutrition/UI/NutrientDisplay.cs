@@ -20,8 +20,18 @@ namespace ComplexNutrition.UI
         };
 
         /// <summary>A nutrient's bar colour, from its group.</summary>
+        /// <summary>Each macro's own colour (v0.3.6), used by its bars in the nutrition window and on the Stats panel alike.</summary>
+        public static readonly Dictionary<string, double[]> MacroColors = new()
+        {
+            [NutrientCodes.Carbohydrate] = new[] { 0.224, 0.529, 0.898, 1.0 },   // #3987e5
+            [NutrientCodes.Fat] = new[] { 0.851, 0.349, 0.149, 1.0 },            // #d95926
+            [NutrientCodes.Protein] = new[] { 0.098, 0.620, 0.439, 1.0 },        // #199e70
+            [NutrientCodes.Fiber] = new[] { 0.788, 0.522, 0.0, 1.0 },            // #c98500
+        };
+
         public static double[] ColorOf(NutrientDefinition n) =>
-            GroupColors.TryGetValue(n?.Group ?? "", out var c) ? c : GuiStyle.FoodBarColor;
+            n != null && MacroColors.TryGetValue(n.Code, out var m) ? m
+            : GroupColors.TryGetValue(n?.Group ?? "", out var c) ? c : GuiStyle.FoodBarColor;
 
         /// <summary>"empty", or "absorbed in about 2.5 hours" for a gut pool.</summary>
         public static string GutHoursText(float hours, float reserve)
