@@ -54,6 +54,19 @@ namespace ComplexNutrition.Core
         /// <summary>The wild harvest a world gets when it has none: half a farmed crop, twice vanilla's quarter.</summary>
         public const string DefaultWildHarvest = "50";
 
+        /// <summary>Nutrient effects (since v0.4.0). On unless the world switches them off.</summary>
+        public const string EffectsKey = "complexnutritionEffects";
+
+        /// <summary>The nutrients whose effects the world has switched off one by one (since v0.4.0), as codes separated by commas.</summary>
+        public const string EffectsOffKey = "complexnutritionEffectsOff";
+
+        /// <summary>Whether nutrient effects apply on this world (on when the world has no such setting).</summary>
+        public static bool Effects(IWorldAccessor world) =>
+            !string.Equals(Text(world, EffectsKey), "false", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>The nutrients whose effects this world has switched off.</summary>
+        public static System.Collections.Generic.HashSet<string> EffectsOff(IWorldAccessor world) => NutrientEffects.ParseOff(Text(world, EffectsOffKey));
+
         /// <summary>The stomach's size in fullness (since v0.3.5): 0 to 1,500, where 0 means no limit.</summary>
         public const string MaxFullnessKey = "complexnutritionMaxFullness";
         public const int DefaultMaxFullness = 300;

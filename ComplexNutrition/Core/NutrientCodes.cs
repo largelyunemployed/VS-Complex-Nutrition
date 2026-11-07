@@ -12,5 +12,10 @@ namespace ComplexNutrition.Core
         public const string VitaminC = "vitaminC";
         public const string VitaminK = "vitaminK";
         public const string Calcium = "calcium";
+        public const string VitaminA = "vitaminA";
+        public const string VitaminD = "vitaminD";
+        public const string VitaminE = "vitaminE";
+        public const string Iron = "iron";
+        public const string Potassium = "potassium";
     }
 }

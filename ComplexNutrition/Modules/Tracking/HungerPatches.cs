@@ -61,7 +61,8 @@ namespace ComplexNutrition.Modules.Tracking
             if (state.GetReserve(Core.NutrientCodes.Calories) <= 0f) return false;
 
             float speed = StringUtil.ToFloat(ep.Api.World.Config.GetString("playerHealthRegenSpeed", "1"), 0f);
-            float perSecond = 0.000333333f * speed;
+            // Since v0.4.0 vitamins K and C speed up or slow down natural healing: only our own part of the healing stat counts here.
+            float perSecond = 0.000333333f * speed * Math.Max(0f, 1f + EffectsRunner.OwnShare(state, "healingeffectivness"));
             var cal = ep.Api.World.Calendar;
             float gameSeconds = SecondsRef(__instance) * cal.SpeedOfTime * cal.CalendarSpeedMul;
             float healed = Math.Min(gameSeconds * perSecond, max - health);

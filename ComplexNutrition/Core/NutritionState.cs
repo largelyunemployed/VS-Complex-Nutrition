@@ -179,6 +179,29 @@ namespace ComplexNutrition.Core
             set => tree.SetInt("day", value);
         }
 
+        // ---- Effects (v0.4.0) ----
+
+        private ITreeAttribute Effects => Sub("effects");
+
+        /// <summary>A timed nutrient's counter: in-game hours of tracked play since its store last held a full day.</summary>
+        public float GetHoursWithoutFullDay(string nutrient) => Effects.GetFloat("without-" + nutrient);
+
+        public void SetHoursWithoutFullDay(string nutrient, float hours) => Effects.SetFloat("without-" + nutrient, hours);
+
+        /// <summary>Vitamin D made by sunlight on the in-game day <see cref="SunDay"/>, in % of a day's need.</summary>
+        public float SunMadeToday
+        {
+            get => Effects.GetFloat("sunMade");
+            set => Effects.SetFloat("sunMade", value);
+        }
+
+        /// <summary>The in-game day <see cref="SunMadeToday"/> belongs to.</summary>
+        public int SunDay
+        {
+            get => Effects.GetInt("sunDay", int.MinValue);
+            set => Effects.SetInt("sunDay", value);
+        }
+
         public void MarkDirty() => entity?.WatchedAttributes.MarkPathDirty(TreeKey);
     }
 }

@@ -55,14 +55,19 @@ static class P
         var digest = JsonConvert.DeserializeObject<DigestionSettings>(File.ReadAllText(Mod + "config/digestion.json"));
         foreach (var kv in digest.Pools) { var d = reg.Get(kv.Key); d.Cap = kv.Value.MaxGrams / d.DailyTarget * 100f; }
         var tracking = JsonConvert.DeserializeObject<TrackingSettings>(File.ReadAllText(Mod + "config/tracking.json"));
+        NutrientEffects.Settings = JsonConvert.DeserializeObject<EffectSettings>(File.ReadAllText(Mod + "config/effects.json"));
 
         // A player a week or so in: fat-soluble vitamins and calcium sliding, something in the gut.
         var tree = new TreeAttribute();
         var st = NutritionState.FromTree(tree);
         var r = new Dictionary<string, float> { ["calories"] = 340, ["fat"] = 40f / 80 * 100, ["protein"] = 22f / 64 * 100, ["carbohydrate"] = 94f / 300 * 100, ["fiber"] = 55,
-            ["vitaminC"] = 80, ["vitaminB"] = 120, ["vitaminA"] = 900, ["vitaminD"] = 140, ["vitaminE"] = 1100, ["vitaminK"] = 600, ["calcium"] = 40, ["iron"] = 380, ["potassium"] = 260 };
+            ["vitaminC"] = 80, ["vitaminB"] = 120, ["vitaminA"] = 1400, ["vitaminD"] = 60, ["vitaminE"] = 1100, ["vitaminK"] = 600, ["calcium"] = 40, ["iron"] = 380, ["potassium"] = 260 };
         foreach (var kv in r) st.SetReserve(kv.Key, kv.Value);
         st.TrackingOn = true;
+        // v0.4.0: vitamin C four days without a full day stored (its effect has started), and some sunlight today.
+        st.SetHoursWithoutFullDay("vitaminC", 3.5f * 24f);
+        st.SunDay = 0;
+        st.SunMadeToday = 35f;
         st.Protein24 = 41;
         st.SetGutHours("carbohydrate", 2.6f);
         st.SetGutHours("fat", 13f);
@@ -115,7 +120,7 @@ static class P
         history.Burned24 = 2410;
 
         bool percent = a.Length > 1 && a[1] == "percent";   // second argument "percent": amounts in % of a day
-        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 300, Health = 9, MaxHealth = 15, Known = known, ShowPercent = percent, History = history };
+        var data = new NutritionPageData { Nutrients = reg, Digest = digest, Tracking = tracking, State = st, Fullness = 240, MaxFullness = 300, Health = 9, MaxHealth = 15, BaseMaxHealth = 15, Today = 0, Known = known, ShowPercent = percent, History = history };
         Console.WriteLine("writing to " + System.IO.Path.GetFullPath(outDir));
         var tabs = new[] { ("overview", NutritionPages.Overview(data)), ("digestion", NutritionPages.DigestionPage(data)), ("vitamins", NutritionPages.Vitamins(data)), ("minerals", NutritionPages.Minerals(data)),
             ("history", NutritionPages.History(data)), };
@@ -164,6 +169,19 @@ static class P
                 foreach (var t in tips) { actx.SetSourceSurface(t, 4, (int)ty); actx.Paint(); ty += t.Height + 8; t.Dispose(); }
                 all.WriteToPng(System.IO.Path.Combine(outDir, "window-overview-macro-tips.png"));
             }
+        }
+        // Every Vitamins and Minerals row hover (v0.4.0: with each nutrient's effect), stacked on their own.
+        foreach (var (file, blocks) in new[] { ("window-vitamins-tips.png", NutritionPages.Vitamins(data)), ("window-minerals-tips.png", NutritionPages.Minerals(data)) })
+        {
+            var spots = new List<Hotspot>();
+            using var page = PageRenderer.Render(capi, blocks, GuiDialogNutrition.ContentWidth - 4, spots);
+            var tips = spots.Where(sp => sp.Vtml != null && sp.Vtml.Contains("Effect now")).Select(sp => PageRenderer.RenderTip(capi, sp.Vtml, GuiElementNutritionPage.TipWidth)).ToList();
+            if (tips.Count == 0) continue;
+            using var all = new ImageSurface(Format.Argb32, (int)tips.Max(t => t.Width) + 8, (int)tips.Sum(t => t.Height + 8));
+            using var actx = new Context(all);
+            double ty = 0;
+            foreach (var t in tips) { actx.SetSourceSurface(t, 4, (int)ty); actx.Paint(); ty += t.Height + 8; t.Dispose(); }
+            all.WriteToPng(System.IO.Path.Combine(outDir, file));
         }
         // Every Digestion tab hover (v0.3.6l), stacked on their own.
         {

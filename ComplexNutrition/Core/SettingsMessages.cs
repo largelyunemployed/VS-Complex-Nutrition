@@ -24,6 +24,9 @@ namespace ComplexNutrition.Core
         public bool Discover;
         public string WildHarvest = WorldSettings.DefaultWildHarvest;
         public int MaxFullness = WorldSettings.DefaultMaxFullness;
+        public bool Effects = true;
+        /// <summary>The nutrients whose effects are switched off, as codes separated by commas.</summary>
+        public string EffectsOff = "";
 
         [JsonIgnore] public bool ShowPercent => string.Equals(DisplayUnits, "percent", System.StringComparison.OrdinalIgnoreCase);
     }
@@ -80,6 +83,9 @@ namespace ComplexNutrition.Core
         public const string WildHarvest = "wildHarvest";
         public const string Discover = "discover";
         public const string MaxFullness = "maxFullness";
+        public const string Effects = "effects";
+        /// <summary>Prefix for one nutrient's effect switch: "effect:vitaminC".</summary>
+        public const string EffectPrefix = "effect:";
         /// <summary>Prefix for a module switch: "module:tracking".</summary>
         public const string ModulePrefix = "module:";
     }
