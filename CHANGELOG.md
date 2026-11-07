@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.4.0
+
+Nutrient effects. Interim test builds are lettered (0.4.0a, 0.4.0b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.0a
+
+- Fixed: with Poultry and bushmeat in pots on, meals made with bushmeat (raw, cooked or cured) or cooked poultry showed a raw game code in their name, such as "stewed game:recipeingredient-item-bushmeat-insturmentalcase". They now read "stewed bushmeat" and "stewed poultry".
+
 ## v0.3.6
 
 A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ...), and each change is listed under the build it arrived in.
