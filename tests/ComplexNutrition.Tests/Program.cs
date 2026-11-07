@@ -499,6 +499,101 @@ namespace ComplexNutrition.Tests
             Assert.True(missing.Count == 0, "missing in en.json: " + string.Join(", ", missing));
         }
 
+        // ---- Nutrient effects (v0.4.0) ----
+
+        static readonly EffectSettings Fx = new();
+
+        [Test]
+        public static void LongTermEffectFollowsTheDaysStored()
+        {
+            Assert.Near(-0.10, NutrientEffects.LongTerm(Fx, 0f), 1e-5, "empty store");
+            Assert.Near(-0.045, NutrientEffects.LongTerm(Fx, 0.5f), 1e-5, "half a day: halfway from -10% to +1%");
+            Assert.Near(0.01, NutrientEffects.LongTerm(Fx, 1f), 1e-5, "one day");
+            Assert.Near(0.10, NutrientEffects.LongTerm(Fx, 10f), 1e-5, "ten days");
+            Assert.Near(0.20, NutrientEffects.LongTerm(Fx, 20f), 1e-5, "a full store");
+            Assert.Near(0.20, NutrientEffects.LongTerm(Fx, 25f), 1e-5, "never past the most");
+        }
+
+        [Test]
+        public static void TimedEffectStartsAtDayThree()
+        {
+            Assert.Equal(0f, NutrientEffects.Timed(Fx, 2.9f), "nothing before day 3");
+            Assert.Near(-0.05, NutrientEffects.Timed(Fx, 3f), 1e-5, "half strength at day 3");
+            Assert.Near(-0.075, NutrientEffects.Timed(Fx, 4f), 1e-5, "three quarters at day 4");
+            Assert.Near(-0.10, NutrientEffects.Timed(Fx, 5f), 1e-5, "full at day 5");
+            Assert.Near(-0.10, NutrientEffects.Timed(Fx, 9f), 1e-5, "no worse after day 5");
+            Assert.Equal(30f, NutrientEffects.NextHoursWithout(24f, 99f, 6f), "the count runs under a full day");
+            Assert.Equal(0f, NutrientEffects.NextHoursWithout(80f, 100f, 6f), "a full day resets it");
+        }
+
+        [Test]
+        public static void StrengthReadsTheState()
+        {
+            var fx = Repo.Load<EffectSettings>(Repo.Config("effects.json"));
+            var state = NutritionState.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            state.SetReserve("vitaminA", 1200f);
+            state.SetReserve("vitaminC", 50f);
+            state.SetHoursWithoutFullDay("vitaminC", 96f);
+            Assert.Near(0.12, NutrientEffects.Strength(fx, state, "vitaminA"), 1e-5, "12 days of vitamin A");
+            Assert.Near(-0.075, NutrientEffects.Strength(fx, state, "vitaminC"), 1e-5, "4 days low on vitamin C");
+            Assert.Equal(0f, NutrientEffects.Strength(fx, state, "vitaminA", new HashSet<string> { "vitaminA" }), "switched off");
+            Assert.Equal(0f, NutrientEffects.Strength(fx, state, "protein"), "macros have no effect yet");
+        }
+
+        [Test]
+        public static void StatsMoveTheRightWay()
+        {
+            var fall = new EffectTarget { Stat = "fallDamageFactor", Invert = true, ShowStat = true };
+            Assert.Near(-0.2, NutrientEffects.StatDelta(fall, 0.2f, 15f), 1e-5, "a bonus lowers fall damage");
+            Assert.Near(-20, NutrientEffects.ShownPercent(fall, 0.2f), 1e-4, "shown as -20% fall damage");
+            var butcher = new EffectTarget { Stat = "animalHarvestingTime", Invert = true };
+            Assert.Near(-0.1, NutrientEffects.StatDelta(butcher, 0.1f, 15f), 1e-5, "a bonus shortens butchering");
+            Assert.Near(10, NutrientEffects.ShownPercent(butcher, 0.1f), 1e-4, "shown as +10% butchering speed");
+            var hp = new EffectTarget { Stat = "maxhealthExtraPoints", PerBaseHealth = true };
+            Assert.Near(3f, NutrientEffects.StatDelta(hp, 0.2f, 15f), 1e-5, "20% of 15 health is 3 points");
+            Assert.Near(8f, NutrientEffects.ResistDamage(10f, Vintagestory.API.Common.EnumDamageType.SlashingAttack, 0.2f), 1e-5, "resistance cuts a slash");
+            Assert.Near(11f, NutrientEffects.ResistDamage(10f, Vintagestory.API.Common.EnumDamageType.BluntAttack, -0.1f), 1e-5, "a penalty raises a blow");
+            Assert.Equal(10f, NutrientEffects.ResistDamage(10f, Vintagestory.API.Common.EnumDamageType.Fire, 0.2f), "fire is not physical");
+        }
+
+        [Test]
+        public static void SunlightMakesAtMostADayADay()
+        {
+            Assert.Near(50f, NutrientEffects.SunMade(Fx, 1f, 1f, 0f), 1e-4, "an hour of full sun makes half a day");
+            Assert.Near(25f, NutrientEffects.SunMade(Fx, 0.5f, 1f, 0f), 1e-4, "half the sun, half as much");
+            Assert.Near(10f, NutrientEffects.SunMade(Fx, 1f, 1f, 90f), 1e-4, "only up to the day's limit");
+            Assert.Equal(0f, NutrientEffects.SunMade(Fx, 1f, 1f, 100f), "nothing past it");
+            Assert.Equal(0f, NutrientEffects.SunMade(Fx, 0f, 5f, 0f), "nothing in the dark");
+        }
+
+        [Test]
+        public static void EffectsJsonMatchesCodeAndData()
+        {
+            var file = Repo.Load<EffectSettings>(Repo.Config("effects.json"));
+            var code = new EffectSettings();
+            foreach (var f in typeof(EffectSettings).GetFields().Where(f => f.GetCustomAttribute<JsonPropertyAttribute>() != null && f.Name != "Nutrients"))
+                Assert.Equal(JsonConvert.SerializeObject(f.GetValue(code)), JsonConvert.SerializeObject(f.GetValue(file)), "effects.json " + f.Name);
+            var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients;
+            var lang = Repo.Json(Repo.Mod("assets", "complexnutrition", "lang", "en.json"));
+            var stats = new[] { "walkspeed", "healingeffectivness", "hungerrate", "maxhealthExtraPoints", "rangedWeaponsAcc", "rangedWeaponsDamage",
+                "meleeWeaponsDamage", "miningSpeedMul", "fallDamageFactor", "animalHarvestingTime", NutrientEffects.PhysicalResistance };
+            foreach (var kv in file.Nutrients)
+            {
+                var n = nutrients.FirstOrDefault(x => x.Code == kv.Key);
+                Assert.True(n != null, "effects.json nutrient " + kv.Key + " is in nutrients.json");
+                Assert.True(kv.Value.Rule is EffectRules.None or EffectRules.LongTerm or EffectRules.Timed, kv.Key + " has a known rule");
+                foreach (var t in kv.Value.Targets)
+                {
+                    Assert.True(stats.Contains(t.Stat), kv.Key + ": " + t.Stat + " is a stat the game reads");
+                    Assert.True(lang[t.Label] != null, kv.Key + ": label " + t.Label + " is in en.json");
+                }
+                if (kv.Value.Rule == EffectRules.LongTerm)
+                    Assert.Equal(code.MaxBonus / code.BonusPerDay * 100f, n.Cap, kv.Key + " holds as many days as the bonus needs");
+            }
+            foreach (var n in nutrients.Where(n => n.Group is "FatSolubleVitamin" or "WaterSolubleVitamin" or "Mineral"))
+                Assert.True(file.Of(n.Code) != null && file.Of(n.Code).Rule != EffectRules.None, n.Code + " has an effect");
+        }
+
         // ---- Files ----
 
         [Test]

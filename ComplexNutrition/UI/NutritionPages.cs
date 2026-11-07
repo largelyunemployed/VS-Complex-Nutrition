@@ -28,8 +28,12 @@ namespace ComplexNutrition.UI
         public float MaxFullness;
         public float Health;
         public float MaxHealth;
+        /// <summary>Max health before any bonus (iron's effect is a share of this).</summary>
+        public float BaseMaxHealth;
         public bool ShowPercent;
         public IReadOnlyList<KnownFood> Known = new List<KnownFood>();
+        /// <summary>The current in-game day (whole TotalDays), for what sunlight has made today.</summary>
+        public int Today;
         /// <summary>The last history the server sent, or null (not yet).</summary>
         public HistoryData History;
     }
@@ -41,6 +45,8 @@ namespace ComplexNutrition.UI
     {
         public const string Low = "#e8a33c";
         public const string Empty = "#ec6b5e";
+        /// <summary>A bonus from a nutrient effect (v0.4.0).</summary>
+        public const string Good = "#7fcf6a";
         public static readonly double[] FullnessColor = { 0.62, 0.52, 0.36, 1.0 };
 
         private static string L(string key, params object[] args) => Lang.Get("complexnutrition:" + key, args);
@@ -101,6 +107,23 @@ namespace ComplexNutrition.UI
         private static bool CanRunLow(NutritionPageData d, NutrientDefinition n) =>
             n.IsCalories || (d.Tracking.LowGroups?.Contains(n.Group) ?? false);
 
+        /// <summary>A timed nutrient (vitamin C, the B vitamins: v0.4.0) that has gone long enough without a full day stored to warn about.</summary>
+        private static bool TimedLow(NutritionPageData d, NutrientDefinition n)
+        {
+            var s = NutrientEffects.Settings;
+            if (s.Of(n.Code)?.Rule != EffectRules.Timed || !NutrientEffects.WorldOn || NutrientEffects.WorldOff.Contains(n.Code)) return false;
+            return d.State.GetHoursWithoutFullDay(n.Code) / 24f >= s.TimedWarnDays;
+        }
+
+        /// <summary>A timed nutrient's chip text: "3.2 days low", amber, or red once its effect has started.</summary>
+        private static string TimedVtml(NutritionPageData d, NutrientDefinition n)
+        {
+            float days = d.State.GetHoursWithoutFullDay(n.Code) / 24f;
+            string text = StatsHover.Text(L("effect-days-low", days < 10f ? days.ToString("0.0", CultureInfo.InvariantCulture) : Math.Round(days).ToString("0", CultureInfo.InvariantCulture)));
+            string color = NutrientEffects.Current(d.State, n.Code) < 0f ? Empty : Low;
+            return "<font color=\"" + color + "\">" + text + "</font>";
+        }
+
         /// <summary>Nutrients running low, lowest first: the calorie reserve under its line, and the slow nutrients under theirs.</summary>
         public static List<NutrientDefinition> RunningLow(NutritionPageData d)
         {
@@ -108,6 +131,14 @@ namespace ComplexNutrition.UI
             if (d.State == null) return new List<NutrientDefinition>();
             foreach (var n in d.Nutrients.All)
             {
+                if (TimedLow(d, n))
+                {
+                    // Ranked with the slow stores by how far past the warning they are: past the start of the effect counts as nearly gone.
+                    var s = NutrientEffects.Settings;
+                    float without = d.State.GetHoursWithoutFullDay(n.Code) / 24f;
+                    low.Add((n, Math.Max(0f, 1f - (without - s.TimedWarnDays) / Math.Max(0.01f, s.TimedStartDays - s.TimedWarnDays))));
+                    continue;
+                }
                 if (!CanRunLow(d, n)) continue;
                 float days = d.State.GetReserve(n.Code) / 100f;
                 float line = n.IsCalories ? d.Tracking.LowCaloriesDays : d.Tracking.LowDays;
@@ -257,10 +288,35 @@ namespace ComplexNutrition.UI
                 foreach (var n in low)
                 {
                     float r = d.State.GetReserve(n.Code);
-                    chips.Chips.Add((StatsHover.Esc(Lang.Get(n.LangKey)) + " " + DaysVtml(d, n, r), NutrientTip(d, n)));
+                    string days = NutrientEffects.Settings.Of(n.Code)?.Rule == EffectRules.Timed ? TimedVtml(d, n) : DaysVtml(d, n, r);
+                    chips.Chips.Add((StatsHover.Esc(Lang.Get(n.LangKey)) + " " + days, NutrientTip(d, n)));
                 }
                 blocks.Add(chips);
                 blocks.Add(new TextBlock(Grey(L("window-low-hover")), true));
+            }
+
+            // Every nutrient with an effect on the player right now (v0.4.0), bonuses green and penalties red.
+            blocks.Add(new HeadingBlock(L("window-heading-effects")));
+            if (!NutrientEffects.WorldOn)
+            {
+                blocks.Add(new TextBlock(StatsHover.Text(L("window-effects-worldoff"))));
+            }
+            else
+            {
+                var effects = new ChipsBlock();
+                foreach (var n in d.Nutrients.All)
+                {
+                    float strength = NutrientEffects.Current(d.State, n.Code);
+                    if (Math.Abs(strength) < 0.0005f) continue;
+                    string pct = NutrientDisplay.SignedPercent(strength * 100f);
+                    effects.Chips.Add((StatsHover.Esc(Lang.Get(n.LangKey)) + " <font color=\"" + (strength > 0 ? Good : Empty) + "\">" + StatsHover.Esc(pct) + "</font>", NutrientTip(d, n)));
+                }
+                if (effects.Chips.Count == 0) blocks.Add(new TextBlock(StatsHover.Text(L("window-effects-none"))));
+                else
+                {
+                    blocks.Add(effects);
+                    blocks.Add(new TextBlock(Grey(L("window-effects-hover")), true));
+                }
             }
             return blocks;
         }
@@ -284,7 +340,29 @@ namespace ComplexNutrition.UI
 
         /// <summary>A vitamin or mineral's hover: its name and what it does, then the best foods the player knows for it.</summary>
         private static string NutrientTip(NutritionPageData d, NutrientDefinition n, string middle = null) =>
-            NutrientTitle(n) + (middle == null ? "" : "<br>" + middle) + "<br>" + BestFoods(d, n);
+            NutrientTitle(n) + (middle == null ? "" : "<br>" + middle) + EffectTip(d, n) + "<br>" + BestFoods(d, n);
+
+        /// <summary>
+        /// A nutrient's effect for its hover (v0.4.0): where it stands now, green for a bonus and red for a penalty, then the rule
+        /// in grey, and for vitamin D what sunlight has made today. Empty for a nutrient without an effect.
+        /// </summary>
+        private static string EffectTip(NutritionPageData d, NutrientDefinition n)
+        {
+            string rule = NutrientDisplay.EffectRule(n.Code, n);
+            if (rule == "" || d.State == null) return "";
+            float strength = NutrientEffects.Current(d.State, n.Code);
+            string now = NutrientDisplay.EffectNow(n.Code, d.State, d.BaseMaxHealth);
+            string nowVtml = strength > 0.0005f ? StatsHover.Paint(now, Good) : strength < -0.0005f ? StatsHover.Paint(now, Empty) : StatsHover.Text(now);
+            string tip = "<br>" + nowVtml + "<br>" + Grey(rule);
+            if (n.Code == NutrientEffects.Settings.SunNutrient)
+            {
+                var s = NutrientEffects.Settings;
+                int today = d.Today;
+                float made = d.State.SunDay == today ? d.State.SunMadeToday : 0f;
+                tip += "<br>" + Grey(L("sun-made", n.Format(made, d.ShowPercent), n.Format(s.SunMaxDaysPerDay * 100f, d.ShowPercent)));
+            }
+            return tip;
+        }
 
         /// <summary>"<b>Name</b>: what it does", in one line: the macros' short "-brief" text (v0.3.6l), else the role.</summary>
         private static string NutrientTitle(NutrientDefinition n)

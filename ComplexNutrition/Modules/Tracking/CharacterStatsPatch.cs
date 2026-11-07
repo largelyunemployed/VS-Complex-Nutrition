@@ -306,7 +306,18 @@ namespace ComplexNutrition.Modules.Tracking
                 .Section(Lang.Get("complexnutrition:hover-status"), status)
                 .Section(Lang.Get("complexnutrition:hover-about"), StatsHover.Text(Lang.Get("complexnutrition:nutrient-" + code + "-role", RoleArg(code))));
             string key = "complexnutrition:nutrient-" + code + "-effect";
-            if (!Lang.HasTranslation(key)) b.Note(Lang.Get("complexnutrition:effect-placeholder"));
+            string rule = NutrientDisplay.EffectRule(code, core?.Nutrients.Get(code));
+            if (rule != "")
+            {
+                // v0.4.0: the nutrient's effect as it stands, coloured like the nutrition window's, then how it works.
+                var state = TrackedState();
+                float baseHealth = capi?.World?.Player?.Entity?.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("basemaxhealth") ?? 15f;
+                float strength = NutrientEffects.Current(state, code);
+                string now = NutrientDisplay.EffectNow(code, state, baseHealth);
+                string nowVtml = strength > 0.0005f ? StatsHover.Paint(now, NutritionPages.Good) : strength < -0.0005f ? StatsHover.Paint(now, NutritionPages.Empty) : StatsHover.Text(now);
+                b.Section(Lang.Get("complexnutrition:hover-ingame"), nowVtml, StatsHover.Text(rule));
+            }
+            else if (!Lang.HasTranslation(key)) b.Note(Lang.Get("complexnutrition:effect-placeholder"));
             else b.Section(Lang.Get("complexnutrition:hover-ingame"), StatsHover.Text(Lang.Get(key)));
             return b.ToString();
         }

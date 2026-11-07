@@ -44,13 +44,11 @@ Every module has its own switch. With all of them off, the game plays exactly li
 
 ## v0.4: Diet tiers and effects
 
-- A diet score sets one of five tiers, from Thriving to Malnourished, with buffs and debuffs to healing, max health, walk speed and hunger rate.
-- Effects build over in-game weeks; one bad meal does nothing.
-- Healing scales with, and uses up, a good share of your vitamin K, calcium and iron reserves. With an empty calorie reserve you don't heal and you suffer malnutrition damage.
-- Different nutrients fail on different clocks: vitamin C and B in days, minerals in a week or two, vitamins A, D, E and K over weeks.
-- Specific deficiencies have their own effects (scurvy slows healing, low iron costs max health, and so on), each with its own switch.
-- Every nutrient gets a gameplay effect of its own, even if a small one.
-- A balanced, healthy micronutrient profile raises how much fats, protein, carbohydrate and fiber you can store, and with them the calorie store.
+- v0.4.0: nutrient effects. Every vitamin and mineral gets an effect on a vanilla stat. The slow stores (vitamins A, D, E and K and the minerals) hold 20 days, give a 1% bonus for each day stored (up to 20%) and a 10% penalty when empty: A ranged accuracy, D physical damage resistance, E mining speed, K healing, calcium fall damage, iron max health, potassium walk speed, melee and ranged damage and butchering speed. Vitamin C (healing) and the B vitamins (hunger rate) only give a penalty, after 3 days without a full day's worth stored, growing until day 5. Sunlight makes vitamin D. A world switch for all effects and one per nutrient. Carbs, fats, protein and fiber have no effect yet.
+- v0.4.1: healing scales with, and uses up, a good share of your vitamin K, calcium and iron. (With an empty calorie reserve you already don't heal, and you starve.)
+- v0.4.2: a diet score that builds over in-game weeks, so one bad meal does nothing.
+- v0.4.3: five diet tiers, from Thriving to Malnourished, from the diet score, with buffs and debuffs to healing, max health, walk speed and hunger rate.
+- v0.4.4: a balanced, healthy micronutrient profile raises how much fats, protein, carbohydrate and fiber you can store, and with them the calorie store.
 
 ## v0.5: Health and effects UI
 

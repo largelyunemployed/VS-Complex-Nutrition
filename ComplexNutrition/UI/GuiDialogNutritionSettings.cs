@@ -167,6 +167,34 @@ namespace ComplexNutrition.UI
                 Switch(L("settings-meatinpots"), Lang.Get("worldattribute-" + WorldSettings.MeatInPotsKey + "-desc"), snap.MeatInPots,
                     on => core.SendSetting(SettingKeys.MeatInPots, on ? "true" : "false"), "meatinpots");
 
+                // ---- Nutrient Effects (v0.4.0): one switch for all, then one per nutrient in two columns ----
+                Heading(L("settings-cat-effects"));
+                Switch(L("settings-effects"), Lang.Get("worldattribute-" + WorldSettings.EffectsKey + "-desc"), snap.Effects,
+                    on => core.SendSetting(SettingKeys.Effects, on ? "true" : "false"), "effects");
+                var off = NutrientEffects.ParseOff(snap.EffectsOff);
+                var withEffects = core.Nutrients.All.Where(n => NutrientEffects.Settings.WithEffects.Contains(n.Code)).ToList();
+                const double half = (LabelWidth + ControlWidth) / 2;
+                for (int i = 0; i < withEffects.Count; i++)
+                {
+                    var n = withEffects[i];
+                    double x = i % 2 == 0 ? 0 : half;
+                    string name = Lang.Get(n.LangKey);
+                    var lb = ElementBounds.Fixed(x + 16, y + 6, half - 60, 24);
+                    bg.WithChild(lb);
+                    composer.AddStaticText(name, CairoFont.WhiteSmallText(), lb);
+                    composer.AddHoverText(L("settings-effect-one-desc", name, NutrientDisplay.EffectRule(n.Code, n)), CairoFont.WhiteSmallText(), 400, lb.FlatCopy());
+                    var cb = ElementBounds.Fixed(x + half - 44, y, 30, 28);
+                    bg.WithChild(cb);
+                    string code = n.Code, key = "effect-" + n.Code;
+                    composer.AddSwitch(on => core.SendSetting(SettingKeys.EffectPrefix + code, on ? "true" : "false"), cb, key, 28);
+                    switchValues.Add((key, !off.Contains(n.Code)));
+                    if (i % 2 == 1 || i == withEffects.Count - 1)
+                    {
+                        y += RowHeight;
+                        rows++;
+                    }
+                }
+
                 // ---- Modules ----
                 Heading(L("settings-cat-modules"));
                 Switch(L("settings-module-fooddata"), L("settings-module-fooddata-desc"), ModuleOn(snap, ModuleIds.FoodData),

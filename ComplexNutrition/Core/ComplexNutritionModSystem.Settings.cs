@@ -164,6 +164,8 @@ namespace ComplexNutrition.Core
             DigestionPool.DiminishingReturns = WorldSettings.DiminishingReturns(world);
             Vintagestory.GameContent.BlockCrop.WildCropDropMul = WorldSettings.WildHarvestShare(world);
             Digestion.SetStomach(WorldSettings.MaxFullness(world));
+            NutrientEffects.WorldOn = WorldSettings.Effects(world);
+            NutrientEffects.WorldOff = WorldSettings.EffectsOff(world);
         }
 
         private static bool IsAdmin(IServerPlayer player) => player != null && player.HasPrivilege(Privilege.controlserver);
@@ -183,6 +185,8 @@ namespace ComplexNutrition.Core
             Discover = WorldSettings.Bool(sapi.World, WorldSettings.DiscoverKey),
             WildHarvest = (WorldSettings.WildHarvestShare(sapi.World) * 100f).ToString("0", System.Globalization.CultureInfo.InvariantCulture),
             MaxFullness = WorldSettings.MaxFullness(sapi.World),
+            Effects = WorldSettings.Effects(sapi.World),
+            EffectsOff = NutrientEffects.JoinOff(WorldSettings.EffectsOff(sapi.World)),
         };
 
         private void SendSettings(IServerPlayer player)
@@ -269,11 +273,27 @@ namespace ComplexNutrition.Core
                     ApplyWorldTweaks(sapi.World);
                     saveConfig = false;
                     break;
+                case SettingKeys.Effects:
+                    sapi.World.Config.SetString(WorldSettings.EffectsKey, on ? "true" : "false");
+                    ApplyWorldTweaks(sapi.World);
+                    saveConfig = false;
+                    break;
                 case SettingKeys.AdvancedDefault:
                     sapi.World.Config.SetBool(WorldSettings.AdvancedDisplayKey, on);
                     saveConfig = false;
                     break;
                 default:
+                    if (key.StartsWith(SettingKeys.EffectPrefix))
+                    {
+                        string code = key.Substring(SettingKeys.EffectPrefix.Length);
+                        if (NutrientEffects.Settings.Of(code) == null) return;
+                        var off = WorldSettings.EffectsOff(sapi.World);
+                        if (on) off.Remove(code); else off.Add(code);
+                        sapi.World.Config.SetString(WorldSettings.EffectsOffKey, NutrientEffects.JoinOff(off));
+                        ApplyWorldTweaks(sapi.World);
+                        saveConfig = false;
+                        break;
+                    }
                     if (!key.StartsWith(SettingKeys.ModulePrefix)) return;
                     var module = modules.FirstOrDefault(m => m.Id == key.Substring(SettingKeys.ModulePrefix.Length));
                     if (module == null) return;
@@ -357,6 +377,8 @@ namespace ComplexNutrition.Core
             ServerSettings = snap;
             DigestionPool.DiminishingReturns = snap.DiminishingReturns;
             Digestion.SetStomach(snap.MaxFullness);
+            NutrientEffects.WorldOn = snap.Effects;
+            NutrientEffects.WorldOff = NutrientEffects.ParseOff(snap.EffectsOff);
 
             // The client follows the server's module switches, so a module switched on or off in the menu takes effect here too.
             foreach (var module in OrderByDependencies(modules).ToList())
@@ -514,6 +536,8 @@ namespace ComplexNutrition.Core
                 MaxFullness = hunger?.GetFloat("maxsaturation") ?? 0f,
                 Health = health?.GetFloat("currenthealth") ?? 0f,
                 MaxHealth = health?.GetFloat("maxhealth") ?? 0f,
+                BaseMaxHealth = health?.GetFloat("basemaxhealth") ?? 15f,
+                Today = (int)Math.Floor(capi.World.Calendar.TotalDays),
                 ShowPercent = ShowPercent,
                 Known = known,
                 History = state == null ? null : History,

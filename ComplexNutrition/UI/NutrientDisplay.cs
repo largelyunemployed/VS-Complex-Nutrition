@@ -40,6 +40,86 @@ namespace ComplexNutrition.UI
             return Lang.Get("complexnutrition:gut-hours", hours < 10f ? hours.ToString("0.0") : Math.Round(hours).ToString("0"));
         }
 
+        // ---- Effects (v0.4.0) ----
+
+        /// <summary>A signed percentage as "+12%" or "-5%" (one decimal under 10).</summary>
+        public static string SignedPercent(float percent)
+        {
+            float a = Math.Abs(percent);
+            string num = a >= 9.95f ? Math.Round(a).ToString("0") : a.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+            if (num == "0") return "0%";
+            return (percent < 0 ? "-" : "+") + num + "%";
+        }
+
+        /// <summary>
+        /// What an effect of this strength does, as the player sees it: "+12% ranged accuracy", or for several stats
+        /// "+5% walk speed, +5% melee damage, ...". Max health adds its points when <paramref name="baseHealth"/> is given.
+        /// </summary>
+        public static string EffectText(string code, float strength, float baseHealth = 0f)
+        {
+            var def = NutrientEffects.Settings.Of(code);
+            if (def == null) return "";
+            var parts = new List<string>();
+            foreach (var t in def.Targets)
+            {
+                string label = Lang.Get("complexnutrition:" + t.Label);
+                string pct = SignedPercent(NutrientEffects.ShownPercent(t, strength));
+                if (t.PerBaseHealth && baseHealth > 0f)
+                {
+                    float hp = strength * baseHealth;
+                    string hpText = (hp < 0 ? "-" : "+") + Math.Abs(hp).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+                    parts.Add(Lang.Get("complexnutrition:effect-change-hp", pct, label, hpText));
+                }
+                else parts.Add(Lang.Get("complexnutrition:effect-change", pct, label));
+            }
+            return string.Join(", ", parts);
+        }
+
+        /// <summary>
+        /// The rule behind a nutrient's effect, in one or two sentences: for a long-term store what a full and an empty store do,
+        /// for a timed one when the penalty starts and how bad it gets. Empty for a nutrient without an effect.
+        /// </summary>
+        public static string EffectRule(string code, NutrientDefinition n)
+        {
+            var s = NutrientEffects.Settings;
+            var def = s.Of(code);
+            if (def == null || def.Rule == EffectRules.None || def.Targets.Count == 0) return "";
+            if (def.Rule == EffectRules.Timed)
+            {
+                return Lang.Get("complexnutrition:effect-rule-timed",
+                    Num(s.TimedStartDays), EffectText(code, NutrientEffects.Timed(s, s.TimedStartDays)),
+                    EffectText(code, NutrientEffects.Timed(s, s.TimedFullDays)), Num(s.TimedFullDays));
+            }
+            float fullDays = n == null ? s.MaxBonus / Math.Max(0.01f, s.BonusPerDay) : n.Cap / 100f;
+            return Lang.Get("complexnutrition:effect-rule-longterm",
+                EffectText(code, NutrientEffects.LongTerm(s, fullDays)), Num(fullDays),
+                Num(s.BonusPerDay) + "%", EffectText(code, NutrientEffects.LongTerm(s, 0f)));
+        }
+
+        /// <summary>
+        /// Where a nutrient's effect stands now: "Effect now: +12% ranged accuracy", with a timed nutrient's count of days,
+        /// or why there is none (switched off, a full day stored, not yet).
+        /// </summary>
+        public static string EffectNow(string code, NutritionState state, float baseHealth = 0f)
+        {
+            var s = NutrientEffects.Settings;
+            var def = s.Of(code);
+            if (def == null || def.Rule == EffectRules.None || def.Targets.Count == 0 || state == null) return "";
+            if (!NutrientEffects.WorldOn) return Lang.Get("complexnutrition:effect-now-worldoff");
+            if (NutrientEffects.WorldOff.Contains(code)) return Lang.Get("complexnutrition:effect-now-off");
+            float strength = NutrientEffects.Current(state, code);
+            if (def.Rule == EffectRules.Timed)
+            {
+                float days = state.GetHoursWithoutFullDay(code) / 24f;
+                if (days <= 0f) return Lang.Get("complexnutrition:effect-now-timed-full");
+                if (strength == 0f) return Lang.Get("complexnutrition:effect-now-timed-waiting", Num(days), Num(s.TimedStartDays));
+                return Lang.Get("complexnutrition:effect-now-timed", EffectText(code, strength, baseHealth), Num(days));
+            }
+            return Lang.Get("complexnutrition:effect-now", EffectText(code, strength, baseHealth));
+        }
+
+        private static string Num(float v) => v >= 10f ? Math.Round(v).ToString("0") : v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+
         /// <summary>A reserve in % of a day as "0.6 days" or "12 days".</summary>
         public static string DaysText(float percent)
         {
