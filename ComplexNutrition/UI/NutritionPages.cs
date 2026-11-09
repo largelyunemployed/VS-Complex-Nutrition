@@ -175,7 +175,7 @@ namespace ComplexNutrition.UI
             float r = d.State.GetReserve(n.Code);
             return new BarBlock
             {
-                Label = StatsHover.Esc(label ?? Lang.Get(n.LangKey)),
+                Label = StatsHover.Esc(label ?? NutrientDisplay.BarName(n)),
                 Value = r,
                 Max = Math.Max(n.CapFor(d.State), r),
                 LineInterval = 100,

@@ -4,6 +4,13 @@
 
 Gentler respawning and new start settings. Interim test builds are lettered (0.4.2a, 0.4.2b, ...), and each change is listed under the build it arrived in.
 
+### 0.4.2d: clearer effects and minerals
+
+- Vitamin E now makes armor slow you down less (the game's armor walk speed stat), up to 20% less with a full store and 10% more when empty. Mining speed moved to potassium, which no longer changes walk speed, so walk speed belongs to vitamin C alone. The game only works out armor's slowdown when you change clothing, so the mod asks it to work it out again whenever vitamin E's effect changes.
+- The B vitamins' effect is now called calorie burn everywhere, since fullness drains at a fixed rate and only calories burn faster. The Stats panel's Hunger rate row is now Calorie burn.
+- Mineral names are blue in food tooltips (Ca · Fe · K), so potassium's K can't be mistaken for vitamin K. Mineral bars on the Stats panel and in the nutrition window read Calcium (Ca), Iron (Fe) and Potassium (K).
+- The handbook's nutrient and effect pages and the roadmap follow the new effects.
+
 ### 0.4.2c: mushrooms for vitamin E, vitamin K and potassium
 
 - Mushrooms now cover seven nutrients instead of four. Boletes (king, bitter, devil and orange oak bolete) carry potassium. Mushrooms that grow on trees (chicken of the woods, dryad's saddle, reishi, bearded tooth and tapir's liver) carry vitamin E. Green, violet and blue ones (green cracked russula, violet webcap, indigo milkcap and blue meanie) carry vitamin K. The other groups keep their colours: orange, red and yellow for vitamin A, white and pale for calcium, brown and dark for iron, and oysters, shiitake, honey mushroom and pink bonnet for vitamin D. The handbook's Mushrooms paragraph says so.

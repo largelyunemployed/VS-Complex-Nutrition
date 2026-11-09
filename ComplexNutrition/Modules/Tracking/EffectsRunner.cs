@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ComplexNutrition.Core;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.GameContent;
@@ -118,6 +119,7 @@ namespace ComplexNutrition.Modules.Tracking
             float baseHealth = health?.BaseMaxHealth ?? 15f;
             if (!applied.TryGetValue(entity.EntityId, out var mine)) applied[entity.EntityId] = mine = new Dictionary<string, float>();
             bool healthChanged = false;
+            bool armorChanged = false;
 
             foreach (var code in S.WithEffects)
             {
@@ -143,9 +145,37 @@ namespace ComplexNutrition.Modules.Tracking
                         mine[key] = delta;
                     }
                     if (t.PerBaseHealth) healthChanged = true;
+                    if (t.Stat == ArmorSlowdownStat) armorChanged = true;
                 }
             }
             if (healthChanged) health?.UpdateMaxHealth();
+            if (armorChanged) RefreshArmorSlowdown(player);
+        }
+
+        /// <summary>The vanilla stat for how much worn armor slows you down (vitamin E's effect since 0.4.2d).</summary>
+        private const string ArmorSlowdownStat = "armorWalkSpeedAffectedness";
+
+        /// <summary>The game's own method that works out walk speed from worn armor. It is private, so it is found once by name.</summary>
+        private static readonly System.Reflection.MethodInfo UpdateWearableStats =
+            HarmonyLib.AccessTools.Method(typeof(ModSystemWearableStats), "updateWearableStats");
+
+        /// <summary>
+        /// The game only works out armor's slowdown when a clothing slot changes or the player joins. When vitamin E's effect
+        /// changes, this asks it to work it out again, so the new slowdown applies straight away.
+        /// </summary>
+        private void RefreshArmorSlowdown(IServerPlayer player)
+        {
+            try
+            {
+                var wearableStats = player.Entity?.Api?.ModLoader.GetModSystem<ModSystemWearableStats>();
+                var characterInventory = player.InventoryManager?.GetOwnInventory(GlobalConstants.characterInvClassName);
+                if (wearableStats == null || characterInventory == null || UpdateWearableStats == null) return;
+                UpdateWearableStats.Invoke(wearableStats, new object[] { characterInventory, player });
+            }
+            catch (Exception e)
+            {
+                LogOnce("armor slowdown", e);
+            }
         }
 
         /// <summary>Takes every modifier and hook off a player (tracking switched off, or the player leaving).</summary>
@@ -156,14 +186,17 @@ namespace ComplexNutrition.Modules.Tracking
             if (applied.TryGetValue(entity.EntityId, out var mine))
             {
                 bool healthChanged = false;
+                bool armorChanged = false;
                 foreach (var key in mine.Keys)
                 {
                     int bar = key.IndexOf('|');
                     entity.Stats.Remove(key.Substring(0, bar), NutrientEffects.StatPrefix + key.Substring(bar + 1));
                     if (key.StartsWith("maxhealthExtraPoints|")) healthChanged = true;
+                    if (key.StartsWith(ArmorSlowdownStat + "|")) armorChanged = true;
                 }
                 applied.Remove(entity.EntityId);
                 if (healthChanged) entity.GetBehavior<EntityBehaviorHealth>()?.UpdateMaxHealth();
+                if (armorChanged) RefreshArmorSlowdown(player);
             }
             if (hooks.TryGetValue(entity.EntityId, out var h))
             {

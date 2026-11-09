@@ -120,6 +120,14 @@ namespace ComplexNutrition.UI
 
         private static string Num(float v) => v >= 10f ? Math.Round(v).ToString("0") : v.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
 
+        /// <summary>
+        /// A nutrient's name for a bar label: minerals carry their symbol, as in "Calcium (Ca)" (0.4.2d), to match the
+        /// Ca · Fe · K line in food tooltips; everything else is just its name.
+        /// </summary>
+        public static string BarName(NutrientDefinition nutrient) => nutrient.Group == "Mineral"
+            ? Lang.Get("complexnutrition:stats-mineral-label", Lang.Get(nutrient.LangKey), Lang.Get("complexnutrition:nutrient-" + nutrient.Code + "-short"))
+            : Lang.Get(nutrient.LangKey);
+
         /// <summary>A reserve in % of a day as "0.6 days" or "12 days".</summary>
         public static string DaysText(float percent)
         {

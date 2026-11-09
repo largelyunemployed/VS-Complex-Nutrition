@@ -13,6 +13,8 @@ namespace ComplexNutrition.Core
         public const string Kcal = "#f5a142";
         public const string Micro = "#f2d230";
         public const string Rate = "#ec6b5e";
+        /// <summary>The short names of the minerals (Ca, Fe, K) in food tooltips, light blue (since 0.4.2d).</summary>
+        public const string MineralName = "#7ab8f5";
 
         // A number with its unit right after it: "94g", "1,920kcal", "7.0mg", "4mcg". Not part of a longer word.
         private static readonly Regex Amount = new(@"(?<![\w.#])\d[\d,]*(?:\.\d+)?(kcal|mcg|mg|g)(?!\w)", RegexOptions.Compiled);

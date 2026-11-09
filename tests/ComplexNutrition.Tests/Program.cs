@@ -584,7 +584,7 @@ namespace ComplexNutrition.Tests
             var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients;
             var lang = Repo.Json(Repo.Mod("assets", "complexnutrition", "lang", "en.json"));
             var stats = new[] { "walkspeed", "healingeffectivness", "hungerrate", "maxhealthExtraPoints", "rangedWeaponsAcc", "rangedWeaponsDamage",
-                "meleeWeaponsDamage", "miningSpeedMul", "fallDamageFactor", "animalHarvestingTime", NutrientEffects.PhysicalResistance };
+                "meleeWeaponsDamage", "miningSpeedMul", "fallDamageFactor", "animalHarvestingTime", "armorWalkSpeedAffectedness", NutrientEffects.PhysicalResistance };
             foreach (var kv in file.Nutrients)
             {
                 var n = nutrients.FirstOrDefault(x => x.Code == kv.Key);
