@@ -654,13 +654,13 @@ namespace ComplexNutrition.Tests
             Assert.Near(1000f, Kcal(settings.CaloriesOnRespawn("something old", Percent(3000f), size, calories, false)), 0.5, "an unknown choice works like lose");
         }
 
-        /// <summary>Every edible mushroom has a signature nutrient: vitamin A, calcium, vitamin D or iron (45% of a day per 100g).</summary>
+        /// <summary>Every edible mushroom has a signature nutrient: vitamin A, D, E or K, calcium, iron or potassium (45% of a day per 100g).</summary>
         [Test]
         public static void MushroomsHaveSignatureNutrients()
         {
             var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients.ToDictionary(n => n.Code);
             var profiles = Repo.Json(Repo.Config(Path.Combine("foodprofiles", "mushroom.json")))["profiles"];
-            string[] signatures = { NutrientCodes.VitaminA, NutrientCodes.Calcium, NutrientCodes.VitaminD, NutrientCodes.Iron };
+            string[] signatures = { NutrientCodes.VitaminA, NutrientCodes.VitaminD, NutrientCodes.VitaminE, NutrientCodes.VitaminK, NutrientCodes.Calcium, NutrientCodes.Iron, NutrientCodes.Potassium };
             foreach (var profile in profiles)
             {
                 string code = (string)profile["code"];
