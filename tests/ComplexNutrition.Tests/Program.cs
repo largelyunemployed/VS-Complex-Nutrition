@@ -300,15 +300,23 @@ namespace ComplexNutrition.Tests
         {
             var attrs = (JArray)Repo.Json(Repo.Mod("worldconfig.json"))["worldConfigAttributes"];
             var lang = Repo.Json(Repo.Mod("assets", "game", "lang", "worldconfig-en.json"));
-            foreach (var (key, def) in new[] { (WorldSettings.StartConditionKey, WorldSettings.DefaultStart), (WorldSettings.RespawnConditionKey, WorldSettings.DefaultRespawn) })
+            foreach (var (key, def, options) in new[]
+            {
+                (WorldSettings.StartConditionKey, WorldSettings.DefaultStart, WorldSettings.StartOptions),
+                (WorldSettings.StartStoresKey, WorldSettings.DefaultStartStores, WorldSettings.StartOptions),
+                (WorldSettings.RespawnCaloriesKey, WorldSettings.DefaultRespawnCalories, WorldSettings.RespawnCaloriesOptions),
+            })
             {
                 var attr = attrs.First(a => (string)a["code"] == key);
-                Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Value)), string.Join(",", attr["values"].Select(v => (string)v)), key + " values");
-                Assert.Equal(string.Join(",", WorldSettings.StartOptions.Select(o => o.Name)), string.Join(",", attr["names"].Select(v => (string)v)), key + " names");
+                Assert.Equal(string.Join(",", options.Select(o => o.Value)), string.Join(",", attr["values"].Select(v => (string)v)), key + " values");
+                Assert.Equal(string.Join(",", options.Select(o => o.Name)), string.Join(",", attr["names"].Select(v => (string)v)), key + " names");
                 Assert.Equal(def, (string)attr["default"], key + " default");
-                foreach (var o in WorldSettings.StartOptions) Assert.True(lang[o.LangKey(key)] != null, "worldconfig-en.json has " + o.LangKey(key));
+                foreach (var o in options) Assert.True(lang[o.LangKey(key)] != null, "worldconfig-en.json has " + o.LangKey(key));
                 Assert.True(lang["worldattribute-" + key] != null && lang["worldattribute-" + key + "-desc"] != null, "worldconfig-en.json names and describes " + key);
             }
+            var keepStores = attrs.First(a => (string)a["code"] == WorldSettings.KeepStoresKey);
+            Assert.Equal("true", (string)keepStores["default"], "Keep vitamin and mineral reserves on death is on by default");
+            Assert.True(!attrs.Any(a => (string)a["code"] == "complexnutritionRespawn"), "the old Respawn calories setting is gone");
             Assert.Near(0.7, WorldSettings.StoreShare(700f), 1e-6, "Easy keeps 70% of each store");
             Assert.Near(0.001, WorldSettings.StoreShare(1f), 1e-6, "Rock Bottom keeps 0.1%");
             foreach (var key in new[] { WorldSettings.AdvancedDisplayKey, WorldSettings.MeatInPotsKey, WorldSettings.DiminishingReturnsKey, WorldSettings.DiscoverKey })
@@ -625,6 +633,25 @@ namespace ComplexNutrition.Tests
             Assert.Equal(vitaminA.Cap, vitaminA.CapFor(state), "other stores don't grow with the tier");
             state.DietTier = 0;
             Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "the tier never drops below the first");
+        }
+
+        /// <summary>Respawn with calories: lose keeps a tenth (at least 1,000kcal), keep changes nothing, reset leaves 1,000kcal.</summary>
+        [Test]
+        public static void RespawnCaloriesChoices()
+        {
+            var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients;
+            var calories = nutrients.First(n => n.Code == NutrientCodes.Calories);
+            var settings = Repo.Load<TrackingSettings>(Repo.Config("tracking.json"));
+            float Kcal(float percentOfDay) => calories.FromPercent(percentOfDay);
+            float Percent(float kcal) => calories.ToPercent(kcal);
+            float size = 400f;   // 4 days
+            Assert.Near(1120f, Kcal(settings.CaloriesOnRespawn(WorldSettings.RespawnLose, Percent(11200f), size, calories, false)), 0.5, "lose keeps a tenth of a full reserve");
+            Assert.Near(1000f, Kcal(settings.CaloriesOnRespawn(WorldSettings.RespawnLose, Percent(3000f), size, calories, false)), 0.5, "lose never leaves less than 1,000kcal");
+            Assert.Near(1000f, Kcal(settings.CaloriesOnRespawn(WorldSettings.RespawnLose, 0f, size, calories, false)), 0.5, "a starved character comes back with 1,000kcal");
+            Assert.Near(5000f, Kcal(settings.CaloriesOnRespawn(WorldSettings.RespawnKeep, Percent(5000f), size, calories, false)), 0.5, "keep changes nothing");
+            Assert.Near(1000f, Kcal(settings.CaloriesOnRespawn(WorldSettings.RespawnReset, Percent(11200f), size, calories, false)), 0.5, "reset leaves 1,000kcal");
+            Assert.True(Kcal(settings.CaloriesOnRespawn(WorldSettings.RespawnReset, Percent(11200f), size, calories, true)) < 20f, "reset on a Rock Bottom start leaves almost nothing");
+            Assert.Near(1000f, Kcal(settings.CaloriesOnRespawn("something old", Percent(3000f), size, calories, false)), 0.5, "an unknown choice works like lose");
         }
 
         /// <summary>Every edible mushroom has a signature nutrient: vitamin A, calcium, vitamin D or iron (45% of a day per 100g).</summary>

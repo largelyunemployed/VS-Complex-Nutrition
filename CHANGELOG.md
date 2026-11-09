@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.4.2
+
+Gentler respawning and new start settings. Interim test builds are lettered (0.4.2a, 0.4.2b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.2a: gentler respawning, start settings, mushroom colours
+
+- Dying is gentler. A new world setting, Keep vitamin and mineral reserves on death (on by default), leaves your vitamin, mineral and fiber stores as they were, and the vitamin C and B vitamin day counts carry on. Switched off, those stores go back to what a new character starts with.
+- Respawn with calories replaces Respawn calories, with three choices. Lose calories on death (the default) leaves a tenth of what your reserve held, but never less than 1,000kcal. Keep calories on death leaves it as it was. Reset calorie progress on death (for masochists only!) leaves 1,000kcal, or almost nothing on a Rock Bottom start, and will also send your diet back to the first tier once diet tiers arrive. Worlds that had the old setting get Lose calories on death. (tracking.json: respawnKeptShare, respawnMinKcal, respawnResetKcal.)
+- The gut always empties on death, whatever the settings.
+- New world setting Starting vitamin and mineral reserves, with the same six choices as Starting calories (default Normal): how full a new character's vitamin, mineral and fiber stores are. Starting calories now sets only the calorie reserve. Worlds made before this keep using Starting calories for both.
+- Mushrooms are grouped by their colour in the game, from the handbook icons, instead of the real species: deer ear, funeral bell, red wine cap and witch's hat now give vitamin A; paddy straw and tapir's liver calcium; and reishi, gold cap and blue meanie iron.
+- Fixed wording: the settings note and the window page now name the Nutrient Effects settings, the Minerals tab says minerals are stored for weeks, and the Eating Well page lost a doubled "and".
+
 ## v0.4.1
 
 Healing, porridge and mushrooms. Interim test builds are lettered (0.4.1a, 0.4.1b, ...), and each change is listed under the build it arrived in.

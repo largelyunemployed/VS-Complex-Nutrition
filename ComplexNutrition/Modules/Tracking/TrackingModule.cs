@@ -219,34 +219,46 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// A character new to Complex Nutrition starts with what the world's start condition picks: the same share of the
-        /// calorie reserve and of every vitamin and mineral store (Full 100%, Easy 70%, Normal 50%, Hard 30%, Brutal 10%,
-        /// Rock Bottom 0.1%). Only on first join; respawning uses the respawn condition.
-        /// Worlds from before v0.2.4 have none, and the nutrients' startReserve applies.
+        /// A character new to Complex Nutrition starts with what the world's two start settings pick (since v0.4.2): Starting
+        /// calories fills that share of the calorie reserve, and Starting vitamin and mineral reserves that share of every
+        /// vitamin, mineral and fiber store (Full 100%, Easy 70%, Normal 50%, Hard 30%, Brutal 10%, Rock Bottom 0.1%).
+        /// Only on first join. A world from before v0.4.2 has no stores setting, and its stores follow Starting calories as
+        /// before; a world from before v0.2.4 has neither, and the nutrients' startReserve applies.
         /// </summary>
         private void ApplyStartCondition(IServerPlayer player, NutritionState state)
         {
-            float? start = WorldSettings.StartCalories(sapi.World);
-            if (start != null) ApplyCondition(player, state, start.Value, publish: false);
+            float? caloriesChoice = WorldSettings.StartCalories(sapi.World);
+            float? storesChoice = WorldSettings.StartStores(sapi.World);
+            if (caloriesChoice != null) FillCalories(player, state, WorldSettings.StoreShare(caloriesChoice.Value), publish: false);
+            if (storesChoice != null) FillStores(player, state, WorldSettings.StoreShare(storesChoice.Value), publish: false);
+        }
+
+        /// <summary>Sets the calorie reserve to <paramref name="shareOfReserve"/> (0 to 1) of its size for this player.</summary>
+        private void FillCalories(IServerPlayer player, NutritionState state, float shareOfReserve, bool publish)
+        {
+            var calories = Core.Nutrients.Get(NutrientCodes.Calories);
+            if (calories != null) SetReserveTo(player, state, calories, calories.CapFor(state) * shareOfReserve, publish);
         }
 
         /// <summary>
-        /// Fills the calorie reserve and every vitamin and mineral store to the share a start or respawn option gives
-        /// (<see cref="WorldSettings.StoreShare"/>: Full 100%, Easy 70%, Normal 50% ... of each store's size). Since v0.4.1 the
-        /// calorie reserve's size is the player's own (<see cref="NutrientDefinition.CapFor"/>), so Normal gives half of it.
+        /// Sets every vitamin and mineral store, and the fiber store, to <paramref name="shareOfStore"/> (0 to 1) of its size:
+        /// Normal (0.5) gives 10 days of each 20-day store and 1 day of the 2-day ones (vitamin C, the B vitamins and fiber).
         /// </summary>
-        private void ApplyCondition(IServerPlayer player, NutritionState state, float optionValue, bool publish)
+        private void FillStores(IServerPlayer player, NutritionState state, float shareOfStore, bool publish)
         {
-            float shareOfStore = WorldSettings.StoreShare(optionValue);
-            foreach (var n in Core.Nutrients.All)
+            foreach (var nutrient in Core.Nutrients.All)
             {
-                float value;
-                if (n.IsCalories || n.IsMicronutrient) value = n.CapFor(state) * shareOfStore;
-                else continue;
-                float old = state.GetReserve(n.Code);
-                state.SetReserve(n.Code, value);
-                if (publish && old != value) Core.PublishReserveChanged(player, n.Code, old, value);
+                if (nutrient.IsMicronutrient || nutrient.Code == NutrientCodes.Fiber)
+                    SetReserveTo(player, state, nutrient, nutrient.CapFor(state) * shareOfStore, publish);
             }
+        }
+
+        /// <summary>Sets one reserve (in % of a day) and, when <paramref name="publish"/> is on, tells other mods it changed.</summary>
+        private void SetReserveTo(IServerPlayer player, NutritionState state, NutrientDefinition nutrient, float value, bool publish)
+        {
+            float old = state.GetReserve(nutrient.Code);
+            state.SetReserve(nutrient.Code, value);
+            if (publish && old != value) Core.PublishReserveChanged(player, nutrient.Code, old, value);
         }
 
         /// <summary>Saves from v0.2.2 to v0.3.0 kept the gut as batches as well as in the reserves; since v0.3.1 the reserve is the one record.</summary>
@@ -262,15 +274,56 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// A respawned character gets the world's respawn condition (Brutal unless set: 10% of the calorie reserve and of each
-        /// vitamin and mineral store). The gut and the last 24 hours of digestion are cleared, so the new body starts fresh.
-        /// Fiber empties too: a new gut starts with none. Vanilla gives half a stomach of fullness.
+        /// A character respawns after dying (reworked in v0.4.2 to be gentler). Three things happen:
+        /// 1. The calorie reserve follows Respawn with calories (<see cref="SetRespawnCalories"/>).
+        /// 2. With Keep vitamin and mineral reserves on death switched on (the default), the vitamin, mineral and fiber stores
+        ///    and the vitamin C and B vitamin day counts stay as they were. Switched off, the stores go back to what a new
+        ///    character starts with (Starting vitamin and mineral reserves) and the day counts start again.
+        /// 3. The gut always empties, with the last 24 hours of digestion, so the new body starts digesting from nothing.
+        /// Vanilla gives half a stomach of fullness.
         /// </summary>
         private void OnRespawn(IServerPlayer player)
         {
             var state = player?.Entity == null ? null : StateOf(player.Entity);
             if (state == null) return;
-            ApplyCondition(player, state, WorldSettings.RespawnCalories(sapi.World), publish: true);
+            SetRespawnCalories(player, state);
+            if (!WorldSettings.KeepStores(sapi.World))
+            {
+                float storesChoice = WorldSettings.StartStores(sapi.World) ?? WorldSettings.DefaultStartStoresValue;
+                FillStores(player, state, WorldSettings.StoreShare(storesChoice), publish: true);
+                Effects?.Reset(state);
+            }
+            EmptyGut(player, state);
+            state.MarkDirty();
+            // Trend arrows compare against the new body, not the old one.
+            var history = NutrientHistory.Of(player.Entity);
+            history.ClearHours();
+            history.RecordHour(CurrentHour, Reserves(state));
+        }
+
+        /// <summary>
+        /// Sets the calorie reserve of a character who just respawned, by the world's Respawn with calories choice:
+        /// - Lose calories on death (the default): a tenth of what the reserve held (respawnKeptShare), but at least 1,000kcal
+        ///   (respawnMinKcal), and never more than the reserve holds.
+        /// - Keep calories on death: unchanged.
+        /// - Reset calorie progress on death: 1,000kcal (respawnResetKcal), or Rock Bottom's share of the reserve on a world
+        ///   that starts at Rock Bottom, and the diet goes back to the first tier.
+        /// </summary>
+        private void SetRespawnCalories(IServerPlayer player, NutritionState state)
+        {
+            var calories = Core.Nutrients.Get(NutrientCodes.Calories);
+            if (calories == null) return;
+            string choice = WorldSettings.RespawnCalories(sapi.World);
+            // Reset first, so the reserve's size is the first tier's when the new amount is worked out.
+            if (choice == WorldSettings.RespawnReset) state.ResetDietProgress();
+            float atDeath = state.GetReserve(calories.Code);
+            float afterRespawn = Settings.CaloriesOnRespawn(choice, atDeath, calories.CapFor(state), calories, WorldSettings.RockBottomStart(sapi.World));
+            SetReserveTo(player, state, calories, afterRespawn, publish: true);
+        }
+
+        /// <summary>Empties the gut on death: carbs, fats, protein and fiber still being digested, and the 24-hour digestion logs.</summary>
+        private void EmptyGut(IServerPlayer player, NutritionState state)
+        {
             foreach (var kv in Digest.Pools)
             {
                 var def = Core.Nutrients.Get(kv.Key);
@@ -283,25 +336,12 @@ namespace ComplexNutrition.Modules.Tracking
                 state.SetAbsorbedLog(kv.Key, new float[24]);
                 state.SetAbsorbedLog(Digestion.KcalLogKey(kv.Key), new float[24]);
             }
-            var fiber = Core.Nutrients.Get(NutrientCodes.Fiber);
-            if (fiber != null)
-            {
-                float old = state.GetReserve(fiber.Code);
-                state.SetReserve(fiber.Code, 0f);
-                if (old != 0f) Core.PublishReserveChanged(player, fiber.Code, old, 0f);
-            }
             state.FiberGut = 0f;
             state.SetGutHours(NutrientCodes.Fiber, 0f);
             state.SetAbsorbedLog(NutrientCodes.Fiber, new float[24]);
             state.SetAbsorbedLog(Digestion.KcalLogKey(NutrientCodes.Fiber), new float[24]);
             state.Protein24 = 0f;
             state.ClearSitting();
-            Effects?.Reset(state);
-            state.MarkDirty();
-            // Trend arrows compare against the new body, not the old one.
-            var history = NutrientHistory.Of(player.Entity);
-            history.ClearHours();
-            history.RecordHour(CurrentHour, Reserves(state));
         }
 
         /// <summary>Lets vanilla recompute its nutrition HP bonus; our patch keeps it at zero while tracking is on.</summary>

@@ -150,10 +150,18 @@ namespace ComplexNutrition.UI
                     WorldSettings.StartOptions.Select(o => o.Value).ToArray(), WorldSettings.StartOptions.Select(o => Lang.Get(o.LangKey(WorldSettings.StartConditionKey))).ToArray(),
                     snap.StartCalories ?? WorldSettings.DefaultStart,
                     v => core.SendSetting(SettingKeys.StartCalories, v), "start");
-                Dropdown(L("settings-respawn"), Lang.Get("worldattribute-" + WorldSettings.RespawnConditionKey + "-desc"),
-                    WorldSettings.StartOptions.Select(o => o.Value).ToArray(), WorldSettings.StartOptions.Select(o => Lang.Get(o.LangKey(WorldSettings.RespawnConditionKey))).ToArray(),
-                    snap.RespawnCalories ?? WorldSettings.DefaultRespawn,
+                // Starting vitamin and mineral reserves (v0.4.2) uses the same six choices as Starting calories.
+                Dropdown(L("settings-startstores"), Lang.Get("worldattribute-" + WorldSettings.StartStoresKey + "-desc"),
+                    WorldSettings.StartOptions.Select(o => o.Value).ToArray(), WorldSettings.StartOptions.Select(o => Lang.Get(o.LangKey(WorldSettings.StartStoresKey))).ToArray(),
+                    snap.StartStores ?? WorldSettings.DefaultStartStores,
+                    v => core.SendSetting(SettingKeys.StartStores, v), "startstores");
+                // What dying does (v0.4.2): the calorie reserve, then the other stores.
+                Dropdown(L("settings-respawn"), Lang.Get("worldattribute-" + WorldSettings.RespawnCaloriesKey + "-desc"),
+                    WorldSettings.RespawnCaloriesOptions.Select(o => o.Value).ToArray(), WorldSettings.RespawnCaloriesOptions.Select(o => Lang.Get(o.LangKey(WorldSettings.RespawnCaloriesKey))).ToArray(),
+                    snap.RespawnCalories ?? WorldSettings.DefaultRespawnCalories,
                     v => core.SendSetting(SettingKeys.RespawnCalories, v), "respawn");
+                Switch(L("settings-keepstores"), Lang.Get("worldattribute-" + WorldSettings.KeepStoresKey + "-desc"), snap.KeepStores,
+                    on => core.SendSetting(SettingKeys.KeepStores, on ? "true" : "false"), "keepstores");
                 Switch(L("settings-advanced-default"), L("settings-advanced-default-desc"), snap.AdvancedDefault,
                     on => core.SendSetting(SettingKeys.AdvancedDefault, on ? "true" : "false"), "advanceddefault");
 

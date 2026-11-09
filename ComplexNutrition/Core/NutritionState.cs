@@ -207,7 +207,8 @@ namespace ComplexNutrition.Core
 
         /// <summary>
         /// The diet tier and its 3-day counter. Respawning leaves this part alone: the calorie reserve's size follows the diet
-        /// tier, and dying doesn't reset it (only the planned "Reset calorie progress on death" respawn choice will).
+        /// tier, and dying doesn't reset it (only the "Reset calorie progress on death" respawn choice does, through
+        /// <see cref="ResetDietProgress"/>).
         /// </summary>
         private ITreeAttribute Diet => Sub("diet");
 
@@ -239,6 +240,17 @@ namespace ComplexNutrition.Core
         {
             get => Diet.GetFloat("pendingDays");
             set => Diet.SetFloat("pendingDays", Math.Max(0f, value));
+        }
+
+        /// <summary>
+        /// Puts the diet back on the first tier with nothing pending, for "Reset calorie progress on death" (since v0.4.2).
+        /// While every character is on the first tier (until v0.4.3) this changes nothing you can see.
+        /// </summary>
+        public void ResetDietProgress()
+        {
+            DietTier = FirstDietTier;
+            PendingDietTier = FirstDietTier;
+            DaysAtPendingTier = 0f;
         }
 
         public void MarkDirty() => entity?.WatchedAttributes.MarkPathDirty(TreeKey);

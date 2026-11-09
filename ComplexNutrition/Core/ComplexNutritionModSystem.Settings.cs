@@ -178,7 +178,9 @@ namespace ComplexNutrition.Core
             DisplayUnits = Config.ShowPercent ? "percent" : "amount",
             Modules = modules.ToDictionary(m => m.Id, m => m.IsEnabled),
             StartCalories = WorldSettings.StartCalories(sapi.World)?.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            RespawnCalories = WorldSettings.RespawnCalories(sapi.World).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            StartStores = WorldSettings.StartStores(sapi.World)?.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            RespawnCalories = WorldSettings.RespawnCalories(sapi.World),
+            KeepStores = WorldSettings.KeepStores(sapi.World),
             AdvancedDefault = Digestion.WorldAdvancedDefault(sapi.World),
             MeatInPots = WorldSettings.Bool(sapi.World, WorldSettings.MeatInPotsKey),
             DiminishingReturns = WorldSettings.DiminishingReturns(sapi.World),
@@ -243,9 +245,18 @@ namespace ComplexNutrition.Core
                     sapi.World.Config.SetString(WorldSettings.StartConditionKey, value);
                     saveConfig = false;
                     break;
-                case SettingKeys.RespawnCalories:
+                case SettingKeys.StartStores:
                     if (!WorldSettings.IsStartOption(value)) return;
-                    sapi.World.Config.SetString(WorldSettings.RespawnConditionKey, value);
+                    sapi.World.Config.SetString(WorldSettings.StartStoresKey, value);
+                    saveConfig = false;
+                    break;
+                case SettingKeys.RespawnCalories:
+                    if (!WorldSettings.IsRespawnCaloriesOption(value)) return;
+                    sapi.World.Config.SetString(WorldSettings.RespawnCaloriesKey, value);
+                    saveConfig = false;
+                    break;
+                case SettingKeys.KeepStores:
+                    sapi.World.Config.SetString(WorldSettings.KeepStoresKey, on ? "true" : "false");
                     saveConfig = false;
                     break;
                 case SettingKeys.MeatInPots:
@@ -402,7 +413,9 @@ namespace ComplexNutrition.Core
                 cfg.SetString(WorldSettings.WildHarvestKey, snap.WildHarvest ?? WorldSettings.DefaultWildHarvest);
                 cfg.SetInt(WorldSettings.MaxFullnessKey, snap.MaxFullness);
                 if (snap.StartCalories != null) cfg.SetString(WorldSettings.StartConditionKey, snap.StartCalories);
-                if (snap.RespawnCalories != null) cfg.SetString(WorldSettings.RespawnConditionKey, snap.RespawnCalories);
+                if (snap.StartStores != null) cfg.SetString(WorldSettings.StartStoresKey, snap.StartStores);
+                if (snap.RespawnCalories != null) cfg.SetString(WorldSettings.RespawnCaloriesKey, snap.RespawnCalories);
+                cfg.SetString(WorldSettings.KeepStoresKey, snap.KeepStores ? "true" : "false");
             }
 
             settingsDialog?.Refresh();

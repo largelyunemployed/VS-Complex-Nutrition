@@ -63,7 +63,7 @@ namespace ComplexNutrition.Modules.Tracking
             sapi.Logger.Error("[complexnutrition] Failed {0}: {1}", what, e);
         }
 
-        /// <summary>A body that has just respawned starts its timed counters again.</summary>
+        /// <summary>Starts the timed counters (vitamin C and the B vitamins) again, for a respawn with Keep vitamin and mineral reserves on death switched off.</summary>
         public void Reset(NutritionState state)
         {
             foreach (var code in S.WithEffects)
