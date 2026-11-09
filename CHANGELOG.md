@@ -4,6 +4,15 @@
 
 Gentler respawning and new start settings. Interim test builds are lettered (0.4.2a, 0.4.2b, ...), and each change is listed under the build it arrived in.
 
+### 0.4.2b: a cleaner settings menu
+
+- The settings menu has two tabs. Your Settings is for every player and only changes what you see: the advanced nutrition display, amounts or percent, short food tooltips and the Running Low icon. World Settings applies to every player and only admins see it (players with the game's controlserver privilege; in single player that is you). It holds Food Info, Starting and Respawning, Food and Digestion (the old World section), Nutrient Effects and Modules.
+- Nothing changes until you press Save. Cancel or the close button leaves everything as it was. Switching Nutrient tracking still asks you to confirm, after Save.
+- The duplicate settings are gone: Default amounts or percent and Advanced display default no longer show in the menu. The world's defaults are still set when the world is created, and Advanced nutrition display and Amounts or percent show them until you pick your own.
+- Changing Max fullness now resizes every player's stomach straight away. Before, it waited for the next digestion step, which never came while the game was paused.
+- Hovers on your own settings now end with "This change will not affect what other players see." instead of mentioning your computer.
+- Text: Running Low icon is capitalised as in the handbook, Poultry and bushmeat in pots has the same name in the menu and on the world creation screen, Diminishing returns no longer says "in one sitting", and Max fullness says fullness empties at a rate of 100 an hour. The handbook's settings paragraph describes the tabs and Save.
+
 ### 0.4.2a: gentler respawning, start settings, mushroom colours
 
 - Dying is gentler. A new world setting, Keep vitamin and mineral reserves on death (on by default), leaves your vitamin, mineral and fiber stores as they were, and the vitamin C and B vitamin day counts carry on. Switched off, those stores go back to what a new character starts with.

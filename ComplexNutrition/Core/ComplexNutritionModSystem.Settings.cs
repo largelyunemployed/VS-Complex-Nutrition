@@ -168,6 +168,19 @@ namespace ComplexNutrition.Core
             NutrientEffects.WorldOff = WorldSettings.EffectsOff(world);
         }
 
+        /// <summary>
+        /// Gives every online player's stomach the world's new Max fullness straight away (0.4.2b). Before this the change
+        /// only reached a player on the next digestion step, which never comes while the game is paused.
+        /// </summary>
+        private void ResizeEveryStomach()
+        {
+            if (Digestion.Settings == null) return;   // tracking is off: players are on vanilla's scale
+            foreach (IServerPlayer player in sapi.World.AllOnlinePlayers)
+            {
+                if (player.Entity != null) Digestion.FitStomach(player.Entity, Digestion.Settings);
+            }
+        }
+
         private static bool IsAdmin(IServerPlayer player) => player != null && player.HasPrivilege(Privilege.controlserver);
 
         private SettingsSnapshot SnapshotFor(IServerPlayer player) => new()
@@ -287,6 +300,7 @@ namespace ComplexNutrition.Core
                     if (!int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int fullness)) return;
                     sapi.World.Config.SetInt(WorldSettings.MaxFullnessKey, Math.Clamp(fullness, 0, WorldSettings.MaxFullnessTop));
                     ApplyWorldTweaks(sapi.World);
+                    ResizeEveryStomach();
                     saveConfig = false;
                     break;
                 case SettingKeys.Effects:

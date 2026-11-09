@@ -24,15 +24,15 @@
 	"worldattribute-complexnutritionKeepStores": "Keep vitamin and mineral reserves on death",
 	"worldattribute-complexnutritionKeepStores-desc": "When on, a character keeps their vitamin, mineral and fiber stores when they die, and their vitamin C and B vitamin day counts carry on. When off, those stores go back to what Starting vitamin and mineral reserves gives a new character. The gut always empties on death.",
 	"worldattribute-complexnutritionAdvancedDisplay": "Advanced nutrition display",
-	"worldattribute-complexnutritionAdvancedDisplay-desc": "Shows more detail when you hover over the Carbs, Fats and Protein bars: how many calories the food being digested will give, how long it will take and how fast it is being absorbed. Each player can change this for themselves in game by typing /cnutrition display.",
-	"worldattribute-complexnutritionMeatInPots": "All poultry and bushmeat in pots",
+	"worldattribute-complexnutritionAdvancedDisplay-desc": "Shows more detail when you hover over the Carbs, Fats and Protein bars: how many calories the food being digested will give, how long it will take and how fast it is being absorbed. This is the default: each player can change it for themselves in the settings menu.",
+	"worldattribute-complexnutritionMeatInPots": "Poultry and bushmeat in pots",
 	"worldattribute-complexnutritionMeatInPots-desc": "Lets raw, cooked and cured poultry and bushmeat go into meat stews and soups as regular ingredients. Changing it takes effect the next time the world is loaded.",
 	"worldattribute-complexnutritionDiscover": "Discover Nutrition",
 	"worldattribute-complexnutritionDiscover-desc": "Hides a food's nutrients (shown as ???) until you have eaten it. Eating a meal or pie teaches you each of its ingredients. How filling a food is still shows. The nutrition window only suggests foods you have eaten.",
 	"worldattribute-complexnutritionHidePoison": "Hide Poison Effects",
 	"worldattribute-complexnutritionHidePoison-desc": "Part of Discover Nutrition, and only works while that is on. Hides the health a food takes from you, such as a poisonous mushroom's, until you have eaten it once. A little extra danger for braver players.",
 	"worldattribute-complexnutritionDiminishingReturns": "Diminishing returns",
-	"worldattribute-complexnutritionDiminishingReturns-desc": "When on, eating a lot of one thing gives less and less: carbs, fats and protein give fewer calories past a day's worth, and vitamins and minerals count for less past a day's worth in one sitting. Switch it off and every gram counts in full.",
+	"worldattribute-complexnutritionDiminishingReturns-desc": "When on, eating a lot of one thing gives less and less: carbs, fats and protein give fewer calories past a day's worth, and vitamins and minerals count for less past a day's worth eaten at once. Switch it off and every gram counts in full.",
 	"worldattribute-complexnutritionWildHarvest": "Wild crop harvest",
 	"worldattribute-complexnutritionWildHarvest-desc": "How much a wild crop gives when you harvest it, compared with the same crop grown on farmland. A wild spelt plant gives about 1 or 2 grain at 25% (vanilla), 2 to 4 at 50%, and as much as a farmed one (5 to 7) at 100%. Seeds are not affected.",
 	"worldconfig-complexnutritionWildHarvest-25": "25% (vanilla)",
@@ -40,7 +40,7 @@
 	"worldconfig-complexnutritionWildHarvest-75": "75%",
 	"worldconfig-complexnutritionWildHarvest-100": "100%: as much as farmed",
 	"worldattribute-complexnutritionMaxFullness": "Max fullness",
-	"worldattribute-complexnutritionMaxFullness-desc": "How much your stomach holds, in fullness. 300 is about 1 kilogram of food. Fullness always empties at 100 an hour and only decides how much you can eat at once. 0 means no limit.",
+	"worldattribute-complexnutritionMaxFullness-desc": "How much a character's stomach holds, in fullness. 300 is about 1 kilogram of food. Fullness always empties at a rate of 100 an hour and only decides how much you can eat at once. 0 means no limit.",
 	"worldattribute-complexnutritionEffects": "Nutrient effects",
-	"worldattribute-complexnutritionEffects-desc": "When on, your vitamin and mineral stores change how your character performs. A well-stocked store gives a bonus, such as better aim, faster mining or more health, and an empty one a penalty. Each nutrient's effect can also be switched off on its own in the settings menu."
+	"worldattribute-complexnutritionEffects-desc": "When on, your vitamin and mineral stores change how your character performs. A well-stocked store gives a bonus, such as better aim, faster mining or more health, and an empty one a penalty. Each nutrient's effect can also be switched off on its own on the World Settings tab of the settings menu."
 }
