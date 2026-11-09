@@ -177,7 +177,7 @@ namespace ComplexNutrition.UI
             {
                 Label = StatsHover.Esc(label ?? Lang.Get(n.LangKey)),
                 Value = r,
-                Max = Math.Max(n.Cap, r),
+                Max = Math.Max(n.CapFor(d.State), r),
                 LineInterval = 100,
                 Color = ColorOf(n),
                 Right = StatsHover.Vtml("complexnutrition:reserve-hover", StatsHover.Text(n.Format(r, d.ShowPercent)), DaysVtml(d, n, r)),
@@ -215,7 +215,7 @@ namespace ComplexNutrition.UI
             if (cal != null)
             {
                 var bar = ReserveBar(d, cal, L("window-calorie-reserve"));
-                bar.Max = Math.Max(cal.Cap, d.State.GetReserve(cal.Code));
+                bar.Max = Math.Max(cal.CapFor(d.State), d.State.GetReserve(cal.Code));
                 // What is on its way and what was burned live in the arrow's hover.
                 bar.Trend = TrendOf(d, cal) ?? 0;
                 string tip = GutOutlookText(d);

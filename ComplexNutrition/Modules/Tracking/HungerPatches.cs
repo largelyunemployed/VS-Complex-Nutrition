@@ -74,6 +74,9 @@ namespace ComplexNutrition.Modules.Tracking
             if (healed <= 0f) return false;
             // Priced at the middle of this step's health, so a big step costs what small ones would.
             module.BurnCalories(player, module.Settings.KcalPerHp((max - (health + healed / 2f)) / max) * healed);
+            // Since v0.4.1 healing also uses up vitamin K. An empty store doesn't stop it (see above).
+            try { module.UseVitaminKForHealing(player, state, healed); }
+            catch (Exception e) { LogOnce(ep, e); }
             __instance.Health = health + healed;
             return false;
         }

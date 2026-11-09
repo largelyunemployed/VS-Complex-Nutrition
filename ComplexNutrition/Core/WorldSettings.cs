@@ -45,6 +45,12 @@ namespace ComplexNutrition.Core
         /// <summary>Discover Nutrition (since v0.3.4): food tooltips show "???" until the player has eaten that food. Off by default.</summary>
         public const string DiscoverKey = "complexnutritionDiscover";
 
+        /// <summary>
+        /// Hide Poison Effects (since v0.4.1), a part of Discover Nutrition: while both are on, a food's health loss (a poisonous
+        /// mushroom's "-8 hp") stays hidden in its tooltip until the player has eaten it once. Off by default.
+        /// </summary>
+        public const string HidePoisonKey = "complexnutritionHidePoison";
+
         /// <summary>How much a wild crop gives when harvested, in % of a farmed one (since v0.3.4; vanilla gives 25%).</summary>
         public const string WildHarvestKey = "complexnutritionWildHarvest";
 
@@ -82,8 +88,10 @@ namespace ComplexNutrition.Core
         }
 
         /// <summary>
-        /// The start conditions, best first, also used for respawning. Each is the calorie reserve in % of a day; vitamins and
-        /// minerals start at the same share of their own stores (Full 100%, Easy 70%, ... Rock Bottom 0.1%).
+        /// The start conditions, best first, also used for respawning. Each value divided by <see cref="FullValue"/> is the share
+        /// of every store it fills (Full 100%, Easy 70%, ... Rock Bottom 0.1%): the calorie reserve and each vitamin and mineral
+        /// store alike. Until v0.4.1 the value was the calorie reserve in % of a day, when the reserve always held 10 days, so
+        /// saved worlds keep the same numbers.
         /// worldconfig.json lists the same values and names for both settings (a test checks).
         /// </summary>
         public static readonly StartOption[] StartOptions =

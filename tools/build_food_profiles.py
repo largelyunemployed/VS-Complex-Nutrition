@@ -134,7 +134,37 @@ def build_entry_profile(entry, usda):
     for k, v in entry.get("set", {}).items():
         prof[k] = float(v)
     gaps = [g for g in gaps if g not in entry.get("set", {})]
+    gaps = [g for g in gaps if g not in entry.get("gameplayBonus", {})]
     return prof, gaps
+
+
+def with_gameplay_bonus(entry, per100):
+    """
+    The profile per 100 g with the entry's 'gameplayBonus' (since v0.4.1) added: extra nutrient given by design as a share
+    of a day's need per 100 g, e.g. {"calcium": 45} adds 45% of the calcium Daily Value for every 100 g. The category
+    templates for other mods' foods use the values without it, so a bonus never spreads to foods it wasn't given to.
+    """
+    boosted = dict(per100)
+    for nutrient, percent_of_day_per_100g in entry.get("gameplayBonus", {}).items():
+        boosted[nutrient] = boosted.get(nutrient, 0.0) + daily_value_amount(nutrient) * float(percent_of_day_per_100g) / 100.0
+    return boosted
+
+
+def daily_value_amount(nutrient):
+    """A day's need of a vitamin or mineral in the profiles' unit (mg or mcg); the B vitamins are already in %DV."""
+    if nutrient == "vitaminB":
+        return 100.0
+    if nutrient not in DV:
+        sys.exit("gameplayBonus: %s has no Daily Value" % nutrient)
+    return DV[nutrient][1]
+
+
+def describe_bonus(entry):
+    """'Gameplay bonus (per 100 g, by design): calcium +45% of a day's need', or '' for none."""
+    bonus = entry.get("gameplayBonus")
+    if not bonus:
+        return ""
+    return "Gameplay bonus (per 100 g, by design): " + ", ".join("%s +%g%% of a day's need" % (k, bonus[k]) for k in ALL if k in bonus)
 
 
 def describe_set(entry):
@@ -209,7 +239,8 @@ def main():
                     rows.append({"code": c, "v": by_code[c], "fallback": True, "notes": e.get("notes", "")})
                 continue
 
-            per100, gaps = build_entry_profile(e, usda)
+            real_per100, gaps = build_entry_profile(e, usda)
+            per100 = with_gameplay_bonus(e, real_per100)
             kcal = per100["calories"]
             if kcal <= 0:
                 sys.exit("%s: zero calories" % pattern)
@@ -267,6 +298,8 @@ def main():
                     notes = (notes + " " if notes else "") + describe_set(e) + "."
                 if describe_factor(factor):
                     notes = (notes + " " if notes else "") + describe_factor(factor) + "."
+                if describe_bonus(e):
+                    notes = (notes + " " if notes else "") + describe_bonus(e) + "."
                 if gaps:
                     notes = (notes + " " if notes else "") + "USDA reports no value for: %s (treated as 0)." % ", ".join(gaps)
                 if notes:
@@ -281,7 +314,7 @@ def main():
             # 'noTemplate': leave this entry out of the category templates, so a family with many
             # entries (the mushrooms) does not outweigh the rest of its category.
             if not is_liquid and not e.get("noTemplate"):
-                template_inputs[by_code[matches[0]]["category"]].append(per100)
+                template_inputs[by_code[matches[0]]["category"]].append(real_per100)
         out_files[group] = profiles
 
     unclaimed = sorted(set(by_code) - set(claimed))

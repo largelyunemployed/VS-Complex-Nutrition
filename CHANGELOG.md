@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.4.1
+
+Healing, porridge and mushrooms. Interim test builds are lettered (0.4.1a, 0.4.1b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.1a: vitamin K for healing, filling porridge, useful mushrooms
+
+- Natural healing uses up vitamin K: a tenth of a day's worth for each health point healed, so a full heal of 15 health uses a day and a half. Healing items use none. An empty store still only slows healing to 90%.
+- Grains and dry soybeans soak up water in the cooking pot. In a pot meal, grains fill you as if they weighed three times their dry weight and soybeans two and a half times, so a 2-grain serving of porridge fills 58 instead of 19, and you can eat about 5 servings at once instead of 15. Grain dishes from other mods are covered too. Raw grain, bread, dough and pies are unchanged. (digestion.json: cookedGrainFullness.)
+- Every mushroom now has a signature vitamin or mineral, picked by its colour: orange, red and yellow ones vitamin A, white and pale ones calcium, oyster mushrooms, shiitake, honey mushrooms and the pink bonnet vitamin D, and brown, dark, green, violet and blue ones iron. Each gives 45% of a day's worth per 100g, about 15% for every 10 fullness: a puffball gives 36% of a day's calcium and a chicken of the woods 40% of a day's vitamin A. Poisonous and psychedelic mushrooms get them too, so colour tells you nothing about safety. Their fullness and calories are unchanged.
+- New world setting Hide Poison Effects, part of Discover Nutrition and off by default. While both are on, a food's tooltip doesn't show the health it takes (a poisonous mushroom's "-8 hp") until you have eaten it once. A meal hides it while it holds a poisonous ingredient you haven't tried. The poison still hurts.
+- The calorie reserve holds 4 days (11,200kcal) instead of 10, so it fills visibly from the first days of eating. Calories you already have above 4 days are kept and used up as usual; you just can't add more until you're below the cap. The start and respawn options now give a share of the reserve: Full 100%, Easy 70%, Normal 50%, Hard 30%, Brutal 10% and Rock Bottom almost nothing, so Normal starts you with 2 days.
+- Groundwork for diet tiers: the calorie reserve's size is worked out per player, ready to grow with your diet tier in v0.4.4, and each player has a saved diet tier that dying will not reset. Nothing changes the tier yet.
+
 ## v0.4.0
 
 Nutrient effects. Interim test builds are lettered (0.4.0a, 0.4.0b, ...), and each change is listed under the build it arrived in.

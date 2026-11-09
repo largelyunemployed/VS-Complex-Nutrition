@@ -56,6 +56,13 @@ namespace ComplexNutrition.Core
         /// <summary>Health vanilla regenerates in an in-game day at the default regen speed (0.000333 a game second).</summary>
         [JsonProperty("regenHpPerDay")] public float RegenHpPerDay = 28.8f;
 
+        /// <summary>
+        /// Vitamin K used up by healing (since v0.4.1), in % of a day's need for each health point healed naturally. With 10, a
+        /// full heal of 15 health uses a day and a half of vitamin K. Healing items use none. An empty store never stops
+        /// healing; it only slows it (vitamin K's effect, config/effects.json).
+        /// </summary>
+        [JsonProperty("vitaminKPerHp")] public float VitaminKPerHp = 10f;
+
         /// <summary>Extra calories a day while healing, with <paramref name="missing"/> (0 to 1) of max health missing.</summary>
         public float HealingKcalPerDay(float missing)
         {

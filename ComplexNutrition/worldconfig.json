@@ -6,6 +6,7 @@
 		{ "category": "complexnutrition", "code": "complexnutritionAdvancedDisplay", "dataType": "bool", "default": "false" },
 		{ "category": "complexnutrition", "code": "complexnutritionMeatInPots", "dataType": "bool", "default": "false" },
 		{ "category": "complexnutrition", "code": "complexnutritionDiscover", "dataType": "bool", "default": "false" },
+		{ "category": "complexnutrition", "code": "complexnutritionHidePoison", "dataType": "bool", "default": "false" },
 		{ "category": "complexnutrition", "code": "complexnutritionDiminishingReturns", "dataType": "bool", "default": "true" },
 		{ "category": "complexnutrition", "code": "complexnutritionWildHarvest", "dataType": "dropdown", "values": [ "25", "50", "75", "100" ], "names": [ "25", "50", "75", "100" ], "default": "50" },
 		{ "category": "complexnutrition", "code": "complexnutritionEffects", "dataType": "bool", "default": "true" },

@@ -138,6 +138,9 @@ namespace ComplexNutrition.UI
                     v => core.SendSetting(SettingKeys.DisplayUnits, v), "unitsdefault");
                 Switch(L("settings-discover"), Lang.Get("worldattribute-" + WorldSettings.DiscoverKey + "-desc"), snap.Discover,
                     on => core.SendSetting(SettingKeys.Discover, on ? "true" : "false"), "discover");
+                // A part of Discover Nutrition (v0.4.1), so it sits right under it and only works while that is on.
+                Switch(L("settings-hidepoison"), Lang.Get("worldattribute-" + WorldSettings.HidePoisonKey + "-desc"), snap.HidePoison,
+                    on => core.SendSetting(SettingKeys.HidePoison, on ? "true" : "false"), "hidepoison");
                 Switch(L("settings-logfallbacks"), L("settings-logfallbacks-desc"), snap.LogFallbacks,
                     on => core.SendSetting(SettingKeys.LogFallbacks, on ? "true" : "false"), "logfallbacks");
 

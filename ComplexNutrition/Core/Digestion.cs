@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using Vintagestory.API.Common;
+using Vintagestory.API.Util;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Config;
 using Vintagestory.GameContent;
@@ -139,6 +140,28 @@ namespace ComplexNutrition.Core
 
         /// <summary>Fullness multiplier for drinks and other liquids.</summary>
         [JsonProperty("liquidFullness")] public float LiquidFullness = 0.5f;
+
+        /// <summary>
+        /// How many times its dry weight a food weighs once cooked in a pot meal (since v0.4.1), by item code pattern (wildcards
+        /// allowed). Grains and dry beans soak up water as they cook, so porridge fills as much as a real bowl of porridge would:
+        /// "game:grain-*": 3 makes a 40g grain fill like 120g. Foods not listed count at their own weight. Pies and foods
+        /// eaten on their own are not affected.
+        /// </summary>
+        [JsonProperty("cookedGrainFullness", ObjectCreationHandling = ObjectCreationHandling.Replace)] public Dictionary<string, float> CookedGrainFullness = new() { ["game:grain-*"] = 3f, ["game:legume-soybean"] = 2.5f };
+
+        /// <summary>
+        /// The weight multiplier from <see cref="CookedGrainFullness"/> for one ingredient of a pot meal: the value of the first
+        /// pattern that matches its code, or 1 when none does.
+        /// </summary>
+        public float SwellInPotMeal(AssetLocation ingredientCode)
+        {
+            if (CookedGrainFullness == null || ingredientCode == null) return 1f;
+            foreach (var patternAndFactor in CookedGrainFullness)
+            {
+                if (patternAndFactor.Value > 0f && WildcardUtil.Match(new AssetLocation(patternAndFactor.Key), ingredientCode)) return patternAndFactor.Value;
+            }
+            return 1f;
+        }
 
         /// <summary>Words in an item code that mark it as cooked for <see cref="CookedFullness"/>.</summary>
         [JsonProperty("cookedWords")] public string[] CookedWords = { "cooked", "smoked", "cured", "bread", "baked", "roasted", "charred" };
@@ -333,6 +356,9 @@ namespace ComplexNutrition.Core
                     {
                         grams = stack.StackSize * food.PortionGrams;
                     }
+                    // Grains and dry beans in a pot meal (not a pie) have soaked up water, so they weigh more than they did dry.
+                    bool potMeal = cookedDish && !isPie;
+                    if (potMeal) grams *= s.SwellInPotMeal(stack.Collectible.Code);
                     f = grams * s.FullnessPerGram;
                     if (food.IsLiquid) f *= s.LiquidFullness;
                     if (!cookedDish && s.IsCookedCode(stack.Collectible.Code)) f *= s.CookedFullness;

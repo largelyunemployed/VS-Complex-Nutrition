@@ -91,7 +91,7 @@ namespace ComplexNutrition.Modules.Tracking
             if (tree == null || def == null || !NutritionState.FromTree(tree).TrackingOn) return false;
             var reserves = tree.GetTreeAttribute("reserves");
             kcal = (reserves?.GetFloat(def.Code) ?? 0f) / 100f * def.DailyTarget;
-            maxKcal = Math.Max(def.Cap / 100f * def.DailyTarget, kcal);
+            maxKcal = Math.Max(def.CapFor(NutritionState.FromTree(tree)) / 100f * def.DailyTarget, kcal);
             var hunger = attrs.GetTreeAttribute("hunger");
             fullness = hunger?.GetFloat("currentsaturation") ?? 0f;
             maxFullness = hunger?.GetFloat("maxsaturation") ?? 0f;
@@ -283,7 +283,7 @@ namespace ComplexNutrition.Modules.Tracking
                 var bar = composer.GetStatbar("cn-" + n.Code);
                 if (bar == null) continue;
                 float reserve = state.GetReserve(n.Code);
-                float max = Math.Max(n.Cap, reserve);
+                float max = Math.Max(n.CapFor(state), reserve);
                 if (n.Code == NutrientCodes.Fiber && Digestion.Settings != null)
                 {
                     // Fiber's bar shows its gut, like carbs, fats and protein (v0.3.6l); its reserve is in the hover.

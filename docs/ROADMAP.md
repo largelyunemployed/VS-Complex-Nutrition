@@ -45,10 +45,10 @@ Every module has its own switch. With all of them off, the game plays exactly li
 ## v0.4: Diet tiers and effects
 
 - v0.4.0: nutrient effects. Every vitamin and mineral gets an effect on a vanilla stat. The slow stores (vitamins A, D, E and K and the minerals) hold 20 days, give a 1% bonus for each day stored (up to 20%) and a 10% penalty when empty: A ranged accuracy, D physical damage resistance, E mining speed, K healing, calcium fall damage, iron max health, potassium walk speed, melee and ranged damage and butchering speed. Vitamin C (walk speed) and the B vitamins (hunger rate) only give a penalty, after 3 days without a full day's worth stored, growing until day 5. Sunlight makes vitamin D. A world switch for all effects and one per nutrient. Carbs, fats, protein and fiber have no effect yet.
-- v0.4.1: healing scales with, and uses up, a good share of your vitamin K, calcium and iron. (With an empty calorie reserve you already don't heal, and you starve.)
-- v0.4.2: a diet score that builds over in-game weeks, so one bad meal does nothing.
-- v0.4.3: five diet tiers, from Thriving to Malnourished, from the diet score, with buffs and debuffs to healing, max health, walk speed and hunger rate.
-- v0.4.4: a balanced, healthy micronutrient profile raises how much fats, protein, carbohydrate and fiber you can store, and with them the calorie store.
+- v0.4.1: healing uses up vitamin K (a tenth of a day's worth per health point; an empty store only slows it). Porridge and other pot meals count grains (x3) and dry soybeans (x2.5) at their cooked weight, so they fill you like the real thing. Every mushroom gets a signature vitamin or mineral by its colour (vitamin A, calcium, vitamin D or iron), and a Hide Poison Effects setting under Discover Nutrition hides a food's health loss until you have eaten it. The calorie reserve holds 4 days for now, with the groundwork for it to grow with your diet tier.
+- v0.4.2: a diet score that builds over in-game weeks, so one bad meal does nothing. Gentler respawning: a switch to keep vitamin and mineral stores on death (on by default), and a Respawn with calories choice (lose calories on death, the default: 10% of what you had, at least 1,000kcal; keep calories; or reset calorie progress, for masochists only). The gut always empties. New start settings: starting diet tier, starting calories and starting vitamin and mineral stores, each as a share of the store.
+- v0.4.3: five diet tiers, from Thriving to Malnourished, from the diet score, with buffs and debuffs to healing, max health, walk speed and hunger rate. A tier change in either direction only counts after 3 days in a row at the new tier.
+- v0.4.4: the calorie reserve's size follows your diet tier: 2 days on the first tier and 2 more for each tier above it, up to 10 days. Dying doesn't shrink it.
 
 ## v0.5: Health and effects UI
 

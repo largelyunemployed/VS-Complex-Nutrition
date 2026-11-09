@@ -90,7 +90,7 @@ namespace ComplexNutrition.Modules.Tracking
             if (made <= 0f) return;
             state.SunMadeToday += made;
             float old = state.GetReserve(n.Code);
-            float now = Math.Min(n.Cap, old + made);
+            float now = Math.Min(n.CapFor(state), old + made);
             if (now == old) return;
             state.SetReserve(n.Code, now);
             module.Core.PublishReserveChanged(player, n.Code, old, now);

@@ -594,6 +594,59 @@ namespace ComplexNutrition.Tests
                 Assert.True(file.Of(n.Code) != null && file.Of(n.Code).Rule != EffectRules.None, n.Code + " has an effect");
         }
 
+        // ---- v0.4.1 ----
+
+        /// <summary>Grains and dry soybeans count at their cooked weight in a pot meal, so porridge fills like a real bowl.</summary>
+        [Test]
+        public static void GrainsSwellInPotMeals()
+        {
+            var digestion = Repo.Load<DigestionSettings>(Repo.Config("digestion.json"));
+            Assert.Equal(3f, digestion.SwellInPotMeal(new Vintagestory.API.Common.AssetLocation("game:grain-spelt")), "a grain swells to 3 times its dry weight");
+            Assert.Equal(2.5f, digestion.SwellInPotMeal(new Vintagestory.API.Common.AssetLocation("game:legume-soybean")), "a soybean swells to 2.5 times");
+            Assert.Equal(1f, digestion.SwellInPotMeal(new Vintagestory.API.Common.AssetLocation("game:vegetable-carrot")), "a carrot keeps its weight");
+            Assert.Equal(1f, digestion.SwellInPotMeal(new Vintagestory.API.Common.AssetLocation("game:legume-peanut")), "a peanut keeps its weight");
+            // A 2-grain serving of porridge: 2 x 40g, swollen 3 times, at 0.3 fullness a gram, cooked dish 80%.
+            float serving = 2 * 40f * digestion.SwellInPotMeal(new Vintagestory.API.Common.AssetLocation("game:grain-spelt")) * digestion.FullnessPerGram * digestion.CookedFullness;
+            Assert.Near(57.6, serving, 0.01, "a 2-grain porridge serving fills 57.6");
+        }
+
+        /// <summary>The calorie reserve holds 4 days for now, and 2 more for each diet tier above the first.</summary>
+        [Test]
+        public static void CalorieReserveFollowsDietTier()
+        {
+            var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients;
+            var calories = nutrients.First(n => n.Code == NutrientCodes.Calories);
+            var vitaminA = nutrients.First(n => n.Code == NutrientCodes.VitaminA);
+            var state = NutritionState.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "a new character is on the first diet tier");
+            Assert.Equal(400f, calories.CapFor(state), "the first tier holds 4 days");
+            state.DietTier = 3;
+            Assert.Equal(800f, calories.CapFor(state), "tier 3 holds 2 days a tier more");
+            Assert.Equal(vitaminA.Cap, vitaminA.CapFor(state), "other stores don't grow with the tier");
+            state.DietTier = 0;
+            Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "the tier never drops below the first");
+        }
+
+        /// <summary>Every edible mushroom has a signature nutrient: vitamin A, calcium, vitamin D or iron (45% of a day per 100g).</summary>
+        [Test]
+        public static void MushroomsHaveSignatureNutrients()
+        {
+            var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients.ToDictionary(n => n.Code);
+            var profiles = Repo.Json(Repo.Config(Path.Combine("foodprofiles", "mushroom.json")))["profiles"];
+            string[] signatures = { NutrientCodes.VitaminA, NutrientCodes.Calcium, NutrientCodes.VitaminD, NutrientCodes.Iron };
+            foreach (var profile in profiles)
+            {
+                string code = (string)profile["code"];
+                if (code.Contains("tinderhoof")) continue;   // not edible
+                var per100g = profile["per100g"];
+                float best = signatures.Max(s => (float)per100g[s] / nutrients[s].DailyTarget * 100f);
+                Assert.True(best >= 45f, code + " gives at least 45% of a day of its signature nutrient per 100g (got " + best + ")");
+            }
+            var puffball = profiles.First(p => ((string)p["code"]).Contains("puffball"));
+            float calciumPerPuffball = (float)puffball["per100g"]["calcium"] * (float)puffball["portionGrams"] / 100f / nutrients[NutrientCodes.Calcium].DailyTarget * 100f;
+            Assert.Near(36, calciumPerPuffball, 1.5, "a puffball gives about 36% of a day's calcium");
+        }
+
         // ---- Files ----
 
         [Test]

@@ -183,6 +183,7 @@ namespace ComplexNutrition.Core
             MeatInPots = WorldSettings.Bool(sapi.World, WorldSettings.MeatInPotsKey),
             DiminishingReturns = WorldSettings.DiminishingReturns(sapi.World),
             Discover = WorldSettings.Bool(sapi.World, WorldSettings.DiscoverKey),
+            HidePoison = WorldSettings.Bool(sapi.World, WorldSettings.HidePoisonKey),
             WildHarvest = (WorldSettings.WildHarvestShare(sapi.World) * 100f).ToString("0", System.Globalization.CultureInfo.InvariantCulture),
             MaxFullness = WorldSettings.MaxFullness(sapi.World),
             Effects = WorldSettings.Effects(sapi.World),
@@ -259,6 +260,10 @@ namespace ComplexNutrition.Core
                     break;
                 case SettingKeys.Discover:
                     sapi.World.Config.SetString(WorldSettings.DiscoverKey, on ? "true" : "false");
+                    saveConfig = false;
+                    break;
+                case SettingKeys.HidePoison:
+                    sapi.World.Config.SetString(WorldSettings.HidePoisonKey, on ? "true" : "false");
                     saveConfig = false;
                     break;
                 case SettingKeys.WildHarvest:
@@ -392,6 +397,7 @@ namespace ComplexNutrition.Core
             {
                 cfg.SetBool(WorldSettings.AdvancedDisplayKey, snap.AdvancedDefault);
                 cfg.SetString(WorldSettings.DiscoverKey, snap.Discover ? "true" : "false");
+                cfg.SetString(WorldSettings.HidePoisonKey, snap.HidePoison ? "true" : "false");
                 cfg.SetString(WorldSettings.DiminishingReturnsKey, snap.DiminishingReturns ? "true" : "false");
                 cfg.SetString(WorldSettings.WildHarvestKey, snap.WildHarvest ?? WorldSettings.DefaultWildHarvest);
                 cfg.SetInt(WorldSettings.MaxFullnessKey, snap.MaxFullness);
@@ -486,6 +492,12 @@ namespace ComplexNutrition.Core
 
         /// <summary>Client: whether Discover Nutrition is on for this world (from the server's settings).</summary>
         public bool DiscoverOn => ServerSettings?.Discover == true;
+
+        /// <summary>
+        /// Client: whether Hide Poison Effects is in force for this world (v0.4.1). It is part of Discover Nutrition, so it only
+        /// works while that is on too.
+        /// </summary>
+        public bool HidePoisonOn => DiscoverOn && ServerSettings?.HidePoison == true;
 
         /// <summary>Client: whether the local player may see this stack's nutrients (always, unless Discover Nutrition hides them).</summary>
         public bool CanSeeNutrients(IWorldAccessor world, ItemStack stack) =>
