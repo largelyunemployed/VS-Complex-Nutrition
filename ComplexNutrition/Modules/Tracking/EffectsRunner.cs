@@ -47,9 +47,20 @@ namespace ComplexNutrition.Modules.Tracking
                     if (S.Of(code).Rule != EffectRules.Timed) continue;
                     state.SetHoursWithoutFullDay(code, NutrientEffects.NextHoursWithout(state.GetHoursWithoutFullDay(code), state.GetReserve(code), hours));
                 }
-                MakeVitaminD(player, state, hours);
+                try { MakeVitaminD(player, state, hours); }
+                catch (Exception e) { LogOnce("making vitamin D from sunlight", e); }
             }
-            Apply(player, state, running);
+            try { Apply(player, state, running); }
+            catch (Exception e) { LogOnce("applying nutrient effects", e); }
+        }
+
+        private readonly HashSet<string> logged = new();
+
+        /// <summary>Logs a failure once per kind, so one bad step can't stop the tracking tick or flood the log.</summary>
+        private void LogOnce(string what, Exception e)
+        {
+            if (!logged.Add(what)) return;
+            sapi.Logger.Error("[complexnutrition] Failed {0}: {1}", what, e);
         }
 
         /// <summary>A body that has just respawned starts its timed counters again.</summary>

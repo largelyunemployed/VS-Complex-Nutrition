@@ -4,6 +4,12 @@
 
 Nutrient effects. Interim test builds are lettered (0.4.0a, 0.4.0b, ...), and each change is listed under the build it arrived in.
 
+### 0.4.0b: only vitamin K affects healing
+
+- Only vitamin K changes how fast you heal. An empty store slows natural healing to 90%, and it never stops it: you heal as long as there are calories in your reserve.
+- Vitamin C's penalty is now on walk speed instead of healing (tiredness is the first sign of scurvy).
+- Healing goes on at the normal rate if working out an effect ever fails, and such a failure is logged once instead of interrupting the tracking tick.
+
 ### 0.4.0a: nutrient effects
 
 - Every vitamin and mineral now has an effect on your character. Hovering over one, in the nutrition window or on the Stats panel, shows its effect now and how it works, and the new handbook page Nutrient Effects explains them all.
@@ -15,10 +21,10 @@ Nutrient effects. Interim test builds are lettered (0.4.0a, 0.4.0b, ...), and ea
   - Calcium: fall damage.
   - Iron: max health (20% of your base health with a full store, 3 health on a normal character).
   - Potassium: walk speed, melee and ranged damage, and butchering speed.
-- Vitamin C and the B vitamins have no bonus. After 3 in-game days of play without a full day's worth stored, you get a 5% penalty, growing to 10% by day 5. Storing a full day's worth once resets the count, and so does respawning. Vitamin C slows healing, and a lack of B vitamins raises your hunger rate, so you burn more calories. They show under Running Low from day 2, as how many days they have been low.
+- Vitamin C and the B vitamins have no bonus. After 3 in-game days of play without a full day's worth stored, you get a 5% penalty, growing to 10% by day 5. Storing a full day's worth once resets the count, and so does respawning. A lack of vitamin C slows your walking, and a lack of B vitamins raises your hunger rate, so you burn more calories. They show under Running Low from day 2, as how many days they have been low.
 - Sunlight makes vitamin D: about a day's worth in 2 hours under open sky around midday, less when the sun is low, and none indoors or underground. It makes at most one day's worth a day.
 - The Overview tab lists every nutrient effect on you now, bonuses in green and penalties in red.
-- Natural healing now listens to vitamins K and C, but not to other changes to the healing stat (armor that slows bandages doesn't slow natural healing).
+- Natural healing now listens to vitamin K, but not to other changes to the healing stat (armor that slows bandages doesn't slow natural healing).
 - New world setting Nutrient effects (on by default), and a switch for each nutrient's effect under Nutrient Effects in the settings menu.
 - Effects are vanilla stat modifiers that are never saved, so removing the mod leaves nothing behind. They are off while tracking is off, in creative and spectator mode, and while dead.
 - New admin command for testing: /cnutrition setdayslow <player> <vitaminC|vitaminB|all> <days>. /cnutrition stats also lists each nutrient's effect.

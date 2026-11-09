@@ -61,8 +61,13 @@ namespace ComplexNutrition.Modules.Tracking
             if (state.GetReserve(Core.NutrientCodes.Calories) <= 0f) return false;
 
             float speed = StringUtil.ToFloat(ep.Api.World.Config.GetString("playerHealthRegenSpeed", "1"), 0f);
-            // Since v0.4.0 vitamins K and C speed up or slow down natural healing: only our own part of the healing stat counts here.
-            float perSecond = 0.000333333f * speed * Math.Max(0f, 1f + EffectsRunner.OwnShare(state, "healingeffectivness"));
+            // Since v0.4.0 vitamin K speeds up or slows down natural healing: only our own part of the healing stat counts here.
+            // An empty vitamin K store only slows healing (to 90%); nothing in the effects can stop it, and if working out the
+            // effect ever fails, healing goes on at the normal rate rather than not at all.
+            float effect = 1f;
+            try { effect = Math.Max(0.1f, 1f + EffectsRunner.OwnShare(state, "healingeffectivness")); }
+            catch (Exception e) { LogOnce(ep, e); }
+            float perSecond = 0.000333333f * speed * effect;
             var cal = ep.Api.World.Calendar;
             float gameSeconds = SecondsRef(__instance) * cal.SpeedOfTime * cal.CalendarSpeedMul;
             float healed = Math.Min(gameSeconds * perSecond, max - health);
@@ -71,6 +76,15 @@ namespace ComplexNutrition.Modules.Tracking
             module.BurnCalories(player, module.Settings.KcalPerHp((max - (health + healed / 2f)) / max) * healed);
             __instance.Health = health + healed;
             return false;
+        }
+
+        private static bool loggedRegenError;
+
+        private static void LogOnce(EntityPlayer ep, Exception e)
+        {
+            if (loggedRegenError) return;
+            loggedRegenError = true;
+            ep.Api.Logger.Error("[complexnutrition] Working out the healing effect failed; healing at the normal rate instead: {0}", e);
         }
 
         public static void Remove()

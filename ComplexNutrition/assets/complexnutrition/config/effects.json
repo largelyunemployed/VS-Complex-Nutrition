@@ -15,7 +15,7 @@
 		"fat": { "rule": "none", "targets": [] },
 		"protein": { "rule": "none", "targets": [] },
 		"fiber": { "rule": "none", "targets": [] },
-		"vitaminC": { "rule": "timed", "targets": [ { "stat": "healingeffectivness", "label": "effect-healing" } ] },
+		"vitaminC": { "rule": "timed", "targets": [ { "stat": "walkspeed", "label": "effect-walkspeed" } ] },
 		"vitaminB": { "rule": "timed", "targets": [ { "stat": "hungerrate", "invert": true, "showStat": true, "label": "effect-hungerrate" } ] },
 		"vitaminA": { "rule": "longTerm", "targets": [ { "stat": "rangedWeaponsAcc", "label": "effect-rangedaccuracy" } ] },
 		"vitaminD": { "rule": "longTerm", "targets": [ { "stat": "physicalResistance", "label": "effect-resistance" } ] },
