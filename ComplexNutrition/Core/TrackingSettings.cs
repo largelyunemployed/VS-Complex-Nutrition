@@ -64,7 +64,7 @@ namespace ComplexNutrition.Core
         [JsonProperty("vitaminKPerHp")] public float VitaminKPerHp = 50f;
 
         /// <summary>
-        /// Respawn with calories, "Lose calories on death" (since v0.4.2): the share of the calorie reserve a character keeps
+        /// Respawn effects: Calories/Diet Tier, "Lose calories on death" (since v0.4.2): the share of the calorie reserve a character keeps
         /// when they die. With 0.1, a reserve of 8,000kcal at death respawns with 800kcal (then raised to the floor below).
         /// </summary>
         [JsonProperty("respawnKeptShare")] public float RespawnKeptShare = 0.1f;
@@ -82,7 +82,7 @@ namespace ComplexNutrition.Core
         [JsonProperty("respawnResetKcal")] public float RespawnResetKcal = 1000f;
 
         /// <summary>
-        /// The calorie reserve a character respawns with, in % of a day, for a Respawn with calories choice (see
+        /// The calorie reserve a character respawns with, in % of a day, for a Respawn effects: Calories/Diet Tier choice (see
         /// <see cref="WorldSettings.RespawnCaloriesOptions"/>). <paramref name="atDeath"/> is what the reserve held at death and
         /// <paramref name="reserveSize"/> how much it holds, both in % of a day; <paramref name="rockBottomStart"/> is whether
         /// the world starts characters at Rock Bottom. Keep returns <paramref name="atDeath"/> unchanged, even above the size.

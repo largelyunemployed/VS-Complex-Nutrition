@@ -153,16 +153,24 @@ namespace ComplexNutrition.Modules.FoodData
             sb.AppendLine(UnitColors.Paint(string.Join(" · ", macros)));
 
             // Vitamins and minerals in the reader's choice of real amounts or % of a day's need (v0.3.6h; 0.3.6f always used %).
-            // Minerals' short names (Ca, Fe, K) are blue (0.4.2d), so potassium's K can't be mistaken for vitamin K.
-            string Label(NutrientDefinition n) => n.Group == "Mineral"
-                ? "<font color=\"" + UnitColors.MineralName + "\">" + Short(n) + "</font>"
-                : Short(n);
+            // Minerals' names are white like the vitamins', and their amounts blue instead of yellow (0.4.3b; the names were blue
+            // in 0.4.2d), so potassium's K still can't be mistaken for vitamin K.
             string Dv(NutrientDefinition n)
             {
-                if (!percent) return Label(n) + " " + UnitColors.Paint(n.FormatAmount(amount(n.Code), false));
-                float dv = n.ToPercent(amount(n.Code));
-                string text = dv > 0f && dv < 0.5f ? "<1%" : Math.Round(dv).ToString("#,##0") + "%";
-                return Label(n) + " <font color=\"" + UnitColors.Micro + "\">" + text + "</font>";
+                bool mineral = n.Group == "Mineral";
+                string text;
+                if (!percent)
+                {
+                    text = n.FormatAmount(amount(n.Code), false);
+                    if (!mineral) return Short(n) + " " + UnitColors.Paint(text);
+                }
+                else
+                {
+                    float dv = n.ToPercent(amount(n.Code));
+                    text = dv > 0f && dv < 0.5f ? "<1%" : Math.Round(dv).ToString("#,##0") + "%";
+                }
+                string colour = mineral ? UnitColors.Mineral : UnitColors.Micro;
+                return Short(n) + " <font color=\"" + colour + "\">" + text + "</font>";
             }
             var vitamins = nutrients.All.Where(n => n.IsMicronutrient && n.Group != "Mineral").OrderBy(Short, StringComparer.Ordinal).ToList();
             var minerals = nutrients.All.Where(n => n.Group == "Mineral").ToList();

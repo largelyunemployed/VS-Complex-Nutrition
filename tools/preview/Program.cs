@@ -120,6 +120,10 @@ static class P
                 day.KcalByCategory["Dairy"] = lean ? 0 : 300 + rnd.Next(0, 300);
                 day.Gained = day.TotalKcal * 0.85f;
                 day.Burned = 2000 + rnd.Next(0, 1200);
+                // The diet score (0.4.3b): it starts at 50, sinks through the lean week, then climbs on the mixed diet.
+                day.DayScore = lean ? 30 + rnd.Next(0, 15) : 70 + rnd.Next(0, 20);
+                float before = i == 3 ? 50f : history.Days[i - 1].DietScore ?? 50f;
+                day.DietScore = i == 3 ? 50f : before + ((history.Days[i - 1].DayScore ?? 50f) - before) / 7f;
             }
             history.Days.Add(day);
         }

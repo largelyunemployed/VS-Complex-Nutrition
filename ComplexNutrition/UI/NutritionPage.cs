@@ -91,8 +91,10 @@ namespace ComplexNutrition.UI
         public bool Small;
         /// <summary>What hovering the paragraph shows (VTML, since v0.3.6); null for no hover.</summary>
         public string Tip;
+        /// <summary>What hovering a white "i" drawn right after the paragraph's first line shows (VTML, since 0.4.3b); null for no "i".</summary>
+        public string InfoTip;
         public TextBlock(string vtml, bool small = false, string tip = null) { Vtml = vtml; Small = small; Tip = tip; }
-        public override string Key => "T|" + (Small ? "s|" : "|") + Vtml + "|" + Tip;
+        public override string Key => "T|" + (Small ? "s|" : "|") + Vtml + "|" + Tip + "|" + InfoTip;
     }
 
     /// <summary>
@@ -332,6 +334,15 @@ namespace ComplexNutrition.UI
                     if (p.Text != null) Draw(ctx, surface, p.Text, 0, p.Y);
                     if (p.Block is TextBlock tb && !string.IsNullOrEmpty(tb.Tip))
                         hotspots?.Add(new Hotspot { X = 0, Y = p.Y, W = Math.Max(1, MeasureWidth(p.Text)), H = p.Text.TotalHeight, Vtml = tb.Tip });
+                    if (p.Block is TextBlock info && !string.IsNullOrEmpty(info.InfoTip))
+                    {
+                        // The "i" sits just right of the text, centred on its first line.
+                        double r = GuiElement.scaled(6);
+                        double cx = MeasureWidth(p.Text) + GuiElement.scaled(6) + r;
+                        double cy = p.Y + FirstLineHeight(p.Text) / 2.0;
+                        DrawInfo(ctx, cx, cy, r);
+                        hotspots?.Add(new Hotspot { X = cx - r - 2, Y = cy - r - 2, W = 2 * r + 4, H = 2 * r + 4, Vtml = info.InfoTip });
+                    }
                     if (p.Block is TableBlock)
                     {
                         foreach (var ry in p.RuleY)
@@ -409,6 +420,16 @@ namespace ComplexNutrition.UI
                 foreach (var b in comp.BoundsPerLine) w = Math.Max(w, b.X + b.Width);
             }
             return w;
+        }
+
+        /// <summary>The height of a rich text's first line, in pixels (the whole text's height when it has no lines).</summary>
+        private static double FirstLineHeight(GuiElementRichtext text)
+        {
+            foreach (var comp in text.Components)
+            {
+                if (comp.BoundsPerLine != null && comp.BoundsPerLine.Length > 0) return comp.BoundsPerLine[0].Height;
+            }
+            return text.TotalHeight;
         }
 
         /// <summary>A small arrow centred on (cx, cy): up and green when rising, a grey dash when steady, down and amber when falling.</summary>

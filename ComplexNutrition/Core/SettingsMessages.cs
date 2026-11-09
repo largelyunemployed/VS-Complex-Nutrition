@@ -19,7 +19,7 @@ namespace ComplexNutrition.Core
         public string StartCalories;
         /// <summary>The world's Starting vitamin and mineral reserves choice (since v0.4.2), or null when the world has none.</summary>
         public string StartStores;
-        /// <summary>The world's Respawn with calories choice (since v0.4.2): lose, keep or reset.</summary>
+        /// <summary>The world's Respawn effects: Calories/Diet Tier choice (since v0.4.2): lose, keep, reset or losetier.</summary>
         public string RespawnCalories = WorldSettings.DefaultRespawnCalories;
         /// <summary>Keep vitamin and mineral reserves on death (since v0.4.2).</summary>
         public bool KeepStores = true;

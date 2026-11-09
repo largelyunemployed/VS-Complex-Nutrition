@@ -290,7 +290,7 @@ namespace ComplexNutrition.Modules.Tracking
 
         /// <summary>
         /// A character respawns after dying (reworked in v0.4.2 to be gentler). Three things happen:
-        /// 1. The calorie reserve follows Respawn with calories (<see cref="SetRespawnCalories"/>).
+        /// 1. The calorie reserve follows Respawn effects: Calories/Diet Tier (<see cref="SetRespawnCalories"/>).
         /// 2. With Keep vitamin and mineral reserves on death switched on (the default), the vitamin, mineral and fiber stores
         ///    and the vitamin C and B vitamin day counts stay as they were. Switched off, the stores go back to what a new
         ///    character starts with (Starting vitamin and mineral reserves) and the day counts start again.
@@ -317,7 +317,7 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// Sets the calorie reserve of a character who just respawned, by the world's Respawn with calories choice:
+        /// Sets the calorie reserve of a character who just respawned, by the world's Respawn effects: Calories/Diet Tier choice:
         /// - Lose calories on death (the default): a tenth of what the reserve held (respawnKeptShare), but at least 1,000kcal
         ///   (respawnMinKcal), and never more than the reserve holds.
         /// - Keep calories on death: unchanged.
@@ -427,8 +427,9 @@ namespace ComplexNutrition.Modules.Tracking
             if (day != int.MinValue && day < today)
             {
                 Core.PublishDailyRollover(player, ledger.Get(day));
-                ScoreDay(player, state, day);
+                ScoreDay(player, state, day, history);
             }
+            if (state.HasDietScore) history.SetDietScore(today, state.DietScoreValue);
             state.ClearToday();
             state.ClearDietToday();
             state.Day = today;
@@ -441,11 +442,12 @@ namespace ComplexNutrition.Modules.Tracking
         /// gap to it, and the tier moves if the score has pointed past it for long enough. A day the player's body never ran
         /// (logged out, in creative mode or dead the whole time) doesn't count.
         /// </summary>
-        private void ScoreDay(IServerPlayer player, NutritionState state, int day)
+        private void ScoreDay(IServerPlayer player, NutritionState state, int day, NutrientHistory history)
         {
             if (!state.PlayedToday) return;
             var settings = DietScore.Settings;
             float dayScore = DietScore.DayScore(settings, code => DietScore.Brought(state, code, day));
+            history.SetDayScore(day, dayScore);
             foreach (var code in settings.Weights.Keys) state.SetLastDayShare(code, DietScore.Share(DietScore.Brought(state, code, day)));
             state.LastDayScore = dayScore;
             state.DietScoreBefore = state.DietScoreValue;
@@ -474,7 +476,10 @@ namespace ComplexNutrition.Modules.Tracking
         private void RecordHourly(IServerPlayer player, NutritionState state)
         {
             var history = NutrientHistory.Of(player.Entity);
-            if (history.LastHour != CurrentHour) history.RecordHour(CurrentHour, Reserves(state));
+            if (history.LastHour == CurrentHour) return;
+            history.RecordHour(CurrentHour, Reserves(state));
+            // The diet score for the History chart: also kept hourly, so a score set by command mid-day shows too.
+            if (state.HasDietScore) history.SetDietScore(Today, state.DietScoreValue);
         }
 
         /// <summary>The nutrition window's history for a player, or null when tracking is not running for them.</summary>
@@ -985,6 +990,7 @@ namespace ComplexNutrition.Modules.Tracking
             int before = state.DietTier;
             int tier = DietScore.Settings.TierFor(score);
             state.SetDiet(score, tier);
+            NutrientHistory.Of(target.Entity).SetDietScore(Today, state.DietScoreValue);
             if (tier != before) TellTierChanged(target, before, tier);
             Effects?.Apply(target, state, Runs(target));
             state.MarkDirty();
@@ -996,7 +1002,9 @@ namespace ComplexNutrition.Modules.Tracking
             var state = StateOf(target.Entity);
             if (state == null) return TextCommandResult.Error("Tracking is not running for " + target.PlayerName);
             state.PlayedToday = true;
-            ScoreDay(target, state, Today);
+            var history = NutrientHistory.Of(target.Entity);
+            ScoreDay(target, state, Today, history);
+            history.SetDietScore(Today, state.DietScoreValue);
             state.ClearToday();
             state.ClearDietToday();
             state.MarkDirty();

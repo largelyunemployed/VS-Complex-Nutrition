@@ -4,6 +4,15 @@
 
 The diet score and diet tiers. Interim test builds are lettered (0.4.3a, 0.4.3b, ...), and each change is listed under the build it arrived in.
 
+### 0.4.3b: diet score on the History tab, carbs, tooltips
+
+- The History tab's Calories by Food Type chart has a lavender line for your diet score, on its own scale from 0 to 100, with a paragraph under the chart saying how it moves. Hover over a day to see that day's diet score and its own score; today shows your score so far.
+- The Overview's Diet section: the line under the score gives only the tier's bonuses or penalties ("No bonuses or penalties." on Getting By), since the tier is named just above it. A white "i" right of the score explains how the tier changes.
+- The diet score hover: "Yesterday's score" and "Today's score so far", nutrient names in their colours (carbs, fats, protein and fiber in their bar colours, vitamins yellow, minerals blue), and no grey explainer or tier list.
+- Carbs: a day's need is 300g, and the gut holds 600g, two days' need, so the carbs bar on the Digestion tab and the Stats panel is split in two. Diminishing returns (when switched on) start past 300g digested in 24 hours, up from 12 hours. (digestion.json: carbohydrate maxGrams 600, windowHours 24.)
+- Food tooltips: the mineral names (Ca, Fe, K) are white like the vitamins', and their amounts blue instead of yellow.
+- The Respawn with calories setting is now called Respawn effects: Calories/Diet Tier, since it covers the diet tier too.
+
 ### 0.4.3a: diet score and six diet tiers
 
 - Each in-game day, from midnight to midnight, gets a score out of 100 for how well you ate. Every nutrient you digested earns points, up to a full day's need of it: protein counts 2, carbs and fats 1, fiber 0.8, vitamin C and the B vitamins 0.6, and vitamins A, D, E and K, calcium, iron and potassium 0.5. Carbs, fats, protein and fiber count when they are digested, not when you eat them, and vitamin D from sunlight counts. A day counts in full however long you played, and days you don't play are skipped.

@@ -375,6 +375,29 @@ namespace ComplexNutrition.Tests
         }
 
         [Test]
+        public static void HistoryRecordsTheDietScore()
+        {
+            var history = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            history.SetDietScore(10, 50f);
+            history.SetDayScore(10, 80f);
+            history.SetDietScore(11, 54.3f);
+            history.SetDietScore(40, 60f);
+            history.Prune(41, 28);
+            var data = history.Build(null, 41, 41 * 24 + 5, 28);
+            Assert.True(data.Days.All(day => day.Day < 40 || day.Day > 40 || day.DietScore == 60f), "a kept day's diet score");
+            Assert.Equal((float?)null, data.Days[^1].DayScore, "today has no score of its own yet");
+            Assert.Equal((float?)null, history.DietDay(10).diet, "old days pruned with the calorie flow");
+
+            var fresh = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            fresh.SetDietScore(5, 54.3f);
+            fresh.SetDayScore(5, 80f);
+            var (diet, dayScore) = fresh.DietDay(5);
+            Assert.Near(54.3, diet ?? -1, 1e-4, "diet score kept");
+            Assert.Near(80, dayScore ?? -1, 1e-4, "day's score kept");
+            Assert.Equal((float?)null, fresh.DietDay(6).diet, "no record, no score");
+        }
+
+        [Test]
         public static void HistoryTrendsUseTheOldestReadingOfTheLastDay()
         {
             var history = NutrientHistory.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
@@ -742,7 +765,7 @@ namespace ComplexNutrition.Tests
             Assert.Near(0, DietScore.Brought(state, NutrientCodes.Protein, 7), 0.01, "midnight starts the record again");
         }
 
-        /// <summary>Respawn with calories: lose keeps a tenth (at least 1,000kcal), keep changes nothing, reset leaves 1,000kcal.</summary>
+        /// <summary>Respawn effects: Calories/Diet Tier: lose keeps a tenth (at least 1,000kcal), keep changes nothing, reset leaves 1,000kcal.</summary>
         [Test]
         public static void RespawnCaloriesChoices()
         {

@@ -233,7 +233,7 @@ namespace ComplexNutrition.Core
         /// <summary>The built-in gut pools, used when digestion.json has none. They match the shipped file (a test checks).</summary>
         public static Dictionary<string, DigestionPool> DefaultPools() => new()
         {
-            [NutrientCodes.Carbohydrate] = new() { MaxGrams = 500, MaxRateGrams = 90, HalfRateGrams = 30, KcalPerGram = 4, DiminishingAboveGrams = 300, WindowHours = 12, DiminishingScaleGrams = 150, FiberSpeedBonus = 0.1f },
+            [NutrientCodes.Carbohydrate] = new() { MaxGrams = 600, MaxRateGrams = 90, HalfRateGrams = 30, KcalPerGram = 4, DiminishingAboveGrams = 300, WindowHours = 24, DiminishingScaleGrams = 150, FiberSpeedBonus = 0.1f },
             [NutrientCodes.Protein] = new() { MaxGrams = 200, MaxRateGrams = 15, HalfRateGrams = 10, KcalPerGram = 4, DiminishingAboveGrams = 64, TaperEndGrams = 128, TaperEndValue = 0.8f, BeyondValue = 0.5f, WindowHours = 24, FiberSpeedBonus = 0.2f },
             [NutrientCodes.Fat] = new() { MaxGrams = 240, MaxRateGrams = 6, HalfRateGrams = 15, KcalPerGram = 9, DiminishingAboveGrams = 70, WindowHours = 24, DiminishingScaleGrams = 35, FiberSpeedBonus = 0.3f },
         };

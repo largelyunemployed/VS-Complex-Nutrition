@@ -40,22 +40,22 @@ namespace ComplexNutrition.Core
         public const string StartStoresKey = "complexnutritionStartStores";
 
         /// <summary>
-        /// Respawn with calories (since v0.4.2): what dying does to the calorie reserve, one of <see cref="RespawnCaloriesOptions"/>.
+        /// Respawn effects: Calories/Diet Tier (since v0.4.2): what dying does to the calorie reserve, one of <see cref="RespawnCaloriesOptions"/>.
         /// It replaced the old "complexnutritionRespawn" setting, which is no longer read; a world that had it gets the default.
         /// </summary>
         public const string RespawnCaloriesKey = "complexnutritionRespawnCalories";
 
-        /// <summary>Respawn with calories: the reserve becomes a share of what it held at death, with a floor (tracking.json).</summary>
+        /// <summary>Respawn effects: Calories/Diet Tier: the reserve becomes a share of what it held at death, with a floor (tracking.json).</summary>
         public const string RespawnLose = "lose";
-        /// <summary>Respawn with calories: the reserve is left as it was.</summary>
+        /// <summary>Respawn effects: Calories/Diet Tier: the reserve is left as it was.</summary>
         public const string RespawnKeep = "keep";
-        /// <summary>Respawn with calories: the reserve goes back to a fixed small amount, and the diet back to the starting tier (never up).</summary>
+        /// <summary>Respawn effects: Calories/Diet Tier: the reserve goes back to a fixed small amount, and the diet back to the starting tier (never up).</summary>
         public const string RespawnReset = "reset";
-        /// <summary>Respawn with calories (since v0.4.3): calories as <see cref="RespawnLose"/>, and the diet drops one tier.</summary>
+        /// <summary>Respawn effects: Calories/Diet Tier (since v0.4.3): calories as <see cref="RespawnLose"/>, and the diet drops one tier.</summary>
         public const string RespawnLoseTier = "losetier";
 
         /// <summary>
-        /// The Respawn with calories choices, as values and the names their lang keys use ("worldconfig-complexnutritionRespawnCalories-Lose").
+        /// The Respawn effects: Calories/Diet Tier choices, as values and the names their lang keys use ("worldconfig-complexnutritionRespawnCalories-Lose").
         /// worldconfig.json lists the same values and names (a test checks).
         /// </summary>
         public static readonly StartOption[] RespawnCaloriesOptions =
@@ -66,7 +66,7 @@ namespace ComplexNutrition.Core
             new(RespawnLoseTier, "LoseTier"),
         };
 
-        /// <summary>The Respawn with calories choice a world gets when it has none.</summary>
+        /// <summary>The Respawn effects: Calories/Diet Tier choice a world gets when it has none.</summary>
         public const string DefaultRespawnCalories = RespawnLose;
 
         /// <summary>
@@ -199,7 +199,7 @@ namespace ComplexNutrition.Core
             return null;
         }
 
-        /// <summary>The world's Respawn with calories choice: lose, keep, reset or losetier. Lose for a world without one, or with a value we don't know.</summary>
+        /// <summary>The world's Respawn effects: Calories/Diet Tier choice: lose, keep, reset or losetier. Lose for a world without one, or with a value we don't know.</summary>
         public static string RespawnCalories(IWorldAccessor world)
         {
             string choice = Text(world, RespawnCaloriesKey);
