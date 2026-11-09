@@ -239,6 +239,8 @@ namespace ComplexNutrition.UI
                 blocks.Add(new TextBlock(L("window-healing-tip"), true));
             }
 
+            AddDiet(blocks, d);
+
             // The last 24 hours of each macro as one table (v0.3.6i): digested, the limit, and the calories it gave.
             var s = d.Digest;
             if (s != null)
@@ -319,6 +321,77 @@ namespace ComplexNutrition.UI
                 }
             }
             return blocks;
+        }
+
+        /// <summary>
+        /// The Diet section (since v0.4.3): the diet score with its tier and which way it is going, what the tier does, and how
+        /// close a tier change is. The score's hover explains it and shows today so far, nutrient by nutrient.
+        /// </summary>
+        private static void AddDiet(List<PageBlock> blocks, NutritionPageData d)
+        {
+            var settings = DietScore.Settings;
+            var state = d.State;
+            if (settings.Tiers.Count == 0 || !state.HasDietScore) return;
+            var tier = settings.Tier(state.DietTier);
+            string tierName = Lang.Get(tier.LangKey);
+            float score = state.DietScoreValue;
+            float change = score - state.DietScoreBefore;
+            string trend = change > 0.05f ? L("window-diet-rising") : change < -0.05f ? L("window-diet-falling") : L("window-diet-steady");
+
+            blocks.Add(new HeadingBlock(L("window-heading-diet")));
+            blocks.Add(new TextBlock(StatsHover.Text(L("window-diet-score", Math.Round(score).ToString("0"), tierName, trend)), false, DietTip(d)));
+
+            string effects = NutrientDisplay.TierEffectText(tier, d.BaseMaxHealth);
+            if (!NutrientEffects.WorldOn) blocks.Add(new TextBlock(StatsHover.Text(L("window-diet-effects-worldoff")), true));
+            else if (effects == "") blocks.Add(new TextBlock(StatsHover.Text(L("window-diet-effects-none", tierName)), true));
+            else
+            {
+                bool bonus = tier.Effects.Any(e => e.Value > 0f);
+                blocks.Add(new TextBlock(StatsHover.Paint(L("window-diet-effects", tierName, effects), bonus ? Good : Empty), true));
+            }
+
+            var progress = state.DietProgress;
+            if (progress.PendingTier != progress.Tier)
+            {
+                int left = Math.Max(1, settings.DaysToChangeTier - progress.PendingDays);
+                string days = left == 1 ? L("window-diet-day") : L("window-diet-days", left);
+                string next = Lang.Get(settings.Tier(progress.PendingTier).LangKey);
+                string key = progress.PendingTier > progress.Tier ? "window-diet-pending-up" : "window-diet-pending-down";
+                blocks.Add(new TextBlock(StatsHover.Text(L(key, days, next)), true));
+            }
+        }
+
+        /// <summary>The diet score's hover: what it is, how it moves, the last day's score, today so far by nutrient, and the tiers.</summary>
+        private static string DietTip(NutritionPageData d)
+        {
+            var settings = DietScore.Settings;
+            var state = d.State;
+            var lines = new List<string>
+            {
+                "<strong>" + StatsHover.Esc(L("window-diet-name")) + "</strong>: " + StatsHover.Text(L("window-diet-what")),
+                Grey(L("window-diet-how", settings.DaysToChangeTier)),
+                "",
+            };
+            if (state.LastDayScore >= 0f) lines.Add(StatsHover.Text(L("window-diet-lastday", Math.Round(state.LastDayScore).ToString("0"))));
+            float today = DietScore.DayScore(settings, code => DietScore.Brought(state, code, d.Today));
+            lines.Add(StatsHover.Text(L("window-diet-today", Math.Round(today).ToString("0"))));
+            foreach (var kv in settings.Weights)
+            {
+                var n = d.Nutrients.Get(kv.Key);
+                if (n == null || kv.Value <= 0f) continue;
+                float share = DietScore.Share(DietScore.Brought(state, kv.Key, d.Today));
+                string pct = Math.Round(share * 100f).ToString("0") + "%";
+                string color = share >= 0.999f ? Good : share < 0.5f ? Empty : Low;
+                lines.Add("• " + StatsHover.Text(L("window-diet-nutrient", NutrientDisplay.BarName(n), Num(kv.Value)) + " ") + StatsHover.Paint(pct, color));
+            }
+            lines.Add("");
+            var tiers = new List<string>();
+            for (int i = 0; i < settings.Tiers.Count; i++)
+            {
+                tiers.Add(L("window-diet-tier-range", Lang.Get(settings.Tiers[i].LangKey), Math.Round(settings.Tiers[i].MinScore).ToString("0"), Math.Round(settings.TopScore(i)).ToString("0")));
+            }
+            lines.Add(Grey(L("window-diet-tiers", string.Join(", ", tiers))));
+            return string.Join("<br>", lines);
         }
 
         /// <summary>A macro's 24-hour calories, red when diminishing returns took some.</summary>

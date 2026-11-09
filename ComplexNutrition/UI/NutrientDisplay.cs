@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ComplexNutrition.Core;
 using Vintagestory.API.Client;
 using Vintagestory.API.Config;
@@ -59,21 +60,26 @@ namespace ComplexNutrition.UI
         {
             var def = NutrientEffects.Settings.Of(code);
             if (def == null) return "";
-            var parts = new List<string>();
-            foreach (var t in def.Targets)
-            {
-                string label = Lang.Get("complexnutrition:" + t.Label);
-                string pct = SignedPercent(NutrientEffects.ShownPercent(t, strength));
-                if (t.PerBaseHealth && baseHealth > 0f)
-                {
-                    float hp = strength * baseHealth;
-                    string hpText = (hp < 0 ? "-" : "+") + Math.Abs(hp).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
-                    parts.Add(Lang.Get("complexnutrition:effect-change-hp", pct, label, hpText));
-                }
-                else parts.Add(Lang.Get("complexnutrition:effect-change", pct, label));
-            }
-            return string.Join(", ", parts);
+            return string.Join(", ", def.Targets.Select(t => TargetText(t, strength, baseHealth)));
         }
+
+        /// <summary>One stat change as the player sees it: "+5% walk speed", or "+10% max health (+1.5 HP)" with the base health known.</summary>
+        public static string TargetText(EffectTarget t, float strength, float baseHealth = 0f)
+        {
+            string label = Lang.Get("complexnutrition:" + t.Label);
+            string pct = SignedPercent(NutrientEffects.ShownPercent(t, strength));
+            if (t.PerBaseHealth && baseHealth > 0f)
+            {
+                float hp = strength * baseHealth;
+                string hpText = (hp < 0 ? "-" : "+") + Math.Abs(hp).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+                return Lang.Get("complexnutrition:effect-change-hp", pct, label, hpText);
+            }
+            return Lang.Get("complexnutrition:effect-change", pct, label);
+        }
+
+        /// <summary>What a diet tier does (since v0.4.3), as "+5% healing, +5% max health (+0.8 HP), ...", or "" for a tier that does nothing.</summary>
+        public static string TierEffectText(DietTierDefinition tier, float baseHealth = 0f) =>
+            tier == null ? "" : string.Join(", ", tier.Effects.Where(e => Math.Abs(e.Value) > 0.0005f).Select(e => TargetText(e, e.Value, baseHealth)));
 
         /// <summary>
         /// The rule behind a nutrient's effect, in one or two sentences: for a long-term store what a full and an empty store do,

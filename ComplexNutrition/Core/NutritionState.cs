@@ -203,21 +203,50 @@ namespace ComplexNutrition.Core
             set => Effects.SetInt("sunDay", value);
         }
 
-        // ---- Diet tier (scaffolding since v0.4.1, used from v0.4.3) ----
+        // ---- Diet score and tier (scaffolding since v0.4.1, used since v0.4.3) ----
 
         /// <summary>
-        /// The diet tier and its 3-day counter. Respawning leaves this part alone: the calorie reserve's size follows the diet
-        /// tier, and dying doesn't reset it (only the "Reset calorie progress on death" respawn choice does, through
-        /// <see cref="ResetDietProgress"/>).
+        /// The diet score, the diet tier and its counter, and today's record for the score. Respawning leaves this part alone
+        /// (only the "Reset calorie progress on death" and "Lose one diet tier on death" respawn choices change it).
         /// </summary>
         private ITreeAttribute Diet => Sub("diet");
 
-        /// <summary>The lowest diet tier, which every character starts on.</summary>
-        public const int FirstDietTier = 1;
+        /// <summary>Today's digested carbs, fats, protein and fiber, for the diet score, in % of a day's need.</summary>
+        private ITreeAttribute DigestedToday => Diet.GetOrAddTreeAttribute("digested");
+
+        /// <summary>Each weighted nutrient's share (0 to 1) of a day's need on the last scored day.</summary>
+        private ITreeAttribute LastDayShares => Diet.GetOrAddTreeAttribute("lastShares");
+
+        /// <summary>The lowest diet tier (Starving since v0.4.3).</summary>
+        public const int FirstDietTier = 0;
+
+        /// <summary>True once the character has a diet score (every character tracked since v0.4.3).</summary>
+        public bool HasDietScore => Diet.HasAttribute("score");
+
+        /// <summary>The diet score, 0 to 100: how well the player has eaten lately. It slowly follows each day's score.</summary>
+        public float DietScoreValue
+        {
+            get => Diet.GetFloat("score");
+            set => Diet.SetFloat("score", Math.Clamp(value, 0f, 100f));
+        }
+
+        /// <summary>The diet score before the last scored day, so the window can say whether it is rising or falling.</summary>
+        public float DietScoreBefore
+        {
+            get => Diet.GetFloat("scoreBefore", DietScoreValue);
+            set => Diet.SetFloat("scoreBefore", Math.Clamp(value, 0f, 100f));
+        }
+
+        /// <summary>The last scored day's score, 0 to 100, or -1 before any day has been scored.</summary>
+        public float LastDayScore
+        {
+            get => Diet.GetFloat("lastDay", -1f);
+            set => Diet.SetFloat("lastDay", value);
+        }
 
         /// <summary>
-        /// The player's diet tier, from <see cref="FirstDietTier"/> up. It sets the calorie reserve's size
-        /// (<see cref="NutrientDefinition.CapFor"/>). Nothing changes it yet: the diet score and tiers arrive in v0.4.2 and v0.4.3.
+        /// The player's diet tier, from <see cref="FirstDietTier"/> (Starving) up. Its effects apply, and from v0.4.4 it sets the
+        /// calorie reserve's size (<see cref="NutrientDefinition.CapFor"/>).
         /// </summary>
         public int DietTier
         {
@@ -225,32 +254,62 @@ namespace ComplexNutrition.Core
             set => Diet.SetInt("tier", Math.Max(FirstDietTier, value));
         }
 
-        /// <summary>
-        /// The tier the player's diet has been at lately, when it differs from <see cref="DietTier"/>. A change only counts
-        /// after <see cref="DaysAtPendingTier"/> reaches 3 days in a row, the same rule as vitamin C's penalty.
-        /// </summary>
+        /// <summary>The tier the diet score points to, when it differs from <see cref="DietTier"/>.</summary>
         public int PendingDietTier
         {
             get => Diet.GetInt("pendingTier", DietTier);
             set => Diet.SetInt("pendingTier", value);
         }
 
-        /// <summary>In-game days in a row the diet has stayed at <see cref="PendingDietTier"/>.</summary>
-        public float DaysAtPendingTier
+        /// <summary>Days in a row the diet score has pointed above (or below) <see cref="DietTier"/>. Saved as a float before v0.4.3.</summary>
+        public int DaysAtPendingTier
         {
-            get => Diet.GetFloat("pendingDays");
-            set => Diet.SetFloat("pendingDays", Math.Max(0f, value));
+            get => Diet["pendingDays"] is FloatAttribute old ? (int)Math.Round(old.value) : Diet.GetInt("pendingDays");
+            set => Diet.SetInt("pendingDays", Math.Max(0, value));
         }
 
-        /// <summary>
-        /// Puts the diet back on the first tier with nothing pending, for "Reset calorie progress on death" (since v0.4.2).
-        /// While every character is on the first tier (until v0.4.3) this changes nothing you can see.
-        /// </summary>
-        public void ResetDietProgress()
+        /// <summary>The tier and where it is heading, as one value for <see cref="DietScore.NextTier"/>.</summary>
+        public DietTierProgress DietProgress
         {
-            DietTier = FirstDietTier;
-            PendingDietTier = FirstDietTier;
-            DaysAtPendingTier = 0f;
+            get => new(DietTier, PendingDietTier, DaysAtPendingTier);
+            set
+            {
+                DietTier = value.Tier;
+                PendingDietTier = value.PendingTier;
+                DaysAtPendingTier = value.PendingDays;
+            }
+        }
+
+        /// <summary>Puts the player on a tier straight away, with this diet score and nothing pending (start, respawn and test commands).</summary>
+        public void SetDiet(float score, int tier)
+        {
+            DietScoreValue = score;
+            DietScoreBefore = score;
+            DietProgress = new DietTierProgress(tier, tier, 0);
+        }
+
+        /// <summary>True once the player's body has run (alive, in survival) at some point today, so today counts towards the diet score.</summary>
+        public bool PlayedToday
+        {
+            get => Diet.GetBool("played");
+            set => Diet.SetBool("played", value);
+        }
+
+        /// <summary>Today's digested amount of a macro or fiber, for the diet score, in % of a day's need.</summary>
+        public float GetDigestedToday(string nutrient) => DigestedToday.GetFloat(nutrient);
+
+        public void AddDigestedToday(string nutrient, float percent) => DigestedToday.SetFloat(nutrient, DigestedToday.GetFloat(nutrient) + percent);
+
+        /// <summary>A nutrient's share (0 to 1) of a day's need on the last scored day.</summary>
+        public float GetLastDayShare(string nutrient) => LastDayShares.GetFloat(nutrient);
+
+        public void SetLastDayShare(string nutrient, float share) => LastDayShares.SetFloat(nutrient, share);
+
+        /// <summary>Starts today's diet record again (at midnight): nothing digested, not played yet.</summary>
+        public void ClearDietToday()
+        {
+            Diet["digested"] = new TreeAttribute();
+            PlayedToday = false;
         }
 
         public void MarkDirty() => entity?.WatchedAttributes.MarkPathDirty(TreeKey);

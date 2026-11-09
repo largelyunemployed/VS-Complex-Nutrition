@@ -618,21 +618,128 @@ namespace ComplexNutrition.Tests
             Assert.Near(57.6, serving, 0.01, "a 2-grain porridge serving fills 57.6");
         }
 
-        /// <summary>The calorie reserve holds 4 days for now, and 2 more for each diet tier above the first.</summary>
+        /// <summary>The calorie reserve holds 4 days whatever the diet tier, until the tiers grow it in v0.4.4.</summary>
         [Test]
-        public static void CalorieReserveFollowsDietTier()
+        public static void CalorieReserveStaysAtFourDaysUntilV044()
         {
             var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients;
             var calories = nutrients.First(n => n.Code == NutrientCodes.Calories);
             var vitaminA = nutrients.First(n => n.Code == NutrientCodes.VitaminA);
             var state = NutritionState.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
-            Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "a new character is on the first diet tier");
+            Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "a state with no tier is on the first (Starving)");
             Assert.Equal(400f, calories.CapFor(state), "the first tier holds 4 days");
-            state.DietTier = 3;
-            Assert.Equal(800f, calories.CapFor(state), "tier 3 holds 2 days a tier more");
+            state.DietTier = 5;
+            Assert.Equal(400f, calories.CapFor(state), "Thriving holds 4 days too until v0.4.4");
             Assert.Equal(vitaminA.Cap, vitaminA.CapFor(state), "other stores don't grow with the tier");
-            state.DietTier = 0;
+            state.DietTier = -2;
             Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "the tier never drops below the first");
+        }
+
+        // ---- Diet score and tiers (v0.4.3) ----
+
+        static DietSettings Diet() => Repo.Load<DietSettings>(Repo.Config("diet.json"));
+
+        /// <summary>diet.json agrees with the code's defaults, its tiers are in order with lang keys, and its effect labels exist.</summary>
+        [Test]
+        public static void DietJsonMatchesCodeAndLang()
+        {
+            var file = Diet();
+            var code = new DietSettings();
+            foreach (var f in typeof(DietSettings).GetFields().Where(f => f.GetCustomAttribute<JsonPropertyAttribute>() != null && f.Name != nameof(DietSettings.Tiers)))
+            {
+                Assert.Equal(JsonConvert.SerializeObject(f.GetValue(code)), JsonConvert.SerializeObject(f.GetValue(file)), "diet.json " + f.Name);
+            }
+            var lang = Repo.Json(Repo.Mod("assets", "complexnutrition", "lang", "en.json"));
+            var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients.Select(n => n.Code).ToHashSet();
+            Assert.Equal(6, file.Tiers.Count, "six tiers");
+            Assert.Equal(0f, file.Tiers[0].MinScore, "the lowest tier starts at 0");
+            for (int i = 0; i < file.Tiers.Count; i++)
+            {
+                var t = file.Tiers[i];
+                Assert.True(lang["diettier-" + t.Code] != null, "tier " + t.Code + " has a name in en.json");
+                Assert.True(t.StartScore >= t.MinScore && t.StartScore <= file.TopScore(i), "tier " + t.Code + "'s start score is on the tier");
+                foreach (var e in t.Effects) Assert.True(lang[e.Label] != null, t.Code + ": label " + e.Label + " is in en.json");
+            }
+            foreach (var w in file.Weights.Keys) Assert.True(nutrients.Contains(w), "weighted nutrient " + w + " is in nutrients.json");
+            foreach (var kv in file.StartTierByStartingCalories)
+            {
+                Assert.True(WorldSettings.StartOptions.Any(o => o.Name == kv.Key), kv.Key + " is a Starting calories choice");
+                Assert.True(file.TierNumber(kv.Value) >= 0, kv.Value + " is a tier");
+            }
+        }
+
+        /// <summary>The bands Miles approved: Starving 0-9, Malnourished 10-19, Poorly Fed 20-39, Getting By 40-59, Well Fed 60-79, Thriving 80+.</summary>
+        [Test]
+        public static void DietScoreBands()
+        {
+            var s = Diet();
+            Assert.Equal("starving", s.Tier(s.TierFor(0f)).Code, "0 is Starving");
+            Assert.Equal("starving", s.Tier(s.TierFor(9.9f)).Code, "9.9 is Starving");
+            Assert.Equal("malnourished", s.Tier(s.TierFor(10f)).Code, "10 is Malnourished");
+            Assert.Equal("poorlyFed", s.Tier(s.TierFor(39f)).Code, "39 is Poorly Fed");
+            Assert.Equal("gettingBy", s.Tier(s.TierFor(40f)).Code, "40 is Getting By");
+            Assert.Equal("wellFed", s.Tier(s.TierFor(79.9f)).Code, "79.9 is Well Fed");
+            Assert.Equal("thriving", s.Tier(s.TierFor(100f)).Code, "100 is Thriving");
+            Assert.Equal("gettingBy", s.Tier(s.StartTierFor("Normal")).Code, "a Normal start is Getting By");
+            Assert.Equal("gettingBy", s.Tier(s.StartTierFor(null)).Code, "a world with no start is Getting By");
+            Assert.Equal("malnourished", s.Tier(s.StartTierFor("Brutal")).Code, "a Brutal start is Malnourished");
+            Assert.Equal("starving", s.Tier(s.StartTierFor("RockBottom")).Code, "a Rock Bottom start is Starving");
+        }
+
+        /// <summary>A day's score weights the nutrients, caps each at a full day, and the diet score closes a seventh of the gap.</summary>
+        [Test]
+        public static void DayScoreWeightsAndCaps()
+        {
+            var s = Diet();
+            Assert.Near(100, DietScore.DayScore(s, _ => 100f), 0.01, "a full day of everything scores 100");
+            Assert.Near(100, DietScore.DayScore(s, _ => 300f), 0.01, "more than a full day earns nothing extra");
+            Assert.Near(0, DietScore.DayScore(s, _ => 0f), 0.01, "nothing scores 0");
+            float weights = s.Weights.Values.Sum();
+            Assert.Near(100.0 * 2 / weights, DietScore.DayScore(s, c => c == NutrientCodes.Protein ? 500f : 0f), 0.01, "protein alone earns its weight of 2");
+            Assert.Near(100.0 * 4 / weights, DietScore.DayScore(s, c => DietScore.CountWhenDigested.Contains(c) && c != NutrientCodes.Fiber ? 100f : 0f), 0.01, "carbs, fats and protein earn 4 of 9.5");
+            Assert.Near(40, DietScore.Follow(s, 30f, 100f), 0.01, "30 and a perfect day makes 40");
+            Assert.Near(30 - 30.0 / 7, DietScore.Follow(s, 30f, 0f), 0.01, "an empty day pulls it down the same way");
+        }
+
+        /// <summary>The tier only moves after 3 days in a row pointing the same way, and pointing back starts the count again.</summary>
+        [Test]
+        public static void TierMovesAfterThreeDaysInARow()
+        {
+            var s = Diet();
+            var p = new DietTierProgress(3, 3, 0);   // Getting By
+            p = DietScore.NextTier(s, p, 65f);
+            Assert.Equal(3, p.Tier, "one day above doesn't move you");
+            Assert.Equal(1, p.PendingDays, "one day counted");
+            p = DietScore.NextTier(s, p, 85f);
+            Assert.Equal(3, p.Tier, "two days above (even two tiers up) don't move you");
+            p = DietScore.NextTier(s, p, 62f);
+            Assert.Equal(4, p.Tier, "the third day in a row moves you to the tier the score points to");
+            Assert.Equal(0, p.PendingDays, "nothing pending after a move");
+            p = DietScore.NextTier(s, p, 50f);
+            p = DietScore.NextTier(s, p, 50f);
+            p = DietScore.NextTier(s, p, 70f);
+            Assert.Equal(4, p.Tier, "pointing back at your tier starts the count again");
+            Assert.Equal(0, p.PendingDays, "back on your own tier, nothing counted");
+            p = DietScore.NextTier(s, p, 50f);
+            p = DietScore.NextTier(s, p, 85f);
+            Assert.Equal(1, p.PendingDays, "pointing the other way starts the count again");
+        }
+
+        /// <summary>A day's record counts digested macros and fiber, absorbed vitamins and minerals, and today's sunlight vitamin D.</summary>
+        [Test]
+        public static void DayRecordCountsDigestedAndSunlight()
+        {
+            var state = NutritionState.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+            state.AddAbsorbedToday(NutrientCodes.Protein, 80f);   // eaten, still in the gut
+            state.AddDigestedToday(NutrientCodes.Protein, 30f);
+            state.AddAbsorbedToday(NutrientCodes.VitaminD, 20f);
+            state.SunDay = 7;
+            state.SunMadeToday = 50f;
+            Assert.Near(30, DietScore.Brought(state, NutrientCodes.Protein, 7), 0.01, "protein counts when digested");
+            Assert.Near(70, DietScore.Brought(state, NutrientCodes.VitaminD, 7), 0.01, "sunlight vitamin D counts on its day");
+            Assert.Near(20, DietScore.Brought(state, NutrientCodes.VitaminD, 8), 0.01, "but not on another day");
+            state.ClearDietToday();
+            Assert.Near(0, DietScore.Brought(state, NutrientCodes.Protein, 7), 0.01, "midnight starts the record again");
         }
 
         /// <summary>Respawn with calories: lose keeps a tenth (at least 1,000kcal), keep changes nothing, reset leaves 1,000kcal.</summary>

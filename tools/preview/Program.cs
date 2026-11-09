@@ -56,6 +56,7 @@ static class P
         foreach (var kv in digest.Pools) { var d = reg.Get(kv.Key); d.Cap = kv.Value.MaxGrams / d.DailyTarget * 100f; }
         var tracking = JsonConvert.DeserializeObject<TrackingSettings>(File.ReadAllText(Mod + "config/tracking.json"));
         NutrientEffects.Settings = JsonConvert.DeserializeObject<EffectSettings>(File.ReadAllText(Mod + "config/effects.json"));
+        DietScore.Settings = JsonConvert.DeserializeObject<DietSettings>(File.ReadAllText(Mod + "config/diet.json"));
 
         // A player a week or so in: fat-soluble vitamins and calcium sliding, something in the gut.
         var tree = new TreeAttribute();
@@ -81,6 +82,14 @@ static class P
         st.SetAbsorbedLog("carbohydrate-kcal", kC); st.SetAbsorbedLog("fat-kcal", kF); st.SetAbsorbedLog("protein-kcal", kP);
         st.SetAbsorbedLog("fiber", gFi); st.SetAbsorbedLog("fiber-kcal", kFi);
         st.AbsorbedHour = 7;
+        // v0.4.3: Well Fed at 63 and falling, after a poor day (48) that points down to Getting By.
+        st.SetDiet(63f, 4);
+        st.DietScoreBefore = 66f;
+        st.LastDayScore = 48f;
+        st.DietProgress = new DietTierProgress(4, 3, 1);
+        st.PlayedToday = true;
+        foreach (var (code, pct) in new[] { ("carbohydrate", 70f), ("fat", 40f), ("protein", 55f), ("fiber", 30f) }) st.AddDigestedToday(code, pct);
+        foreach (var (code, pct) in new[] { ("vitaminC", 120f), ("vitaminB", 60f), ("vitaminA", 200f), ("calcium", 30f), ("iron", 90f), ("potassium", 45f) }) st.AddAbsorbedToday(code, pct);
 
         var known = new List<KnownFood>();
         var wanted = new Dictionary<string, string> { ["game:vegetable-carrot"] = "Carrot", ["game:cheese-cheddar-1slice"] = "Cheddar cheese", ["game:fruit-blueberry"] = "Blueberry",

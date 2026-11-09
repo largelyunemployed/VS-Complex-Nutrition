@@ -49,8 +49,10 @@ namespace ComplexNutrition.Core
         public const string RespawnLose = "lose";
         /// <summary>Respawn with calories: the reserve is left as it was.</summary>
         public const string RespawnKeep = "keep";
-        /// <summary>Respawn with calories: the reserve goes back to a fixed small amount, and (once tiers exist) the diet tier to the first.</summary>
+        /// <summary>Respawn with calories: the reserve goes back to a fixed small amount, and the diet back to the starting tier (never up).</summary>
         public const string RespawnReset = "reset";
+        /// <summary>Respawn with calories (since v0.4.3): calories as <see cref="RespawnLose"/>, and the diet drops one tier.</summary>
+        public const string RespawnLoseTier = "losetier";
 
         /// <summary>
         /// The Respawn with calories choices, as values and the names their lang keys use ("worldconfig-complexnutritionRespawnCalories-Lose").
@@ -61,6 +63,7 @@ namespace ComplexNutrition.Core
             new(RespawnLose, "Lose"),
             new(RespawnKeep, "Keep"),
             new(RespawnReset, "Reset"),
+            new(RespawnLoseTier, "LoseTier"),
         };
 
         /// <summary>The Respawn with calories choice a world gets when it has none.</summary>
@@ -184,7 +187,19 @@ namespace ComplexNutrition.Core
         /// </summary>
         public static float? StartStores(IWorldAccessor world) => Number(Text(world, StartStoresKey)) ?? StartCalories(world);
 
-        /// <summary>The world's Respawn with calories choice: lose, keep or reset. Lose for a world without one, or with a value we don't know.</summary>
+        /// <summary>The name of the world's Starting calories choice ("Normal", "Brutal", "RockBottom"...), or null when it has none.</summary>
+        public static string StartCaloriesName(IWorldAccessor world)
+        {
+            float? value = StartCalories(world);
+            if (value == null) return null;
+            foreach (var option in StartOptions)
+            {
+                if (Number(option.Value) == value) return option.Name;
+            }
+            return null;
+        }
+
+        /// <summary>The world's Respawn with calories choice: lose, keep, reset or losetier. Lose for a world without one, or with a value we don't know.</summary>
         public static string RespawnCalories(IWorldAccessor world)
         {
             string choice = Text(world, RespawnCaloriesKey);

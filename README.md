@@ -59,7 +59,7 @@ Turning one module off never breaks the others, and with all modules off the gam
 | Food data | v0.1 | Real-world nutrient profiles for every vanilla food |
 | Tracking | v0.2 | Per-nutrient body reserves; replaces the vanilla category bars |
 | Nutrition UI | v0.3 | Nutrition window, settings menu, tooltips and optional HUD indicator |
-| Effects | v0.4 | Five diet tiers (Thriving to Malnourished) with buffs and debuffs |
+| Effects | v0.4 | Six diet tiers (Starving to Thriving) with buffs and debuffs |
 | Health UI | v0.5 | Shows your diet tier, active effects and what to eat next |
 | Allergies | v0.6 | Optional, off by default: 0 to 3 hidden food allergies per character, found by tasting; reactions hurt and slow you but never kill |
 | Body composition | v0.7 | A lean-to-heavy build driven by calorie surplus or deficit and activity |

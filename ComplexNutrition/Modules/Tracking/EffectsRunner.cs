@@ -121,32 +121,45 @@ namespace ComplexNutrition.Modules.Tracking
             bool healthChanged = false;
             bool armorChanged = false;
 
+            // Puts one modifier (named after its source, a nutrient code or the diet tier) on a stat, or takes it off at zero.
+            void SetModifier(EffectTarget target, string source, float delta)
+            {
+                string key = target.Stat + "|" + source;
+                bool had = mine.TryGetValue(key, out float last);
+                if (Math.Abs(delta) < 0.0005f)
+                {
+                    if (!had) return;
+                    entity.Stats.Remove(target.Stat, NutrientEffects.StatPrefix + source);
+                    mine.Remove(key);
+                }
+                else
+                {
+                    // Shares move in steps of 0.1% and health in 0.05 points, so a slowly draining store doesn't resend the stats every few seconds.
+                    float step = target.PerBaseHealth ? 0.05f : 0.001f;
+                    if (had && Math.Abs(delta - last) < step) return;
+                    entity.Stats.Set(target.Stat, NutrientEffects.StatPrefix + source, delta, false);
+                    mine[key] = delta;
+                }
+                if (target.PerBaseHealth) healthChanged = true;
+                if (target.Stat == ArmorSlowdownStat) armorChanged = true;
+            }
+
             foreach (var code in S.WithEffects)
             {
                 float strength = running ? NutrientEffects.Current(state, code) : 0f;
                 foreach (var t in S.Of(code).Targets)
                 {
                     if (string.IsNullOrEmpty(t.Stat) || t.Stat == NutrientEffects.PhysicalResistance) continue;
-                    string key = t.Stat + "|" + code;
-                    float delta = NutrientEffects.StatDelta(t, strength, baseHealth);
-                    bool had = mine.TryGetValue(key, out float last);
-                    if (Math.Abs(delta) < 0.0005f)
-                    {
-                        if (!had) continue;
-                        entity.Stats.Remove(t.Stat, NutrientEffects.StatPrefix + code);
-                        mine.Remove(key);
-                    }
-                    else
-                    {
-                        // Shares move in steps of 0.1% and health in 0.05 points, so a slowly draining store doesn't resend the stats every few seconds.
-                        float step = t.PerBaseHealth ? 0.05f : 0.001f;
-                        if (had && Math.Abs(delta - last) < step) continue;
-                        entity.Stats.Set(t.Stat, NutrientEffects.StatPrefix + code, delta, false);
-                        mine[key] = delta;
-                    }
-                    if (t.PerBaseHealth) healthChanged = true;
-                    if (t.Stat == ArmorSlowdownStat) armorChanged = true;
+                    SetModifier(t, code, NutrientEffects.StatDelta(t, strength, baseHealth));
                 }
+            }
+
+            // The diet tier's effects (since v0.4.3): every stat any tier changes, at the current tier's value or nothing.
+            var tier = running && NutrientEffects.WorldOn ? DietScore.Settings.Tier(state.DietTier) : null;
+            foreach (var target in DietScore.TierStats(DietScore.Settings))
+            {
+                var current = tier?.Effects.Find(e => e.Stat == target.Stat);
+                SetModifier(target, DietScore.TierSource, current == null ? 0f : NutrientEffects.StatDelta(current, current.Value, baseHealth));
             }
             if (healthChanged) health?.UpdateMaxHealth();
             if (armorChanged) RefreshArmorSlowdown(player);
@@ -255,6 +268,7 @@ namespace ComplexNutrition.Modules.Tracking
                     if (t.Stat == stat) sum += NutrientEffects.StatDelta(t, strength, 0f);
                 }
             }
+            sum += DietScore.TierEffect(state, stat);
             return sum;
         }
     }

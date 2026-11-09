@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.4.3
+
+The diet score and diet tiers. Interim test builds are lettered (0.4.3a, 0.4.3b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.3a: diet score and six diet tiers
+
+- Each in-game day, from midnight to midnight, gets a score out of 100 for how well you ate. Every nutrient you digested earns points, up to a full day's need of it: protein counts 2, carbs and fats 1, fiber 0.8, vitamin C and the B vitamins 0.6, and vitamins A, D, E and K, calcium, iron and potassium 0.5. Carbs, fats, protein and fiber count when they are digested, not when you eat them, and vitamin D from sunlight counts. A day counts in full however long you played, and days you don't play are skipped.
+- Your diet score follows your day scores slowly: every midnight it closes a seventh of the gap to the day you just had (30 and a perfect day makes 40). Dying leaves it as it was.
+- Six diet tiers come from the diet score: Starving (0 to 9), Malnourished (10 to 19), Poorly Fed (20 to 39), Getting By (40 to 59), Well Fed (60 to 79) and Thriving (80 and up). Your tier only changes once the score has stayed above or below it for 3 days in a row, and the chat tells you when it does.
+- Each tier changes healing, max health, walk speed and calorie burn: Thriving +10% healing, +10% max health, +5% walk speed and 5% less calorie burn; Well Fed half of that or less (+5%, +5%, +2%, -2%); Getting By nothing; Poorly Fed the mirror of Well Fed; Malnourished -15%, -10%, -5% and +5%; Starving -30%, -20%, -10% and +10%. They add to the vitamin and mineral effects and follow the Nutrient effects world setting. (config/diet.json.)
+- New characters start on Getting By (score 50), Malnourished (15) with a Brutal start, or Starving (5) with a Rock Bottom start. Characters from before 0.4.3 start the same way. The planned Starting diet tier setting is dropped.
+- Respawn with calories has a fourth choice, Lose one diet tier on death: calories as Lose calories on death, and the diet drops one tier. Reset calorie progress on death now sends the diet back to the starting tier, never up.
+- The nutrition window's Overview has a Diet section: your diet score, tier and trend, what the tier does, and how many more days until a tier change. Hover the score for your last day's score and today so far, nutrient by nutrient.
+- A new handbook page, Diet Score and Tiers. The overview, effects and window pages link to it.
+- Test commands: `/cnutrition setdietscore <player> <score>` puts a player on that score's tier straight away, and `/cnutrition endday <player>` scores the day so far as if it were midnight.
+- The calorie reserve still holds 4 days on every tier; it starts growing with the tier in v0.4.4 (nutrients.json capPerTier is 0 until then).
+
 ## v0.4.2
 
 Gentler respawning and new start settings. Interim test builds are lettered (0.4.2a, 0.4.2b, ...), and each change is listed under the build it arrived in.
