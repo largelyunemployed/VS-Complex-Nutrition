@@ -34,12 +34,6 @@
 					"value": -0.3
 				},
 				{
-					"stat": "maxhealthExtraPoints",
-					"perBaseHealth": true,
-					"label": "effect-maxhealth",
-					"value": -0.2
-				},
-				{
 					"stat": "walkspeed",
 					"label": "effect-walkspeed",
 					"value": -0.1
@@ -64,12 +58,6 @@
 					"value": -0.15
 				},
 				{
-					"stat": "maxhealthExtraPoints",
-					"perBaseHealth": true,
-					"label": "effect-maxhealth",
-					"value": -0.1
-				},
-				{
 					"stat": "walkspeed",
 					"label": "effect-walkspeed",
 					"value": -0.05
@@ -91,13 +79,7 @@
 				{
 					"stat": "healingeffectivness",
 					"label": "effect-healing",
-					"value": -0.05
-				},
-				{
-					"stat": "maxhealthExtraPoints",
-					"perBaseHealth": true,
-					"label": "effect-maxhealth",
-					"value": -0.05
+					"value": -0.1
 				},
 				{
 					"stat": "walkspeed",
@@ -127,18 +109,18 @@
 				{
 					"stat": "healingeffectivness",
 					"label": "effect-healing",
-					"value": 0.05
+					"value": 0.1
 				},
 				{
 					"stat": "maxhealthExtraPoints",
 					"perBaseHealth": true,
 					"label": "effect-maxhealth",
-					"value": 0.05
+					"value": 0.1
 				},
 				{
 					"stat": "walkspeed",
 					"label": "effect-walkspeed",
-					"value": 0.02
+					"value": 0.05
 				},
 				{
 					"stat": "hungerrate",
@@ -157,18 +139,18 @@
 				{
 					"stat": "healingeffectivness",
 					"label": "effect-healing",
-					"value": 0.1
+					"value": 0.2
 				},
 				{
 					"stat": "maxhealthExtraPoints",
 					"perBaseHealth": true,
 					"label": "effect-maxhealth",
-					"value": 0.1
+					"value": 0.3
 				},
 				{
 					"stat": "walkspeed",
 					"label": "effect-walkspeed",
-					"value": 0.05
+					"value": 0.1
 				},
 				{
 					"stat": "hungerrate",
