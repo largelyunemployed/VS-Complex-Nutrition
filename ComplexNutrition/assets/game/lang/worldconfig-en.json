@@ -25,7 +25,7 @@
 	"worldattribute-complexnutritionKeepStores-desc": "When on, a character keeps their vitamin, mineral and fiber stores when they die, and their vitamin C and B vitamin day counts carry on. When off, those stores go back to what Starting vitamin and mineral reserves gives a new character. The gut always empties on death.",
 	"worldattribute-complexnutritionAdvancedDisplay": "Advanced nutrition display",
 	"worldattribute-complexnutritionAdvancedDisplay-desc": "Shows more detail when you hover over the Carbs, Fats and Protein bars: how many calories the food being digested will give, how long it will take and how fast it is being absorbed. This is the default: each player can change it for themselves in the settings menu.",
-	"worldattribute-complexnutritionMeatInPots": "Poultry and bushmeat in pots",
+	"worldattribute-complexnutritionMeatInPots": "Expanded cooking ingredients",
 	"worldattribute-complexnutritionMeatInPots-desc": "Lets raw, cooked and cured poultry and bushmeat go into meat stews and soups as regular ingredients. Changing it takes effect the next time the world is loaded.",
 	"worldattribute-complexnutritionDiscover": "Discover Nutrition",
 	"worldattribute-complexnutritionDiscover-desc": "Hides a food's nutrients (shown as ???) until you have eaten it. Eating a meal or pie teaches you each of its ingredients. How filling a food is still shows. The nutrition window only suggests foods you have eaten.",

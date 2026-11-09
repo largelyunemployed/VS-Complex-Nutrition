@@ -4,6 +4,10 @@
 
 Gentler respawning and new start settings. Interim test builds are lettered (0.4.2a, 0.4.2b, ...), and each change is listed under the build it arrived in.
 
+### 0.4.2e: diet score
+
+- The Poultry and bushmeat in pots setting is now called Expanded cooking ingredients, in the menu, on the world creation screen, in the /cnutrition meatinpots replies and in the handbook, so it can cover more ingredients later. Its hover is unchanged.
+
 ### 0.4.2d: clearer effects and minerals
 
 - Vitamin E now makes armor slow you down less (the game's armor walk speed stat), up to 20% less with a full store and 10% more when empty. Mining speed moved to potassium, which no longer changes walk speed, so walk speed belongs to vitamin C alone. The game only works out armor's slowdown when you change clothing, so the mod asks it to work it out again whenever vitamin E's effect changes.
