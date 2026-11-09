@@ -61,7 +61,7 @@ namespace ComplexNutrition.Core
         /// full heal of 15 health uses a day and a half of vitamin K. Healing items use none. An empty store never stops
         /// healing; it only slows it (vitamin K's effect, config/effects.json).
         /// </summary>
-        [JsonProperty("vitaminKPerHp")] public float VitaminKPerHp = 10f;
+        [JsonProperty("vitaminKPerHp")] public float VitaminKPerHp = 50f;
 
         /// <summary>
         /// Respawn with calories, "Lose calories on death" (since v0.4.2): the share of the calorie reserve a character keeps

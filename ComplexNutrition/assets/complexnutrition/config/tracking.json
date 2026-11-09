@@ -14,7 +14,7 @@
 	"recoveryKcalPerKgMin": 33,
 	"recoveryKcalPerKgMax": 44,
 	"regenHpPerDay": 28.8,
-	"vitaminKPerHp": 10,
+	"vitaminKPerHp": 50,
 	"respawnKeptShare": 0.1,
 	"respawnMinKcal": 1000,
 	"respawnResetKcal": 1000

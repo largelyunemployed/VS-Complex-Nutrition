@@ -4,8 +4,10 @@
 
 Gentler respawning and new start settings. Interim test builds are lettered (0.4.2a, 0.4.2b, ...), and each change is listed under the build it arrived in.
 
-### 0.4.2e: diet score
+### 0.4.2e: final v0.4.2 build
 
+- Natural healing now uses half a day's vitamin K for each health point, up from a tenth, so a full heal of 15 health uses seven and a half days of the 20-day store. Healing items still use none, and an empty store still only slows healing to 90%. (tracking.json: vitaminKPerHp 50.)
+- The diet score moved to v0.4.3, alongside the diet tiers.
 - The Poultry and bushmeat in pots setting is now called Expanded cooking ingredients, in the menu, on the world creation screen, in the /cnutrition meatinpots replies and in the handbook, so it can cover more ingredients later. Its hover is unchanged.
 
 ### 0.4.2d: clearer effects and minerals
