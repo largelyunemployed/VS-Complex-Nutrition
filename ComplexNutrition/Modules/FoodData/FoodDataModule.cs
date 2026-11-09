@@ -51,6 +51,7 @@ namespace ComplexNutrition.Modules.FoodData
                 api.Logger.Notification("[complexnutrition] Nutrient info added to {0} foods and meal containers.", patched.Count);
                 PieTooltipPatch.Apply(core);
                 NutritionFactsPatch.Apply(core);
+                PoisonHidingPatch.Apply(core);
                 TooltipCtrlPatch.Apply((Vintagestory.API.Client.ICoreClientAPI)api, core);
             }
 
@@ -73,6 +74,7 @@ namespace ComplexNutrition.Modules.FoodData
             {
                 PieTooltipPatch.Remove();
                 NutritionFactsPatch.Remove();
+                PoisonHidingPatch.Remove();
                 TooltipCtrlPatch.Remove();
             }
             IsEnabled = false;

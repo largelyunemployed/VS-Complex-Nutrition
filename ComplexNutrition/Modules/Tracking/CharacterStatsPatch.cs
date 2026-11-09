@@ -91,7 +91,7 @@ namespace ComplexNutrition.Modules.Tracking
             if (tree == null || def == null || !NutritionState.FromTree(tree).TrackingOn) return false;
             var reserves = tree.GetTreeAttribute("reserves");
             kcal = (reserves?.GetFloat(def.Code) ?? 0f) / 100f * def.DailyTarget;
-            maxKcal = Math.Max(def.Cap / 100f * def.DailyTarget, kcal);
+            maxKcal = Math.Max(def.CapFor(NutritionState.FromTree(tree)) / 100f * def.DailyTarget, kcal);
             var hunger = attrs.GetTreeAttribute("hunger");
             fullness = hunger?.GetFloat("currentsaturation") ?? 0f;
             maxFullness = hunger?.GetFloat("maxsaturation") ?? 0f;
@@ -283,7 +283,7 @@ namespace ComplexNutrition.Modules.Tracking
                 var bar = composer.GetStatbar("cn-" + n.Code);
                 if (bar == null) continue;
                 float reserve = state.GetReserve(n.Code);
-                float max = Math.Max(n.Cap, reserve);
+                float max = Math.Max(n.CapFor(state), reserve);
                 if (n.Code == NutrientCodes.Fiber && Digestion.Settings != null)
                 {
                     // Fiber's bar shows its gut, like carbs, fats and protein (v0.3.6l); its reserve is in the hover.
@@ -306,7 +306,18 @@ namespace ComplexNutrition.Modules.Tracking
                 .Section(Lang.Get("complexnutrition:hover-status"), status)
                 .Section(Lang.Get("complexnutrition:hover-about"), StatsHover.Text(Lang.Get("complexnutrition:nutrient-" + code + "-role", RoleArg(code))));
             string key = "complexnutrition:nutrient-" + code + "-effect";
-            if (!Lang.HasTranslation(key)) b.Note(Lang.Get("complexnutrition:effect-placeholder"));
+            string rule = NutrientDisplay.EffectRule(code, core?.Nutrients.Get(code));
+            if (rule != "")
+            {
+                // v0.4.0: the nutrient's effect as it stands, coloured like the nutrition window's, then how it works.
+                var state = TrackedState();
+                float baseHealth = capi?.World?.Player?.Entity?.WatchedAttributes.GetTreeAttribute("health")?.GetFloat("basemaxhealth") ?? 15f;
+                float strength = NutrientEffects.Current(state, code);
+                string now = NutrientDisplay.EffectNow(code, state, baseHealth);
+                string nowVtml = strength > 0.0005f ? StatsHover.Paint(now, NutritionPages.Good) : strength < -0.0005f ? StatsHover.Paint(now, NutritionPages.Empty) : StatsHover.Text(now);
+                b.Section(Lang.Get("complexnutrition:hover-ingame"), nowVtml, StatsHover.Text(rule));
+            }
+            else if (!Lang.HasTranslation(key)) b.Note(Lang.Get("complexnutrition:effect-placeholder"));
             else b.Section(Lang.Get("complexnutrition:hover-ingame"), StatsHover.Text(Lang.Get(key)));
             return b.ToString();
         }

@@ -1,5 +1,48 @@
 # Changelog
 
+## v0.4.1
+
+Healing, porridge and mushrooms. Interim test builds are lettered (0.4.1a, 0.4.1b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.1a: vitamin K for healing, filling porridge, useful mushrooms
+
+- Natural healing uses up vitamin K: a tenth of a day's worth for each health point healed, so a full heal of 15 health uses a day and a half. Healing items use none. An empty store still only slows healing to 90%.
+- Grains and dry soybeans soak up water in the cooking pot. In a pot meal, grains fill you as if they weighed three times their dry weight and soybeans two and a half times, so a 2-grain serving of porridge fills 58 instead of 19, and you can eat about 5 servings at once instead of 15. Grain dishes from other mods are covered too. Raw grain, bread, dough and pies are unchanged. (digestion.json: cookedGrainFullness.)
+- Every mushroom now has a signature vitamin or mineral, picked by its colour: orange, red and yellow ones vitamin A, white and pale ones calcium, oyster mushrooms, shiitake, honey mushrooms and the pink bonnet vitamin D, and brown, dark, green, violet and blue ones iron. Each gives 45% of a day's worth per 100g, about 15% for every 10 fullness: a puffball gives 36% of a day's calcium and a chicken of the woods 40% of a day's vitamin A. Poisonous and psychedelic mushrooms get them too, so colour tells you nothing about safety. Their fullness and calories are unchanged.
+- New world setting Hide Poison Effects, part of Discover Nutrition and off by default. While both are on, a food's tooltip doesn't show the health it takes (a poisonous mushroom's "-8 hp") until you have eaten it once. A meal hides it while it holds a poisonous ingredient you haven't tried. The poison still hurts.
+- The calorie reserve holds 4 days (11,200kcal) instead of 10, so it fills visibly from the first days of eating. Calories you already have above 4 days are kept and used up as usual; you just can't add more until you're below the cap. The start and respawn options now give a share of the reserve: Full 100%, Easy 70%, Normal 50%, Hard 30%, Brutal 10% and Rock Bottom almost nothing, so Normal starts you with 2 days.
+- Groundwork for diet tiers: the calorie reserve's size is worked out per player, ready to grow with your diet tier in v0.4.4, and each player has a saved diet tier that dying will not reset. Nothing changes the tier yet.
+
+## v0.4.0
+
+Nutrient effects. Interim test builds are lettered (0.4.0a, 0.4.0b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.0b: only vitamin K affects healing
+
+- Only vitamin K changes how fast you heal. An empty store slows natural healing to 90%, and it never stops it: you heal as long as there are calories in your reserve.
+- Vitamin C's penalty is now on walk speed instead of healing (tiredness is the first sign of scurvy).
+- Healing goes on at the normal rate if working out an effect ever fails, and such a failure is logged once instead of interrupting the tracking tick.
+
+### 0.4.0a: nutrient effects
+
+- Every vitamin and mineral now has an effect on your character. Hovering over one, in the nutrition window or on the Stats panel, shows its effect now and how it works, and the new handbook page Nutrient Effects explains them all.
+- The slow stores (vitamins A, D, E and K, calcium, iron and potassium) now hold 20 days each (A, D, E and K held 25, the minerals 10). Each day stored gives a 1% bonus, up to 20% with a full store. Under one day's worth the bonus fades, down to a 10% penalty when empty. Stores above 20 days are trimmed to 20 when you join.
+  - Vitamin A: ranged accuracy.
+  - Vitamin D: resistance to blunt, slashing and piercing damage, like armor.
+  - Vitamin E: mining speed.
+  - Vitamin K: healing (natural healing, bandages and poultices).
+  - Calcium: fall damage.
+  - Iron: max health (20% of your base health with a full store, 3 health on a normal character).
+  - Potassium: walk speed, melee and ranged damage, and butchering speed.
+- Vitamin C and the B vitamins have no bonus. After 3 in-game days of play without a full day's worth stored, you get a 5% penalty, growing to 10% by day 5. Storing a full day's worth once resets the count, and so does respawning. A lack of vitamin C slows your walking, and a lack of B vitamins raises your hunger rate, so you burn more calories. They show under Running Low from day 2, as how many days they have been low.
+- Sunlight makes vitamin D: about a day's worth in 2 hours under open sky around midday, less when the sun is low, and none indoors or underground. It makes at most one day's worth a day.
+- The Overview tab lists every nutrient effect on you now, bonuses in green and penalties in red.
+- Natural healing now listens to vitamin K, but not to other changes to the healing stat (armor that slows bandages doesn't slow natural healing).
+- New world setting Nutrient effects (on by default), and a switch for each nutrient's effect under Nutrient Effects in the settings menu.
+- Effects are vanilla stat modifiers that are never saved, so removing the mod leaves nothing behind. They are off while tracking is off, in creative and spectator mode, and while dead.
+- New admin command for testing: /cnutrition setdayslow <player> <vitaminC|vitaminB|all> <days>. /cnutrition stats also lists each nutrient's effect.
+- Fixed: with Poultry and bushmeat in pots on, meals made with bushmeat (raw, cooked or cured) or cooked poultry showed a raw game code in their name, such as "stewed game:recipeingredient-item-bushmeat-insturmentalcase". They now read "stewed bushmeat" and "stewed poultry".
+
 ## v0.3.6
 
 A simpler nutrition window. Interim test builds are lettered (0.3.6a, 0.3.6b, ...), and each change is listed under the build it arrived in.

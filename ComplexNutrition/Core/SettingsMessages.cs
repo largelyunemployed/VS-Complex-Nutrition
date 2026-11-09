@@ -22,8 +22,13 @@ namespace ComplexNutrition.Core
         public bool MeatInPots;
         public bool DiminishingReturns = true;
         public bool Discover;
+        /// <summary>Hide Poison Effects (since v0.4.1): health loss stays hidden until eaten, while Discover Nutrition is on too.</summary>
+        public bool HidePoison;
         public string WildHarvest = WorldSettings.DefaultWildHarvest;
         public int MaxFullness = WorldSettings.DefaultMaxFullness;
+        public bool Effects = true;
+        /// <summary>The nutrients whose effects are switched off, as codes separated by commas.</summary>
+        public string EffectsOff = "";
 
         [JsonIgnore] public bool ShowPercent => string.Equals(DisplayUnits, "percent", System.StringComparison.OrdinalIgnoreCase);
     }
@@ -79,7 +84,11 @@ namespace ComplexNutrition.Core
         public const string DiminishingReturns = "diminishingReturns";
         public const string WildHarvest = "wildHarvest";
         public const string Discover = "discover";
+        public const string HidePoison = "hidePoison";
         public const string MaxFullness = "maxFullness";
+        public const string Effects = "effects";
+        /// <summary>Prefix for one nutrient's effect switch: "effect:vitaminC".</summary>
+        public const string EffectPrefix = "effect:";
         /// <summary>Prefix for a module switch: "module:tracking".</summary>
         public const string ModulePrefix = "module:";
     }

@@ -1,5 +1,5 @@
 {
-	"_comment": "Complex Nutrition tracking rules. Per-nutrient caps, start reserves, drain and sitting limits are in nutrients.json. sittingHours: food eaten within this many in-game hours of the previous food counts as one sitting. diminishingScale: above a nutrient's sitting limit, an extra x (in % of a day) adds scale * ln(1 + x / scale). ledgerDays: in-game days of diet history kept. updateSeconds: real seconds between reserve updates. minDrainHours: in-game hours between drains. lowCaloriesDays, lowDays and lowGroups: when the nutrition window lists a nutrient as running low (the calorie reserve below lowCaloriesDays days; nutrients of the lowGroups groups below lowDays days). heldScanSeconds: real seconds between checks of what each player holds, for the foods the window suggests. Healing (v0.3.3): a recovering body needs recoveryKcalPerKgMin to recoveryKcalPerKgMax kcal per kg a day (the worse the injury, the more), against restingKcalPerKg when well; the difference, for a body of bodyKg, spread over regenHpPerDay (the health vanilla regenerates in a day), is the cost of each health point healed naturally (80kg: about 22 to 53kcal a point). Healing items cost nothing.",
+	"_comment": "Complex Nutrition tracking rules. Per-nutrient caps, start reserves, drain and sitting limits are in nutrients.json. sittingHours: food eaten within this many in-game hours of the previous food counts as one sitting. diminishingScale: above a nutrient's sitting limit, an extra x (in % of a day) adds scale * ln(1 + x / scale). ledgerDays: in-game days of diet history kept. updateSeconds: real seconds between reserve updates. minDrainHours: in-game hours between drains. lowCaloriesDays, lowDays and lowGroups: when the nutrition window lists a nutrient as running low (the calorie reserve below lowCaloriesDays days; nutrients of the lowGroups groups below lowDays days). heldScanSeconds: real seconds between checks of what each player holds, for the foods the window suggests. Healing (v0.3.3): a recovering body needs recoveryKcalPerKgMin to recoveryKcalPerKgMax kcal per kg a day (the worse the injury, the more), against restingKcalPerKg when well; the difference, for a body of bodyKg, spread over regenHpPerDay (the health vanilla regenerates in a day), is the cost of each health point healed naturally (80kg: about 22 to 53kcal a point). Healing items cost nothing. vitaminKPerHp (since v0.4.1): vitamin K used up, in % of a day's need, for each health point healed naturally (healing items use none; an empty store only slows healing).",
 	"sittingHours": 1.0,
 	"diminishingScale": 100,
 	"ledgerDays": 28,
@@ -13,5 +13,6 @@
 	"restingKcalPerKg": 25,
 	"recoveryKcalPerKgMin": 33,
 	"recoveryKcalPerKgMax": 44,
-	"regenHpPerDay": 28.8
+	"regenHpPerDay": 28.8,
+	"vitaminKPerHp": 10
 }

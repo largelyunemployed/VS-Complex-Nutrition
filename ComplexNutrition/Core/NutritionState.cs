@@ -1,3 +1,4 @@
+using System;
 using Vintagestory.API.Common.Entities;
 using Vintagestory.API.Datastructures;
 
@@ -177,6 +178,67 @@ namespace ComplexNutrition.Core
         {
             get => tree.GetInt("day", int.MinValue);
             set => tree.SetInt("day", value);
+        }
+
+        // ---- Effects (v0.4.0) ----
+
+        private ITreeAttribute Effects => Sub("effects");
+
+        /// <summary>A timed nutrient's counter: in-game hours of tracked play since its store last held a full day.</summary>
+        public float GetHoursWithoutFullDay(string nutrient) => Effects.GetFloat("without-" + nutrient);
+
+        public void SetHoursWithoutFullDay(string nutrient, float hours) => Effects.SetFloat("without-" + nutrient, hours);
+
+        /// <summary>Vitamin D made by sunlight on the in-game day <see cref="SunDay"/>, in % of a day's need.</summary>
+        public float SunMadeToday
+        {
+            get => Effects.GetFloat("sunMade");
+            set => Effects.SetFloat("sunMade", value);
+        }
+
+        /// <summary>The in-game day <see cref="SunMadeToday"/> belongs to.</summary>
+        public int SunDay
+        {
+            get => Effects.GetInt("sunDay", int.MinValue);
+            set => Effects.SetInt("sunDay", value);
+        }
+
+        // ---- Diet tier (scaffolding since v0.4.1, used from v0.4.3) ----
+
+        /// <summary>
+        /// The diet tier and its 3-day counter. Respawning leaves this part alone: the calorie reserve's size follows the diet
+        /// tier, and dying doesn't reset it (only the planned "Reset calorie progress on death" respawn choice will).
+        /// </summary>
+        private ITreeAttribute Diet => Sub("diet");
+
+        /// <summary>The lowest diet tier, which every character starts on.</summary>
+        public const int FirstDietTier = 1;
+
+        /// <summary>
+        /// The player's diet tier, from <see cref="FirstDietTier"/> up. It sets the calorie reserve's size
+        /// (<see cref="NutrientDefinition.CapFor"/>). Nothing changes it yet: the diet score and tiers arrive in v0.4.2 and v0.4.3.
+        /// </summary>
+        public int DietTier
+        {
+            get => Math.Max(FirstDietTier, Diet.GetInt("tier", FirstDietTier));
+            set => Diet.SetInt("tier", Math.Max(FirstDietTier, value));
+        }
+
+        /// <summary>
+        /// The tier the player's diet has been at lately, when it differs from <see cref="DietTier"/>. A change only counts
+        /// after <see cref="DaysAtPendingTier"/> reaches 3 days in a row, the same rule as vitamin C's penalty.
+        /// </summary>
+        public int PendingDietTier
+        {
+            get => Diet.GetInt("pendingTier", DietTier);
+            set => Diet.SetInt("pendingTier", value);
+        }
+
+        /// <summary>In-game days in a row the diet has stayed at <see cref="PendingDietTier"/>.</summary>
+        public float DaysAtPendingTier
+        {
+            get => Diet.GetFloat("pendingDays");
+            set => Diet.SetFloat("pendingDays", Math.Max(0f, value));
         }
 
         public void MarkDirty() => entity?.WatchedAttributes.MarkPathDirty(TreeKey);

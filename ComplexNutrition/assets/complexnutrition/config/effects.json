@@ -1,0 +1,33 @@
+{
+	"_comment": "Complex Nutrition nutrient effects (since v0.4.0), used while tracking runs. Each nutrient has a rule. longTerm (the slow stores: vitamins A, D, E, K and the minerals): the effect is bonusPerDay % for every day stored, up to maxBonus %, and below one day it falls in a straight line to -emptyPenalty % at empty. timed (vitamin C and the B vitamins): nothing until the store has gone timedStartDays in-game days of play without holding a full day's worth, then timedStartShare of -emptyPenalty %, rising to all of it at timedFullDays; holding a full day once resets the count. They show as running low from timedWarnDays. none: no effect yet. Each target names a vanilla entity stat (or physicalResistance: blunt, slashing and piercing damage taken) and how the effect moves it: a bonus raises the stat by that share, or lowers it with invert; perBaseHealth makes it that share of the player's base max health in points. label is the lang key of what the player sees change, and showStat shows the stat's own change (fall damage -12%) rather than the effect. Sunlight makes sunNutrient: a day's worth for every sunHoursPerDay in-game hours in full midday sun under open sky, up to sunMaxDaysPerDay days' worth a day.",
+	"bonusPerDay": 1,
+	"maxBonus": 20,
+	"emptyPenalty": 10,
+	"timedStartDays": 3,
+	"timedFullDays": 5,
+	"timedStartShare": 0.5,
+	"timedWarnDays": 2,
+	"sunNutrient": "vitaminD",
+	"sunHoursPerDay": 2,
+	"sunMaxDaysPerDay": 1,
+	"nutrients": {
+		"carbohydrate": { "rule": "none", "targets": [] },
+		"fat": { "rule": "none", "targets": [] },
+		"protein": { "rule": "none", "targets": [] },
+		"fiber": { "rule": "none", "targets": [] },
+		"vitaminC": { "rule": "timed", "targets": [ { "stat": "walkspeed", "label": "effect-walkspeed" } ] },
+		"vitaminB": { "rule": "timed", "targets": [ { "stat": "hungerrate", "invert": true, "showStat": true, "label": "effect-hungerrate" } ] },
+		"vitaminA": { "rule": "longTerm", "targets": [ { "stat": "rangedWeaponsAcc", "label": "effect-rangedaccuracy" } ] },
+		"vitaminD": { "rule": "longTerm", "targets": [ { "stat": "physicalResistance", "label": "effect-resistance" } ] },
+		"vitaminE": { "rule": "longTerm", "targets": [ { "stat": "miningSpeedMul", "label": "effect-mining" } ] },
+		"vitaminK": { "rule": "longTerm", "targets": [ { "stat": "healingeffectivness", "label": "effect-healing" } ] },
+		"calcium": { "rule": "longTerm", "targets": [ { "stat": "fallDamageFactor", "invert": true, "showStat": true, "label": "effect-falldamage" } ] },
+		"iron": { "rule": "longTerm", "targets": [ { "stat": "maxhealthExtraPoints", "perBaseHealth": true, "label": "effect-maxhealth" } ] },
+		"potassium": { "rule": "longTerm", "targets": [
+			{ "stat": "walkspeed", "label": "effect-walkspeed" },
+			{ "stat": "meleeWeaponsDamage", "label": "effect-meleedamage" },
+			{ "stat": "rangedWeaponsDamage", "label": "effect-rangeddamage" },
+			{ "stat": "animalHarvestingTime", "invert": true, "label": "effect-butchering" }
+		] }
+	}
+}

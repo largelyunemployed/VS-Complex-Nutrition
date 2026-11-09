@@ -47,6 +47,8 @@ namespace ComplexNutrition.Modules.Tracking
         private float heldTimer;
         /// <summary>Client: the running-low icon right of the hotbar.</summary>
         private RunningLowIcon lowIcon;
+        /// <summary>Server: puts nutrient effects on players (v0.4.0).</summary>
+        internal EffectsRunner Effects { get; private set; }
 
         public void Start(ICoreAPI api, ComplexNutritionModSystem core)
         {
@@ -88,6 +90,8 @@ namespace ComplexNutrition.Modules.Tracking
                 sapi.Event.PlayerJoin += InitPlayer;
                 sapi.Event.PlayerNowPlaying += InitPlayer;
                 sapi.Event.PlayerRespawn += OnRespawn;
+                sapi.Event.PlayerDisconnect += OnLeave;
+                Effects = new EffectsRunner(this, sapi);
                 core.HistoryProvider = BuildHistory;
                 tickListener = sapi.Event.RegisterGameTickListener(OnTick, (int)(Math.Max(0.5f, Settings.UpdateSeconds) * 1000));
                 foreach (IServerPlayer player in sapi.World.AllOnlinePlayers) InitPlayer(player);
@@ -111,6 +115,7 @@ namespace ComplexNutrition.Modules.Tracking
                 sapi.Event.PlayerJoin -= InitPlayer;
                 sapi.Event.PlayerNowPlaying -= InitPlayer;
                 sapi.Event.PlayerRespawn -= OnRespawn;
+                sapi.Event.PlayerDisconnect -= OnLeave;
                 if (Core.HistoryProvider == BuildHistory) Core.HistoryProvider = null;
                 sapi.Event.UnregisterGameTickListener(tickListener);
                 HungerPatches.Remove();
@@ -118,6 +123,7 @@ namespace ComplexNutrition.Modules.Tracking
                 {
                     var state = NutritionState.Of(player.Entity);
                     if (state == null) continue;
+                    Effects?.Clear(player);
                     // Only the flag: if tracking stays off, the player is converted to vanilla values when they next join.
                     state.TrackingOn = false;
                     state.MarkDirty();
@@ -174,6 +180,7 @@ namespace ComplexNutrition.Modules.Tracking
             var state = NutritionState.GetOrCreate(player.Entity, Core.Nutrients, NowHours, out bool created);
             if (created) ApplyStartCondition(player, state);
             MigrateGut(state);
+            FitStores(state);
             state.TrackingOn = true;
             state.LastUpdateHours = NowHours;
             Digestion.UseOurScale(player.Entity, Digest);
@@ -184,14 +191,37 @@ namespace ComplexNutrition.Modules.Tracking
                 if (hunger != null) hunger.Saturation = EmptyStomach;
             }
             EnsureDay(player, state);
+            Effects?.Apply(player, state, Runs(player));
             state.MarkDirty();
             RefreshVanillaHealthBonus(player);
         }
 
+        /// <summary>The player leaves: forget the effects we put on them (they aren't saved, so nothing stays behind).</summary>
+        private void OnLeave(IServerPlayer player) => Effects?.Clear(player);
+
+        /// <summary>Whether a player's body is running: alive and not in creative or spectator mode. Only then do reserves drain and effects apply.</summary>
+        private static bool Runs(IServerPlayer player)
+        {
+            var mode = player.WorldData.CurrentGameMode;
+            return player.Entity.Alive && mode != EnumGameMode.Creative && mode != EnumGameMode.Spectator;
+        }
+
+        /// <summary>Since v0.4.0 the slow stores hold 20 days (A, D, E and K held 25): anything over a store's cap is trimmed to it.</summary>
+        private void FitStores(NutritionState state)
+        {
+            foreach (var n in Core.Nutrients.All)
+            {
+                if (!n.IsMicronutrient) continue;
+                float r = state.GetReserve(n.Code);
+                float cap = n.CapFor(state);
+                if (r > cap) state.SetReserve(n.Code, cap);
+            }
+        }
+
         /// <summary>
-        /// A character new to Complex Nutrition starts with what the world's start condition picks: the calorie reserve
-        /// (Full 10 days, Easy 7, Normal 5, Hard 3, Brutal 1, Rock Bottom 1% of a day) and the same share of every
-        /// vitamin and mineral store (Full 100%, Easy 70%, ...). Only on first join; respawning uses the respawn condition.
+        /// A character new to Complex Nutrition starts with what the world's start condition picks: the same share of the
+        /// calorie reserve and of every vitamin and mineral store (Full 100%, Easy 70%, Normal 50%, Hard 30%, Brutal 10%,
+        /// Rock Bottom 0.1%). Only on first join; respawning uses the respawn condition.
         /// Worlds from before v0.2.4 have none, and the nutrients' startReserve applies.
         /// </summary>
         private void ApplyStartCondition(IServerPlayer player, NutritionState state)
@@ -201,17 +231,17 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// Sets the calorie reserve to <paramref name="calories"/> (% of a day) and each vitamin and mineral to the same share
-        /// of its store (<see cref="WorldSettings.StoreShare"/>).
+        /// Fills the calorie reserve and every vitamin and mineral store to the share a start or respawn option gives
+        /// (<see cref="WorldSettings.StoreShare"/>: Full 100%, Easy 70%, Normal 50% ... of each store's size). Since v0.4.1 the
+        /// calorie reserve's size is the player's own (<see cref="NutrientDefinition.CapFor"/>), so Normal gives half of it.
         /// </summary>
-        private void ApplyCondition(IServerPlayer player, NutritionState state, float calories, bool publish)
+        private void ApplyCondition(IServerPlayer player, NutritionState state, float optionValue, bool publish)
         {
-            float share = WorldSettings.StoreShare(calories);
+            float shareOfStore = WorldSettings.StoreShare(optionValue);
             foreach (var n in Core.Nutrients.All)
             {
                 float value;
-                if (n.IsCalories) value = Math.Clamp(calories, 0f, n.Cap);
-                else if (n.IsMicronutrient) value = n.Cap * share;
+                if (n.IsCalories || n.IsMicronutrient) value = n.CapFor(state) * shareOfStore;
                 else continue;
                 float old = state.GetReserve(n.Code);
                 state.SetReserve(n.Code, value);
@@ -232,7 +262,7 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// A respawned character gets the world's respawn condition (Brutal unless set: 1 day of calories and 10% of each
+        /// A respawned character gets the world's respawn condition (Brutal unless set: 10% of the calorie reserve and of each
         /// vitamin and mineral store). The gut and the last 24 hours of digestion are cleared, so the new body starts fresh.
         /// Fiber empties too: a new gut starts with none. Vanilla gives half a stomach of fullness.
         /// </summary>
@@ -266,6 +296,7 @@ namespace ComplexNutrition.Modules.Tracking
             state.SetAbsorbedLog(Digestion.KcalLogKey(NutrientCodes.Fiber), new float[24]);
             state.Protein24 = 0f;
             state.ClearSitting();
+            Effects?.Reset(state);
             state.MarkDirty();
             // Trend arrows compare against the new body, not the old one.
             var history = NutrientHistory.Of(player.Entity);
@@ -350,8 +381,7 @@ namespace ComplexNutrition.Modules.Tracking
                 RecordHourly(player, state);
                 if (scanHeld) RecordHeld(player);
 
-                var mode = player.WorldData.CurrentGameMode;
-                bool drains = player.Entity.Alive && mode != EnumGameMode.Creative && mode != EnumGameMode.Spectator;
+                bool drains = Runs(player);
                 if (starveNow && drains && state.GetReserve(NutrientCodes.Calories) <= 0f)
                 {
                     // Vanilla's starvation, moved from an empty stomach to an empty calorie reserve.
@@ -390,6 +420,7 @@ namespace ComplexNutrition.Modules.Tracking
 
                     DigestStep(player, state, (float)hours, now);
                 }
+                Effects.Step(player, state, (float)hours, drains);
                 state.MarkDirty();
             }
         }
@@ -511,7 +542,7 @@ namespace ComplexNutrition.Modules.Tracking
             if (cal != null && kcal > 0f)
             {
                 float old = state.GetReserve(cal.Code);
-                float updated = Math.Max(old, Math.Min(cal.Cap, old + cal.ToPercent(kcal)));   // a full reserve wastes the rest
+                float updated = Math.Max(old, Math.Min(cal.CapFor(state), old + cal.ToPercent(kcal)));   // a full reserve wastes the rest
                 state.SetReserve(cal.Code, updated);
                 state.AddAbsorbedToday(cal.Code, updated - old);
                 NutrientHistory.Of(player.Entity).AddFlow(now, Today, cal.FromPercent(updated - old), 0f);
@@ -533,6 +564,22 @@ namespace ComplexNutrition.Modules.Tracking
             NutrientHistory.Of(player.Entity).AddFlow(NowHours, Today, 0f, def.FromPercent(old - now));
             state.MarkDirty();
             Core.PublishReserveChanged(player, def.Code, old, now);
+        }
+
+        /// <summary>
+        /// Uses up the vitamin K that natural healing needs (since v0.4.1): <see cref="TrackingSettings.VitaminKPerHp"/> of a
+        /// day's need for each of the <paramref name="healthHealed"/> points. The store never goes below empty.
+        /// </summary>
+        internal void UseVitaminKForHealing(IServerPlayer player, NutritionState state, float healthHealed)
+        {
+            var vitaminK = Core.Nutrients.Get(NutrientCodes.VitaminK);
+            if (state == null || vitaminK == null || healthHealed <= 0f || Settings.VitaminKPerHp <= 0f) return;
+            float before = state.GetReserve(vitaminK.Code);
+            if (before <= 0f) return;
+            float after = Math.Max(0f, before - Settings.VitaminKPerHp * healthHealed);
+            state.SetReserve(vitaminK.Code, after);
+            state.MarkDirty();
+            Core.PublishReserveChanged(player, vitaminK.Code, before, after);
         }
 
         /// <summary>Absorption above the sitting limit: the extra x adds scale * ln(1 + x / scale).</summary>
@@ -580,7 +627,7 @@ namespace ComplexNutrition.Modules.Tracking
                 state.SetSitting(n.Code, after);
 
                 float old = state.GetReserve(n.Code);
-                float updated = Math.Max(old, Math.Min(n.Cap, old + gained));   // never cut a reserve already over the cap
+                float updated = Math.Max(old, Math.Min(n.CapFor(state), old + gained));   // never cut a reserve already over the cap
                 state.SetReserve(n.Code, updated);
                 state.AddAbsorbedToday(n.Code, gained);
                 absorbed.Absorbed[n.Code] = gained;
@@ -716,6 +763,12 @@ namespace ComplexNutrition.Modules.Tracking
                     .WithArgs(parsers.OnlinePlayer("player"), parsers.Word("nutrient"), parsers.Float("percent"))
                     .HandleWith(args => SetReserveCommand((IServerPlayer)args[0], (string)args[1], (float)args[2]))
                 .EndSubCommand()
+                .BeginSubCommand("setdayslow")
+                    .WithDescription("For testing timed effects: set how many days a player's vitamin C or B vitamins have gone without a full day stored: /cnutrition setdayslow <player> <vitaminC|vitaminB|all> <days>")
+                    .RequiresPrivilege(Privilege.controlserver)
+                    .WithArgs(parsers.OnlinePlayer("player"), parsers.Word("nutrient"), parsers.Float("days"))
+                    .HandleWith(args => SetDaysLowCommand((IServerPlayer)args[0], (string)args[1], (float)args[2]))
+                .EndSubCommand()
                 .BeginSubCommand("ledger")
                     .WithDescription("Show a player's diet ledger: calories per food category for each recorded day")
                     .RequiresPrivilege(Privilege.controlserver)
@@ -735,8 +788,10 @@ namespace ComplexNutrition.Modules.Tracking
                 string line = Digest.Pool(n.Code) != null
                     ? Lang.Get("complexnutrition:cmd-gut-line", Lang.Get(n.LangKey), n.Format(r, Core.ShowPercent), NutrientDisplay.GutHoursText(state.GetGutHours(n.Code), r))
                     : Lang.Get("complexnutrition:cmd-reserve-line", Lang.Get(n.LangKey), n.Format(r, Core.ShowPercent), NutrientDisplay.DaysText(r));
-                if (withToday) line += $" (today +{Math.Round(state.GetAbsorbedToday(n.Code))}%, cap {Math.Round(n.Cap)}%)";
+                if (withToday) line += $" (today +{Math.Round(state.GetAbsorbedToday(n.Code))}%, cap {Math.Round(n.CapFor(state))}%)";
                 sb.AppendLine(line);
+                string effect = NutrientDisplay.EffectNow(n.Code, state, entity?.GetBehavior<EntityBehaviorHealth>()?.BaseMaxHealth ?? 15f);
+                if (effect != "") sb.AppendLine(Lang.Get("complexnutrition:cmd-effect-line", effect));
                 if (n.Code == NutrientCodes.Protein) sb.AppendLine(Lang.Get("complexnutrition:protein24-hover", n.FormatAmount(state.Protein24, Core.ShowPercent), n.FormatAmount(Digest.ProteinNeedGrams, Core.ShowPercent), n.FormatAmount(Digest.ProteinMaxGrams, Core.ShowPercent)));
             }
             return sb.ToString().TrimEnd();
@@ -760,6 +815,24 @@ namespace ComplexNutrition.Modules.Tracking
             }
             state.MarkDirty();
             return TextCommandResult.Success($"Set {code} to {percent}% for {target.PlayerName}.");
+        }
+
+        private TextCommandResult SetDaysLowCommand(IServerPlayer target, string code, float days)
+        {
+            var state = StateOf(target.Entity);
+            if (state == null) return TextCommandResult.Error("Tracking is not running for " + target.PlayerName);
+            var timed = NutrientEffects.Settings.WithEffects.Where(c => NutrientEffects.Settings.Of(c).Rule == EffectRules.Timed).ToList();
+            var targets = code == "all" ? timed : timed.Where(c => c == code).ToList();
+            if (targets.Count == 0) return TextCommandResult.Error("Use one of: all, " + string.Join(", ", timed));
+            foreach (var c in targets)
+            {
+                // The count only runs while the store is under a full day, so the store is lowered to just under one if needed.
+                if (state.GetReserve(c) >= 100f && days > 0f) state.SetReserve(c, 99f);
+                state.SetHoursWithoutFullDay(c, Math.Max(0f, days) * 24f);
+            }
+            Effects?.Apply(target, state, Runs(target));
+            state.MarkDirty();
+            return TextCommandResult.Success($"Set {code} to {days} days without a full day stored for {target.PlayerName}.");
         }
 
         private TextCommandResult LedgerCommand(IServerPlayer target)

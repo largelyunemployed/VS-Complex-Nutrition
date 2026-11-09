@@ -145,6 +145,7 @@ namespace ComplexNutrition.Core
             Nutrients.Load(api);
             Foods.Load(api, Nutrients);
             Cooking = CookingRules.Load(api);
+            NutrientEffects.Settings = EffectSettings.Load(api);
             api.Logger.Notification("[complexnutrition] Loaded {0} nutrients and {1} food profiles.", Nutrients.All.Count, Foods.ProfileCount);
 
             foreach (var module in modules) module.Start(api, this);
