@@ -1,6 +1,6 @@
 # Mod page text, v0.1 release (draft)
 
-Draft for the VS Mod DB and Workshop listing when v0.1 goes up. It keeps Miles's wording from [../MODPAGE.md](../MODPAGE.md) for the disclaimer, pitch and credits, and adds sections for what v0.1 actually does. Rewrite freely; nothing here replaces MODPAGE.md until Miles says so.
+Draft for the mod's GitHub page (the mod is GitHub only until further notice; Miles, 2026-11-09). It keeps Miles's wording from [../MODPAGE.md](../MODPAGE.md) for the disclaimer, pitch and credits, and adds sections for what v0.1 actually does. Rewrite freely; nothing here replaces MODPAGE.md until Miles says so.
 
 Images: thumbnail `art/out/thumbnail-512.png` (blocky Vitruvian character), roadmap banner `art/out/roadmap-1920.png`.
 
@@ -34,7 +34,7 @@ A few honest caveats:
 
 ## Roadmap
 
-- **v0.1:** nutrient data for all vanilla foods, mod feasibility testing, VS Mod DB thumbnail, description, and roadmap drafts. (You are here.)
+- **v0.1:** nutrient data for all vanilla foods, mod feasibility testing, mod page thumbnail, description, and roadmap drafts. (You are here.)
 - **v0.2:** nutrient tracking and an in-game handbook guide for all implemented systems (will expand with each update).
 - **v0.3:** nutrition UI
 - **v0.4:** diet tiers and effects

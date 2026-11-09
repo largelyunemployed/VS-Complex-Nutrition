@@ -12,7 +12,7 @@ Complex Nutrition expands Vintage Story's nutrition system. Every food gets real
 
 **Target game version:** 1.22.7 (latest stable)
 **Status:** in development. Test builds (v0.3) are playable: nutrient tracking, digestion, the nutrition window and tooltips work, and diet effects come in v0.4.
-**VS Mod DB page:** [placeholder]
+**Where to get it:** this GitHub page only, for now. It is not on the VS Mod DB.
 
 **Designed by:** Largely Unemployed - https://www.youtube.com/@LargelyUnemployed
 **All the real work done by:** Claude
@@ -37,7 +37,7 @@ It has only been tested on Vintage Story 1.22.7 so far. Other versions might wor
 
 ## Roadmap
 
-- **v0.1:** nutrient data for all vanilla foods, mod feasibility testing, VS Mod DB thumbnail, description, and roadmap drafts.
+- **v0.1:** nutrient data for all vanilla foods, mod feasibility testing, mod page thumbnail, description, and roadmap drafts.
 - **v0.2:** nutrient tracking and an in-game handbook guide for all implemented systems (will expand with each update).
 - **v0.3:** nutrition UI: a nutrition window with Overview, Digestion, Vitamins, Minerals and History tabs, a settings menu, food tooltips showing every nutrient, and a calorie rebalance (finished in v0.3.6)
 - **v0.4:** diet tiers and effects

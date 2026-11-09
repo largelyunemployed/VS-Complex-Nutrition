@@ -1,6 +1,6 @@
 # Mod page text (draft)
 
-Text for the Vintage Story mod database and Workshop listing. Keep the disclaimer at the top of the published description.
+Text for the mod's GitHub page. The mod is shared on GitHub only until further notice (Miles, 2026-11-09), so there is no VS Mod DB listing. Keep the disclaimer at the top of the published description.
 
 ---
 

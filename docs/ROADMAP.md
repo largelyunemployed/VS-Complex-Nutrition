@@ -10,7 +10,7 @@ Every module has its own switch. With all of them off, the game plays exactly li
 - 14 tracked nutrients: calories; fats, protein, carbohydrate, fiber; vitamins A, D, E, K; vitamin C and the B vitamins; calcium, iron and potassium.
 - Nutrition shown in item tooltips. No gameplay changes.
 - Mod feasibility testing: the mod loads cleanly on a 1.22.7 server and a data table of every food is in [FOOD_DATA.md](FOOD_DATA.md).
-- VS Mod DB thumbnail, description and roadmap drafts.
+- Mod page thumbnail, description and roadmap drafts.
 
 ## v0.2: Nutrient tracking and the handbook guide (released)
 
