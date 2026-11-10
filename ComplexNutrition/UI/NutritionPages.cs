@@ -807,15 +807,15 @@ namespace ComplexNutrition.UI
                 if (Categories[i] == "Unknown" && !any) continue;
                 chart.Legend.Add((CategoryColors[Categories[i]], StatsHover.Esc(L("history-cat-" + Categories[i].ToLowerInvariant()))));
             }
-            if (hasDiet) chart.Legend.Add((DietColor, StatsHover.Esc(L("history-diet"))));
-            blocks.Add(chart);
-
-            // What the diet line means (since 0.4.3b, Miles: the diet score's details belong on the History tab).
+            // The diet line's key says what the line means when hovered (0.4.3b; it was a paragraph under the chart at first).
             if (hasDiet)
             {
                 string swatch = "<font color=\"" + StatsHover.Hex(DietColor, 0) + "\">\u25a0</font>";
-                blocks.Add(new TextBlock(StatsHover.Vtml("complexnutrition:history-diet-explain", swatch, Num(Math.Max(1f, settings.FollowDays)), Math.Max(1, settings.DaysToChangeTier)), true));
+                chart.LegendTips[chart.Legend.Count] = StatsHover.Vtml("complexnutrition:history-diet-explain", swatch,
+                    Num(Math.Max(1f, settings.FollowDays)), Math.Max(1, settings.DaysToChangeTier));
+                chart.Legend.Add((DietColor, StatsHover.Esc(L("history-diet"))));
             }
+            blocks.Add(chart);
             return blocks;
         }
     }

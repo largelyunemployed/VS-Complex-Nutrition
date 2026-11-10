@@ -149,7 +149,7 @@ static class P
             using var page = PageRenderer.Render(capi, NutritionPages.History(data), GuiDialogNutrition.ContentWidth - 4, spots);
             using var ctx = new Context(page);
             var days = spots.Where(sp => sp.Highlight).ToList();
-            var picks = new List<Hotspot> { days[days.Count / 2 - 3], days[^2], spots.First(sp => !sp.Highlight) };
+            var picks = new List<Hotspot> { days[days.Count / 2 - 3], spots.First(sp => !sp.Highlight), spots.Last(sp => !sp.Highlight) };   // the last: the diet key's hover (0.4.3b)
             foreach (var sp in picks)
             {
                 if (sp.Highlight) { ctx.SetSourceRGBA(1, 1, 1, 28 / 255.0); ctx.Rectangle(sp.X, sp.Y, sp.W, sp.H); ctx.Fill(); }
