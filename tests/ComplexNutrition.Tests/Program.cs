@@ -643,19 +643,34 @@ namespace ComplexNutrition.Tests
 
         /// <summary>The calorie reserve holds 4 days whatever the diet tier, until the tiers grow it in v0.4.4.</summary>
         [Test]
-        public static void CalorieReserveStaysAtFourDaysUntilV044()
+        public static void CalorieReserveFollowsDietTier()
         {
             var nutrients = Repo.Load<NutrientRegistryFile>(Repo.Config("nutrients.json")).Nutrients;
             var calories = nutrients.First(n => n.Code == NutrientCodes.Calories);
             var vitaminA = nutrients.First(n => n.Code == NutrientCodes.VitaminA);
-            var state = NutritionState.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
-            Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "a state with no tier is on the first (Starving)");
-            Assert.Equal(400f, calories.CapFor(state), "the first tier holds 4 days");
-            state.DietTier = 5;
-            Assert.Equal(400f, calories.CapFor(state), "Thriving holds 4 days too until v0.4.4");
-            Assert.Equal(vitaminA.Cap, vitaminA.CapFor(state), "other stores don't grow with the tier");
-            state.DietTier = -2;
-            Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "the tier never drops below the first");
+            var saved = DietScore.Settings;
+            try
+            {
+                DietScore.Settings = Diet();
+                var state = NutritionState.FromTree(new Vintagestory.API.Datastructures.TreeAttribute());
+                Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "a state with no tier is on the first (Starving)");
+                float[] days = { 1, 2, 4, 6, 8, 10 };
+                for (int tier = 0; tier < days.Length; tier++)
+                {
+                    state.DietTier = tier;
+                    Assert.Equal(days[tier] * 100f, calories.CapFor(state), "tier " + tier + " holds " + days[tier] + " days");
+                    Assert.Equal(vitaminA.Cap, vitaminA.CapFor(state), "other stores don't grow with the tier");
+                }
+                state.DietTier = -2;
+                Assert.Equal(NutritionState.FirstDietTier, state.DietTier, "the tier never drops below the first");
+
+                DietScore.Settings = new DietSettings();
+                Assert.Equal(calories.Cap, calories.CapFor(state), "no tiers: the calories cap");
+            }
+            finally
+            {
+                DietScore.Settings = saved;
+            }
         }
 
         // ---- Diet score and tiers (v0.4.3) ----

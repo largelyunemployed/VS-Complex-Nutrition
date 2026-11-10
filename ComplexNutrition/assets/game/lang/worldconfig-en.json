@@ -1,7 +1,7 @@
 {
 	"worldconfig-category-complexnutrition": "Complex Nutrition",
 	"worldattribute-complexnutritionStart": "Starting calories",
-	"worldattribute-complexnutritionStart-desc": "How full a new character's calorie reserve is when they first spawn. The reserve holds 4 days of calories, so Normal gives 2 days. It only applies the first time a character joins the world; Respawn effects: Calories/Diet Tier sets what happens to it when they die.",
+	"worldattribute-complexnutritionStart-desc": "How full a new character's calorie reserve is when they first spawn. The reserve's size follows the diet tier a character starts on: 6 days on Getting By, so Normal gives 3 days (Brutal starts on Malnourished with 2 days, and Rock Bottom on Starving with 1 day). It only applies the first time a character joins the world; Respawn effects: Calories/Diet Tier sets what happens to it when they die.",
 	"worldconfig-complexnutritionStart-Full": "Full: a full calorie reserve",
 	"worldconfig-complexnutritionStart-Easy": "Easy: 70% of the calorie reserve",
 	"worldconfig-complexnutritionStart-Normal": "Normal: half the calorie reserve",

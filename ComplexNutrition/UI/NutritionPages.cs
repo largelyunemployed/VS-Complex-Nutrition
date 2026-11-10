@@ -354,6 +354,10 @@ namespace ComplexNutrition.UI
                 blocks.Add(new TextBlock(StatsHover.Paint(L("window-diet-effects", effects), bonus ? Good : Empty), true));
             }
 
+            // The calorie reserve's size on this tier (since v0.4.4), which applies even with nutrient effects switched off.
+            if (tier.CalorieReserveDays > 0f)
+                blocks.Add(new TextBlock(StatsHover.Text(tier.CalorieReserveDays == 1f ? L("window-diet-reserve-one") : L("window-diet-reserve", Num(tier.CalorieReserveDays))), true));
+
             var progress = state.DietProgress;
             if (progress.PendingTier != progress.Tier)
             {

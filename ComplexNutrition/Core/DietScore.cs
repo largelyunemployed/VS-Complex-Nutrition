@@ -24,6 +24,12 @@ namespace ComplexNutrition.Core
         /// </summary>
         [JsonProperty("effects")] public List<DietTierEffect> Effects = new();
 
+        /// <summary>
+        /// How many active days of calories the calorie reserve holds on this tier (since v0.4.4). 0 leaves the reserve at
+        /// nutrients.json's calories cap.
+        /// </summary>
+        [JsonProperty("calorieReserveDays")] public float CalorieReserveDays;
+
         public string LangKey => "complexnutrition:diettier-" + Code;
     }
 

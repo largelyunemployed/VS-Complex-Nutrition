@@ -178,8 +178,9 @@ namespace ComplexNutrition.Modules.Tracking
         {
             if (player?.Entity == null) return;
             var state = NutritionState.GetOrCreate(player.Entity, Core.Nutrients, NowHours, out bool created);
-            if (created) ApplyStartCondition(player, state);
+            // The diet tier first: it sets the calorie reserve's size (since v0.4.4), which Starting calories fills a share of.
             StartDietScore(state);
+            if (created) ApplyStartCondition(player, state);
             MigrateGut(state);
             FitStores(state);
             state.TrackingOn = true;

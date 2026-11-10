@@ -1,5 +1,5 @@
 {
-	"_comment": "Complex Nutrition diet score and tiers (since v0.4.3), used while tracking runs. Each in-game day, from midnight to midnight, gets a score from 0 to 100: each nutrient in weights earns its weight's share of the score for what was digested that day (carbs, fats, protein and fiber) or absorbed (vitamins and minerals, with vitamin D from sunlight), up to a full day's need of it. Only days the player played count. Each midnight the diet score closes one part in followDays of the gap to the day's score. The tier is the highest one whose minScore the diet score reaches, but a change up or down only happens once the diet score has pointed past the current tier for daysToChangeTier days in a row. A new character starts on startTier at its startScore, or on the tier startTierByStartingCalories names for the world's Starting calories choice. Each tier's effects work like the targets in config/effects.json, with value as the effect's strength (+0.05 = a 5% bonus, -0.1 = a 10% penalty): healing (healingeffectivness), max health (maxhealthExtraPoints, a share of base health), walk speed and calorie burn (hungerrate, inverted, so a bonus burns calories more slowly). Tier effects follow the world's Nutrient effects setting.",
+	"_comment": "Complex Nutrition diet score and tiers (since v0.4.3), used while tracking runs. Each in-game day, from midnight to midnight, gets a score from 0 to 100: each nutrient in weights earns its weight's share of the score for what was digested that day (carbs, fats, protein and fiber) or absorbed (vitamins and minerals, with vitamin D from sunlight), up to a full day's need of it. Only days the player played count. Each midnight the diet score closes one part in followDays of the gap to the day's score. The tier is the highest one whose minScore the diet score reaches, but a change up or down only happens once the diet score has pointed past the current tier for daysToChangeTier days in a row. A new character starts on startTier at its startScore, or on the tier startTierByStartingCalories names for the world's Starting calories choice. Each tier's effects work like the targets in config/effects.json, with value as the effect's strength (+0.05 = a 5% bonus, -0.1 = a 10% penalty): healing (healingeffectivness), max health (maxhealthExtraPoints, a share of base health), walk speed and calorie burn (hungerrate, inverted, so a bonus burns calories more slowly). Tier effects follow the world's Nutrient effects setting. calorieReserveDays (since v0.4.4) is how many active days of calories the calorie reserve holds on that tier; it changes with the tier, a calorie reserve already over a smaller size is kept and burned down, and 0 leaves it at nutrients.json's calories cap.",
 	"followDays": 7,
 	"daysToChangeTier": 3,
 	"weights": {
@@ -27,6 +27,7 @@
 			"code": "starving",
 			"minScore": 0,
 			"startScore": 5,
+			"calorieReserveDays": 1,
 			"effects": [
 				{
 					"stat": "healingeffectivness",
@@ -51,6 +52,7 @@
 			"code": "malnourished",
 			"minScore": 10,
 			"startScore": 15,
+			"calorieReserveDays": 2,
 			"effects": [
 				{
 					"stat": "healingeffectivness",
@@ -75,6 +77,7 @@
 			"code": "poorlyFed",
 			"minScore": 20,
 			"startScore": 30,
+			"calorieReserveDays": 4,
 			"effects": [
 				{
 					"stat": "healingeffectivness",
@@ -99,12 +102,14 @@
 			"code": "gettingBy",
 			"minScore": 40,
 			"startScore": 50,
+			"calorieReserveDays": 6,
 			"effects": []
 		},
 		{
 			"code": "wellFed",
 			"minScore": 60,
 			"startScore": 70,
+			"calorieReserveDays": 8,
 			"effects": [
 				{
 					"stat": "healingeffectivness",
@@ -135,6 +140,7 @@
 			"code": "thriving",
 			"minScore": 80,
 			"startScore": 90,
+			"calorieReserveDays": 10,
 			"effects": [
 				{
 					"stat": "healingeffectivness",

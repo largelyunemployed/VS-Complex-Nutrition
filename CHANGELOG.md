@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.4
+
+The calorie reserve grows with your diet tier. Interim test builds are lettered (0.4.4a, 0.4.4b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.4a: calorie reserve by diet tier
+
+- The calorie reserve's size now follows your diet tier: 1 active day when Starving (2,800kcal), 2 when Malnourished, 4 when Poorly Fed, 6 when Getting By, 8 when Well Fed and 10 when Thriving (28,000kcal). It used to hold 4 days on every tier. (config/diet.json: calorieReserveDays on each tier; nutrients.json's calories capPerTier is gone.)
+- It changes when your tier does, so after the same 3 days in a row. Dropping to a smaller reserve never takes calories away: you keep what you stored and burn it down, but digestion can't refill it past the new size.
+- Starting calories is a share of the reserve on the tier a new character starts on: Normal gives 3 of Getting By's 6 days, Brutal 10% of Malnourished's 2 days and Rock Bottom almost nothing of Starving's 1 day. Respawning works out the new amount on the tier you respawn on.
+- The Overview's Diet section says how many days your calorie reserve holds on your tier, and the handbook's tier list, Nutrient Reserves, Digestion and Eating Well pages and the Starting calories hover give the new sizes.
+
 ## v0.4.3
 
 The diet score and diet tiers. Interim test builds are lettered (0.4.3a, 0.4.3b, ...), and each change is listed under the build it arrived in.
