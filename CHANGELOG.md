@@ -1,5 +1,85 @@
 # Changelog
 
+## v0.4.4
+
+The calorie reserve grows with your diet tier. Interim test builds are lettered (0.4.4a, 0.4.4b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.4a: calorie reserve by diet tier
+
+- The calorie reserve's size now follows your diet tier: 1 active day when Starving (2,800kcal), 2 when Malnourished, 4 when Poorly Fed, 6 when Getting By, 8 when Well Fed and 10 when Thriving (28,000kcal). It used to hold 4 days on every tier. (config/diet.json: calorieReserveDays on each tier; nutrients.json's calories capPerTier is gone.)
+- It changes when your tier does, so after the same 3 days in a row. Dropping to a smaller reserve never takes calories away: you keep what you stored and burn it down, but digestion can't refill it past the new size.
+- Starting calories is a share of the reserve on the tier a new character starts on: Normal gives 3 of Getting By's 6 days, Brutal 10% of Malnourished's 2 days and Rock Bottom almost nothing of Starving's 1 day. Respawning works out the new amount on the tier you respawn on.
+- The Overview's Diet section says how many days your calorie reserve holds on your tier, and the handbook's tier list, Nutrient Reserves, Digestion and Eating Well pages and the Starting calories hover give the new sizes.
+
+## v0.4.3
+
+The diet score and diet tiers. Interim test builds are lettered (0.4.3a, 0.4.3b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.3c: diet line explained in its key
+
+- The paragraph under the Calories by Food Type chart is gone. The same text now shows when you hover the chart key's Diet score entry, which has a white "i" after it.
+
+### 0.4.3b: diet score on the History tab, carbs, tooltips
+
+- The History tab's Calories by Food Type chart has a lavender line for your diet score, on its own scale from 0 to 100, with a paragraph under the chart saying how it moves (moved into the key's hover in 0.4.3c). Hover over a day to see that day's diet score and its own score; today shows your score so far.
+- The Overview's Diet section: the line under the score gives only the tier's bonuses or penalties ("No bonuses or penalties." on Getting By), since the tier is named just above it. A white "i" right of the score explains how the tier changes.
+- The diet score hover: "Yesterday's score" and "Today's score so far", nutrient names in their colours (carbs, fats, protein and fiber in their bar colours, vitamins yellow, minerals blue), and no grey explainer or tier list.
+- Carbs: a day's need is 300g, and the gut holds 600g, two days' need, so the carbs bar on the Digestion tab and the Stats panel is split in two. Diminishing returns (when switched on) start past 300g digested in 24 hours, up from 12 hours. (digestion.json: carbohydrate maxGrams 600, windowHours 24.)
+- Food tooltips: the mineral names (Ca, Fe, K) are white like the vitamins', and their amounts blue instead of yellow.
+- The Respawn with calories setting is now called Respawn effects: Calories/Diet Tier, since it covers the diet tier too.
+
+### 0.4.3a: diet score and six diet tiers
+
+- Each in-game day, from midnight to midnight, gets a score out of 100 for how well you ate. Every nutrient you digested earns points, up to a full day's need of it: protein counts 2, carbs and fats 1, fiber 0.8, vitamin C and the B vitamins 0.6, and vitamins A, D, E and K, calcium, iron and potassium 0.5. Carbs, fats, protein and fiber count when they are digested, not when you eat them, and vitamin D from sunlight counts. A day counts in full however long you played, and days you don't play are skipped.
+- Your diet score follows your day scores slowly: every midnight it closes a seventh of the gap to the day you just had (30 and a perfect day makes 40). Dying leaves it as it was.
+- Six diet tiers come from the diet score: Starving (0 to 9), Malnourished (10 to 19), Poorly Fed (20 to 39), Getting By (40 to 59), Well Fed (60 to 79) and Thriving (80 and up). Your tier only changes once the score has stayed above or below it for 3 days in a row, and the chat tells you when it does.
+- Each tier changes healing, walk speed and calorie burn, and the good tiers max health: Thriving +20% healing, +30% max health, +10% walk speed and 5% less calorie burn; Well Fed +10%, +10%, +5% and 2% less; Getting By nothing; Poorly Fed -10% healing, -2% walk speed and 2% more calorie burn; Malnourished -15%, -5% and 5% more; Starving -30%, -10% and 10% more. A poor diet never takes max health away, it only loses the good tiers' bonus. They add to the vitamin and mineral effects and follow the Nutrient effects world setting. (config/diet.json.)
+- New characters start on Getting By (score 50), Malnourished (15) with a Brutal start, or Starving (5) with a Rock Bottom start. Characters from before 0.4.3 start the same way. The planned Starting diet tier setting is dropped.
+- Respawn with calories has a fourth choice, Lose one diet tier on death: calories as Lose calories on death, and the diet drops one tier. Reset calorie progress on death now sends the diet back to the starting tier, never up.
+- The nutrition window's Overview has a Diet section: your diet score, tier and trend, what the tier does, and how many more days until a tier change. Hover the score for your last day's score and today so far, nutrient by nutrient.
+- A new handbook page, Diet Score and Tiers. The overview, effects and window pages link to it.
+- Test commands: `/cnutrition setdietscore <player> <score>` puts a player on that score's tier straight away, and `/cnutrition endday <player>` scores the day so far as if it were midnight.
+- The calorie reserve still holds 4 days on every tier; it starts growing with the tier in v0.4.4 (nutrients.json capPerTier is 0 until then).
+
+## v0.4.2
+
+Gentler respawning and new start settings. Interim test builds are lettered (0.4.2a, 0.4.2b, ...), and each change is listed under the build it arrived in.
+
+### 0.4.2e: final v0.4.2 build
+
+- Natural healing now uses half a day's vitamin K for each health point, up from a tenth, so a full heal of 15 health uses seven and a half days of the 20-day store. Healing items still use none, and an empty store still only slows healing to 90%. (tracking.json: vitaminKPerHp 50.)
+- The diet score moved to v0.4.3, alongside the diet tiers.
+- The Poultry and bushmeat in pots setting is now called Expanded cooking ingredients, in the menu, on the world creation screen, in the /cnutrition meatinpots replies and in the handbook, so it can cover more ingredients later. Its hover is unchanged.
+
+### 0.4.2d: clearer effects and minerals
+
+- Vitamin E now makes armor slow you down less (the game's armor walk speed stat), up to 20% less with a full store and 10% more when empty. Mining speed moved to potassium, which no longer changes walk speed, so walk speed belongs to vitamin C alone. The game only works out armor's slowdown when you change clothing, so the mod asks it to work it out again whenever vitamin E's effect changes.
+- The B vitamins' effect is now called calorie burn everywhere, since fullness drains at a fixed rate and only calories burn faster. The Stats panel's Hunger rate row is now Calorie burn.
+- Mineral names are blue in food tooltips (Ca · Fe · K), so potassium's K can't be mistaken for vitamin K. Mineral bars on the Stats panel and in the nutrition window read Calcium (Ca), Iron (Fe) and Potassium (K).
+- The handbook's nutrient and effect pages and the roadmap follow the new effects.
+
+### 0.4.2c: mushrooms for vitamin E, vitamin K and potassium
+
+- Mushrooms now cover seven nutrients instead of four. Boletes (king, bitter, devil and orange oak bolete) carry potassium. Mushrooms that grow on trees (chicken of the woods, dryad's saddle, reishi, bearded tooth and tapir's liver) carry vitamin E. Green, violet and blue ones (green cracked russula, violet webcap, indigo milkcap and blue meanie) carry vitamin K. The other groups keep their colours: orange, red and yellow for vitamin A, white and pale for calcium, brown and dark for iron, and oysters, shiitake, honey mushroom and pink bonnet for vitamin D. The handbook's Mushrooms paragraph says so.
+
+### 0.4.2b: a cleaner settings menu
+
+- The settings menu has two tabs. Your Settings is for every player and only changes what you see: the advanced nutrition display, amounts or percent, short food tooltips and the Running Low icon. World Settings applies to every player and only admins see it (players with the game's controlserver privilege; in single player that is you). It holds Food Info, Starting and Respawning, Food and Digestion (the old World section), Nutrient Effects and Modules.
+- Nothing changes until you press Save. Cancel or the close button leaves everything as it was. Switching Nutrient tracking still asks you to confirm, after Save.
+- The duplicate settings are gone: Default amounts or percent and Advanced display default no longer show in the menu. The world's defaults are still set when the world is created, and Advanced nutrition display and Amounts or percent show them until you pick your own.
+- Changing Max fullness now resizes every player's stomach straight away. Before, it waited for the next digestion step, which never came while the game was paused.
+- Hovers on your own settings now end with "This change will not affect what other players see." instead of mentioning your computer.
+- Text: Running Low icon is capitalised as in the handbook, Poultry and bushmeat in pots has the same name in the menu and on the world creation screen, Diminishing returns no longer says "in one sitting", and Max fullness says fullness empties at a rate of 100 an hour. The handbook's settings paragraph describes the tabs and Save.
+
+### 0.4.2a: gentler respawning, start settings, mushroom colours
+
+- Dying is gentler. A new world setting, Keep vitamin and mineral reserves on death (on by default), leaves your vitamin, mineral and fiber stores as they were, and the vitamin C and B vitamin day counts carry on. Switched off, those stores go back to what a new character starts with.
+- Respawn with calories replaces Respawn calories, with three choices. Lose calories on death (the default) leaves a tenth of what your reserve held, but never less than 1,000kcal. Keep calories on death leaves it as it was. Reset calorie progress on death (for masochists only!) leaves 1,000kcal, or almost nothing on a Rock Bottom start, and will also send your diet back to the first tier once diet tiers arrive. Worlds that had the old setting get Lose calories on death. (tracking.json: respawnKeptShare, respawnMinKcal, respawnResetKcal.)
+- The gut always empties on death, whatever the settings.
+- New world setting Starting vitamin and mineral reserves, with the same six choices as Starting calories (default Normal): how full a new character's vitamin, mineral and fiber stores are. Starting calories now sets only the calorie reserve. Worlds made before this keep using Starting calories for both.
+- Mushrooms are grouped by their colour in the game, from the handbook icons, instead of the real species: deer ear, funeral bell, red wine cap and witch's hat now give vitamin A; paddy straw and tapir's liver calcium; and reishi, gold cap and blue meanie iron.
+- Fixed wording: the settings note and the window page now name the Nutrient Effects settings, the Minerals tab says minerals are stored for weeks, and the Eating Well page lost a doubled "and".
+
 ## v0.4.1
 
 Healing, porridge and mushrooms. Interim test builds are lettered (0.4.1a, 0.4.1b, ...), and each change is listed under the build it arrived in.

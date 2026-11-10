@@ -588,7 +588,7 @@ namespace ComplexNutrition.Modules.Tracking
                 }
                 else
                 {
-                    string title = Lang.Get(n.LangKey);
+                    string title = NutrientDisplay.BarName(n);   // minerals carry their symbol: "Calcium (Ca)"
                     Row(title, "cn-" + code, color, () =>
                     {
                         var st = NutritionState.Of(capi?.World?.Player?.Entity);
@@ -635,7 +635,7 @@ namespace ComplexNutrition.Modules.Tracking
                 .AddDynamicText((int)Math.Round(100f * healing) + "%", CairoFont.WhiteDetailText(), rightColumnBounds = rightColumnBounds.FlatCopy().WithFixedPosition(rightColumnBounds.fixedX, leftColumnBoundsW.fixedY), "healeffectiveness");
             if (saturation.HasValue)
             {
-                compo.AddStaticText(Lang.Get("Hunger rate"), CairoFont.WhiteDetailText(), leftColumnBoundsW = leftColumnBoundsW.BelowCopy())
+                compo.AddStaticText(Lang.Get("complexnutrition:stats-calorieburn"), CairoFont.WhiteDetailText(), leftColumnBoundsW = leftColumnBoundsW.BelowCopy())
                     .AddDynamicText((int)Math.Round(100f * hungerrate) + "%", CairoFont.WhiteDetailText(), rightColumnBounds = rightColumnBounds.FlatCopy().WithFixedPosition(rightColumnBounds.fixedX, leftColumnBoundsW.fixedY), "hungerrate");
             }
             compo.AddStaticText(Lang.Get("Ranged Accuracy"), CairoFont.WhiteDetailText(), leftColumnBoundsW = leftColumnBoundsW.BelowCopy())

@@ -19,12 +19,12 @@
 		"vitaminB": { "rule": "timed", "targets": [ { "stat": "hungerrate", "invert": true, "showStat": true, "label": "effect-hungerrate" } ] },
 		"vitaminA": { "rule": "longTerm", "targets": [ { "stat": "rangedWeaponsAcc", "label": "effect-rangedaccuracy" } ] },
 		"vitaminD": { "rule": "longTerm", "targets": [ { "stat": "physicalResistance", "label": "effect-resistance" } ] },
-		"vitaminE": { "rule": "longTerm", "targets": [ { "stat": "miningSpeedMul", "label": "effect-mining" } ] },
+		"vitaminE": { "rule": "longTerm", "targets": [ { "stat": "armorWalkSpeedAffectedness", "invert": true, "showStat": true, "label": "effect-armorslowdown" } ] },
 		"vitaminK": { "rule": "longTerm", "targets": [ { "stat": "healingeffectivness", "label": "effect-healing" } ] },
 		"calcium": { "rule": "longTerm", "targets": [ { "stat": "fallDamageFactor", "invert": true, "showStat": true, "label": "effect-falldamage" } ] },
 		"iron": { "rule": "longTerm", "targets": [ { "stat": "maxhealthExtraPoints", "perBaseHealth": true, "label": "effect-maxhealth" } ] },
 		"potassium": { "rule": "longTerm", "targets": [
-			{ "stat": "walkspeed", "label": "effect-walkspeed" },
+			{ "stat": "miningSpeedMul", "label": "effect-mining" },
 			{ "stat": "meleeWeaponsDamage", "label": "effect-meleedamage" },
 			{ "stat": "rangedWeaponsDamage", "label": "effect-rangeddamage" },
 			{ "stat": "animalHarvestingTime", "invert": true, "label": "effect-butchering" }

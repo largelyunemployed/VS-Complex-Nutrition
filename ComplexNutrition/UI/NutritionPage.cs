@@ -91,8 +91,10 @@ namespace ComplexNutrition.UI
         public bool Small;
         /// <summary>What hovering the paragraph shows (VTML, since v0.3.6); null for no hover.</summary>
         public string Tip;
+        /// <summary>What hovering a white "i" drawn right after the paragraph's first line shows (VTML, since 0.4.3b); null for no "i".</summary>
+        public string InfoTip;
         public TextBlock(string vtml, bool small = false, string tip = null) { Vtml = vtml; Small = small; Tip = tip; }
-        public override string Key => "T|" + (Small ? "s|" : "|") + Vtml + "|" + Tip;
+        public override string Key => "T|" + (Small ? "s|" : "|") + Vtml + "|" + Tip + "|" + InfoTip;
     }
 
     /// <summary>
@@ -118,6 +120,11 @@ namespace ComplexNutrition.UI
         public string BottomLeft, BottomRight;
         /// <summary>Legend entries: a colour swatch and its VTML label.</summary>
         public List<(double[] color, string label)> Legend = new();
+        /// <summary>
+        /// Hovers for legend entries (since 0.4.3b), by their place in <see cref="Legend"/>. An entry with one gets a white "i"
+        /// after its label, and hovering the entry shows the hover (VTML).
+        /// </summary>
+        public Dictionary<int, string> LegendTips = new();
         /// <summary>VTML in the plot's top corners (since v0.3.5): the bars' top in yellow on the left, the line's top on the right.</summary>
         public string TopLeft, TopRight;
         /// <summary>Per day, oldest first: what hovering that day shows (VTML), or null for nothing.</summary>
@@ -143,6 +150,7 @@ namespace ComplexNutrition.UI
                 sb.Append('|').Append(BottomLeft).Append('|').Append(BottomRight).Append('|').Append(TopLeft).Append('|').Append(TopRight).Append('|').Append(MarkTip).Append('|');
                 if (Tips != null) foreach (var t in Tips) sb.Append(t).Append(';');
                 foreach (var l in Legend) sb.Append(l.label).Append(';');
+                foreach (var t in LegendTips) sb.Append(t.Key).Append('=').Append(t.Value).Append(';');
                 if (LineColor != null) sb.Append(string.Join(",", LineColor));
                 return sb.ToString();
             }
@@ -302,6 +310,8 @@ namespace ComplexNutrition.UI
                             var text = Rich(capi, label, detail, width);
                             double tw = MeasureWidth(text);
                             double ew = swatch + GuiElement.scaled(5) + tw + GuiElement.scaled(14);
+                            // Room for the white "i" of an entry with a hover.
+                            if (c.LegendTips.ContainsKey(p.Legend.Count)) ew += GuiElement.scaled(LegendInfoRadius * 2 + 5);
                             if (lx > 0 && lx + ew > GuiElement.scaled(width))
                             {
                                 lx = 0;
@@ -332,6 +342,15 @@ namespace ComplexNutrition.UI
                     if (p.Text != null) Draw(ctx, surface, p.Text, 0, p.Y);
                     if (p.Block is TextBlock tb && !string.IsNullOrEmpty(tb.Tip))
                         hotspots?.Add(new Hotspot { X = 0, Y = p.Y, W = Math.Max(1, MeasureWidth(p.Text)), H = p.Text.TotalHeight, Vtml = tb.Tip });
+                    if (p.Block is TextBlock info && !string.IsNullOrEmpty(info.InfoTip))
+                    {
+                        // The "i" sits just right of the text, centred on its first line.
+                        double r = GuiElement.scaled(6);
+                        double cx = MeasureWidth(p.Text) + GuiElement.scaled(6) + r;
+                        double cy = p.Y + FirstLineHeight(p.Text) / 2.0;
+                        DrawInfo(ctx, cx, cy, r);
+                        hotspots?.Add(new Hotspot { X = cx - r - 2, Y = cy - r - 2, W = 2 * r + 4, H = 2 * r + 4, Vtml = info.InfoTip });
+                    }
                     if (p.Block is TableBlock)
                     {
                         foreach (var ry in p.RuleY)
@@ -395,6 +414,8 @@ namespace ComplexNutrition.UI
         }
 
         public const double LegendSwatch = 10;
+        /// <summary>The radius of the white "i" after a legend entry with a hover.</summary>
+        public const double LegendInfoRadius = 5;
         public static readonly double[] RisingColor = { 0.45, 0.78, 0.40, 1 };
         public static readonly double[] SteadyColor = { 0.70, 0.70, 0.70, 1 };
         public static readonly double[] FallingColor = { 0.91, 0.64, 0.24, 1 };
@@ -409,6 +430,16 @@ namespace ComplexNutrition.UI
                 foreach (var b in comp.BoundsPerLine) w = Math.Max(w, b.X + b.Width);
             }
             return w;
+        }
+
+        /// <summary>The height of a rich text's first line, in pixels (the whole text's height when it has no lines).</summary>
+        private static double FirstLineHeight(GuiElementRichtext text)
+        {
+            foreach (var comp in text.Components)
+            {
+                if (comp.BoundsPerLine != null && comp.BoundsPerLine.Length > 0) return comp.BoundsPerLine[0].Height;
+            }
+            return text.TotalHeight;
         }
 
         /// <summary>A small arrow centred on (cx, cy): up and green when rising, a grey dash when steady, down and amber when falling.</summary>
@@ -584,9 +615,19 @@ namespace ComplexNutrition.UI
             Draw(ctx, surface, p.Right2, width - MeasureWidth(p.Right2), labelY);
 
             double sw = GuiElement.scaled(LegendSwatch);
-            foreach (var (color, text, x, y) in p.Legend)
+            for (int i = 0; i < p.Legend.Count; i++)
             {
+                var (color, text, x, y) = p.Legend[i];
                 double ty = p.Y + y;
+                if (c.LegendTips.TryGetValue(i, out var legendTip) && !string.IsNullOrEmpty(legendTip))
+                {
+                    // A white "i" after the label; hovering the swatch, the label or the "i" shows the hover.
+                    double r = GuiElement.scaled(LegendInfoRadius);
+                    double labelEnd = x + sw + GuiElement.scaled(5) + MeasureWidth(text);
+                    double cx = labelEnd + GuiElement.scaled(5) + r;
+                    DrawInfo(ctx, cx, ty + text.TotalHeight / 2, r);
+                    hotspots?.Add(new Hotspot { X = x, Y = ty, W = cx + r + 2 - x, H = text.TotalHeight, Vtml = legendTip });
+                }
                 ctx.SetSourceRGBA(color[0], color[1], color[2], 1);
                 ctx.Rectangle(x, ty + (text.TotalHeight - sw) / 2, sw, sw);
                 ctx.FillPreserve();

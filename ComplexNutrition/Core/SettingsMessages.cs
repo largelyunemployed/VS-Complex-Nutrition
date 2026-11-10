@@ -15,9 +15,14 @@ namespace ComplexNutrition.Core
         public bool LogFallbacks = true;
         public string DisplayUnits = "amount";
         public Dictionary<string, bool> Modules = new();
-        /// <summary>The world's start condition (% of a day in the calorie reserve), or null when the world has none.</summary>
+        /// <summary>The world's Starting calories choice (a start option's value), or null when the world has none.</summary>
         public string StartCalories;
-        public string RespawnCalories;
+        /// <summary>The world's Starting vitamin and mineral reserves choice (since v0.4.2), or null when the world has none.</summary>
+        public string StartStores;
+        /// <summary>The world's Respawn effects: Calories/Diet Tier choice (since v0.4.2): lose, keep, reset or losetier.</summary>
+        public string RespawnCalories = WorldSettings.DefaultRespawnCalories;
+        /// <summary>Keep vitamin and mineral reserves on death (since v0.4.2).</summary>
+        public bool KeepStores = true;
         public bool AdvancedDefault;
         public bool MeatInPots;
         public bool DiminishingReturns = true;
@@ -78,7 +83,9 @@ namespace ComplexNutrition.Core
         public const string LogFallbacks = "logFallbacks";
         public const string DisplayUnits = "displayUnits";
         public const string StartCalories = "startCalories";
+        public const string StartStores = "startStores";
         public const string RespawnCalories = "respawnCalories";
+        public const string KeepStores = "keepStores";
         public const string AdvancedDefault = "advancedDefault";
         public const string MeatInPots = "meatInPots";
         public const string DiminishingReturns = "diminishingReturns";

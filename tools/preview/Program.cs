@@ -56,6 +56,7 @@ static class P
         foreach (var kv in digest.Pools) { var d = reg.Get(kv.Key); d.Cap = kv.Value.MaxGrams / d.DailyTarget * 100f; }
         var tracking = JsonConvert.DeserializeObject<TrackingSettings>(File.ReadAllText(Mod + "config/tracking.json"));
         NutrientEffects.Settings = JsonConvert.DeserializeObject<EffectSettings>(File.ReadAllText(Mod + "config/effects.json"));
+        DietScore.Settings = JsonConvert.DeserializeObject<DietSettings>(File.ReadAllText(Mod + "config/diet.json"));
 
         // A player a week or so in: fat-soluble vitamins and calcium sliding, something in the gut.
         var tree = new TreeAttribute();
@@ -81,6 +82,14 @@ static class P
         st.SetAbsorbedLog("carbohydrate-kcal", kC); st.SetAbsorbedLog("fat-kcal", kF); st.SetAbsorbedLog("protein-kcal", kP);
         st.SetAbsorbedLog("fiber", gFi); st.SetAbsorbedLog("fiber-kcal", kFi);
         st.AbsorbedHour = 7;
+        // v0.4.3: Well Fed at 63 and falling, after a poor day (48) that points down to Getting By.
+        st.SetDiet(63f, 4);
+        st.DietScoreBefore = 66f;
+        st.LastDayScore = 48f;
+        st.DietProgress = new DietTierProgress(4, 3, 1);
+        st.PlayedToday = true;
+        foreach (var (code, pct) in new[] { ("carbohydrate", 70f), ("fat", 40f), ("protein", 55f), ("fiber", 30f) }) st.AddDigestedToday(code, pct);
+        foreach (var (code, pct) in new[] { ("vitaminC", 120f), ("vitaminB", 60f), ("vitaminA", 200f), ("calcium", 30f), ("iron", 90f), ("potassium", 45f) }) st.AddAbsorbedToday(code, pct);
 
         var known = new List<KnownFood>();
         var wanted = new Dictionary<string, string> { ["game:vegetable-carrot"] = "Carrot", ["game:cheese-cheddar-1slice"] = "Cheddar cheese", ["game:fruit-blueberry"] = "Blueberry",
@@ -111,6 +120,10 @@ static class P
                 day.KcalByCategory["Dairy"] = lean ? 0 : 300 + rnd.Next(0, 300);
                 day.Gained = day.TotalKcal * 0.85f;
                 day.Burned = 2000 + rnd.Next(0, 1200);
+                // The diet score (0.4.3b): it starts at 50, sinks through the lean week, then climbs on the mixed diet.
+                day.DayScore = lean ? 30 + rnd.Next(0, 15) : 70 + rnd.Next(0, 20);
+                float before = i == 3 ? 50f : history.Days[i - 1].DietScore ?? 50f;
+                day.DietScore = i == 3 ? 50f : before + ((history.Days[i - 1].DayScore ?? 50f) - before) / 7f;
             }
             history.Days.Add(day);
         }
@@ -136,7 +149,7 @@ static class P
             using var page = PageRenderer.Render(capi, NutritionPages.History(data), GuiDialogNutrition.ContentWidth - 4, spots);
             using var ctx = new Context(page);
             var days = spots.Where(sp => sp.Highlight).ToList();
-            var picks = new List<Hotspot> { days[days.Count / 2 - 3], days[^2], spots.First(sp => !sp.Highlight) };
+            var picks = new List<Hotspot> { days[days.Count / 2 - 3], spots.First(sp => !sp.Highlight), spots.Last(sp => !sp.Highlight) };   // the last: the diet key's hover (0.4.3b)
             foreach (var sp in picks)
             {
                 if (sp.Highlight) { ctx.SetSourceRGBA(1, 1, 1, 28 / 255.0); ctx.Rectangle(sp.X, sp.Y, sp.W, sp.H); ctx.Fill(); }

@@ -61,7 +61,48 @@ namespace ComplexNutrition.Core
         /// full heal of 15 health uses a day and a half of vitamin K. Healing items use none. An empty store never stops
         /// healing; it only slows it (vitamin K's effect, config/effects.json).
         /// </summary>
-        [JsonProperty("vitaminKPerHp")] public float VitaminKPerHp = 10f;
+        [JsonProperty("vitaminKPerHp")] public float VitaminKPerHp = 50f;
+
+        /// <summary>
+        /// Respawn effects: Calories/Diet Tier, "Lose calories on death" (since v0.4.2): the share of the calorie reserve a character keeps
+        /// when they die. With 0.1, a reserve of 8,000kcal at death respawns with 800kcal (then raised to the floor below).
+        /// </summary>
+        [JsonProperty("respawnKeptShare")] public float RespawnKeptShare = 0.1f;
+
+        /// <summary>
+        /// The least a character respawns with under "Lose calories on death", in kcal, so a player who starved to death
+        /// doesn't come back starving. It never goes over the reserve's size.
+        /// </summary>
+        [JsonProperty("respawnMinKcal")] public float RespawnMinKcal = 1000f;
+
+        /// <summary>
+        /// What "Reset calorie progress on death" leaves in the calorie reserve, in kcal. On a world with a Rock Bottom start it
+        /// leaves Rock Bottom's share instead, almost nothing.
+        /// </summary>
+        [JsonProperty("respawnResetKcal")] public float RespawnResetKcal = 1000f;
+
+        /// <summary>
+        /// The calorie reserve a character respawns with, in % of a day, for a Respawn effects: Calories/Diet Tier choice (see
+        /// <see cref="WorldSettings.RespawnCaloriesOptions"/>). <paramref name="atDeath"/> is what the reserve held at death and
+        /// <paramref name="reserveSize"/> how much it holds, both in % of a day; <paramref name="rockBottomStart"/> is whether
+        /// the world starts characters at Rock Bottom. Keep returns <paramref name="atDeath"/> unchanged, even above the size.
+        /// </summary>
+        public float CaloriesOnRespawn(string choice, float atDeath, float reserveSize, NutrientDefinition calories, bool rockBottomStart)
+        {
+            switch (choice)
+            {
+                case WorldSettings.RespawnKeep:
+                    return atDeath;
+                case WorldSettings.RespawnReset:
+                    float reset = rockBottomStart
+                        ? reserveSize * WorldSettings.StoreShare(WorldSettings.RockBottomValue)
+                        : calories.ToPercent(RespawnResetKcal);
+                    return Math.Min(reset, reserveSize);
+                default:
+                    float kept = Math.Max(atDeath * RespawnKeptShare, calories.ToPercent(RespawnMinKcal));
+                    return Math.Min(kept, reserveSize);
+            }
+        }
 
         /// <summary>Extra calories a day while healing, with <paramref name="missing"/> (0 to 1) of max health missing.</summary>
         public float HealingKcalPerDay(float missing)

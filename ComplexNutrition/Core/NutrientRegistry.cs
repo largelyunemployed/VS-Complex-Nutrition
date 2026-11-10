@@ -32,26 +32,26 @@ namespace ComplexNutrition.Core
         [JsonProperty("source")] public string Source;
 
         /// <summary>
-        /// Tracking: the most the body stores, in % of the daily target (100 = one day). For calories this is the size at the
-        /// first diet tier; read a player's own size with <see cref="CapFor"/>.
+        /// Tracking: the most the body stores, in % of the daily target (100 = one day). The calorie reserve's size comes from
+        /// the player's diet tier instead (since v0.4.4), and this is only its size when the tiers give none; read a player's
+        /// own size with <see cref="CapFor"/>.
         /// </summary>
         [JsonProperty("cap")] public float Cap = 150;
 
         /// <summary>
-        /// Tracking (since v0.4.1): how much bigger the store gets for each diet tier above the first, in % of the daily target.
-        /// Only the calorie reserve uses it (2 days a tier); every other store stays at <see cref="Cap"/>.
-        /// </summary>
-        [JsonProperty("capPerTier")] public float CapPerTier;
-
-        /// <summary>
-        /// The most this player's body stores of this nutrient, in % of the daily target: <see cref="Cap"/>, plus
-        /// <see cref="CapPerTier"/> for each diet tier above the first. Use this, not <see cref="Cap"/>, wherever a
-        /// player's own store is filled, drawn or checked.
+        /// The most this player's body stores of this nutrient, in % of the daily target. For the calorie reserve (since
+        /// v0.4.4) that is the player's diet tier's calorieReserveDays (config/diet.json): 1 day when Starving up to 10 when
+        /// Thriving. Every other store, and the calorie reserve when the tiers give no size, holds <see cref="Cap"/>. Use this,
+        /// not <see cref="Cap"/>, wherever a player's own store is filled, drawn or checked.
         /// </summary>
         public float CapFor(NutritionState state)
         {
-            int tiersAboveFirst = state == null ? 0 : Math.Max(0, state.DietTier - NutritionState.FirstDietTier);
-            return Cap + CapPerTier * tiersAboveFirst;
+            if (IsCalories && state != null)
+            {
+                float days = DietScore.Settings.Tier(state.DietTier)?.CalorieReserveDays ?? 0f;
+                if (days > 0f) return days * 100f;
+            }
+            return Cap;
         }
 
         /// <summary>Tracking: reserve a new character starts with, in % of the daily target.</summary>

@@ -27,11 +27,53 @@ namespace ComplexNutrition.Core
     /// </summary>
     public static class WorldSettings
     {
-        /// <summary>The calorie reserve of a new character, in % of a day.</summary>
+        /// <summary>
+        /// Starting calories: how full a new character's calorie reserve is, as one of <see cref="StartOptions"/>. Until v0.4.2 it
+        /// also set the vitamin and mineral stores; worlds without <see cref="StartStoresKey"/> still work that way.
+        /// </summary>
         public const string StartConditionKey = "complexnutritionStart";
 
-        /// <summary>The calorie reserve a character respawns with, in % of a day, from the same options (since v0.3.2).</summary>
-        public const string RespawnConditionKey = "complexnutritionRespawn";
+        /// <summary>
+        /// Starting vitamin and mineral reserves (since v0.4.2): how full a new character's vitamin, mineral and fiber stores
+        /// are, from the same <see cref="StartOptions"/> as Starting calories.
+        /// </summary>
+        public const string StartStoresKey = "complexnutritionStartStores";
+
+        /// <summary>
+        /// Respawn effects: Calories/Diet Tier (since v0.4.2): what dying does to the calorie reserve, one of <see cref="RespawnCaloriesOptions"/>.
+        /// It replaced the old "complexnutritionRespawn" setting, which is no longer read; a world that had it gets the default.
+        /// </summary>
+        public const string RespawnCaloriesKey = "complexnutritionRespawnCalories";
+
+        /// <summary>Respawn effects: Calories/Diet Tier: the reserve becomes a share of what it held at death, with a floor (tracking.json).</summary>
+        public const string RespawnLose = "lose";
+        /// <summary>Respawn effects: Calories/Diet Tier: the reserve is left as it was.</summary>
+        public const string RespawnKeep = "keep";
+        /// <summary>Respawn effects: Calories/Diet Tier: the reserve goes back to a fixed small amount, and the diet back to the starting tier (never up).</summary>
+        public const string RespawnReset = "reset";
+        /// <summary>Respawn effects: Calories/Diet Tier (since v0.4.3): calories as <see cref="RespawnLose"/>, and the diet drops one tier.</summary>
+        public const string RespawnLoseTier = "losetier";
+
+        /// <summary>
+        /// The Respawn effects: Calories/Diet Tier choices, as values and the names their lang keys use ("worldconfig-complexnutritionRespawnCalories-Lose").
+        /// worldconfig.json lists the same values and names (a test checks).
+        /// </summary>
+        public static readonly StartOption[] RespawnCaloriesOptions =
+        {
+            new(RespawnLose, "Lose"),
+            new(RespawnKeep, "Keep"),
+            new(RespawnReset, "Reset"),
+            new(RespawnLoseTier, "LoseTier"),
+        };
+
+        /// <summary>The Respawn effects: Calories/Diet Tier choice a world gets when it has none.</summary>
+        public const string DefaultRespawnCalories = RespawnLose;
+
+        /// <summary>
+        /// Keep vitamin and mineral reserves on death (since v0.4.2). On unless the world switches it off. While on, dying leaves
+        /// the vitamin, mineral and fiber stores and the vitamin C and B vitamin day counts as they were.
+        /// </summary>
+        public const string KeepStoresKey = "complexnutritionKeepStores";
 
         /// <summary>Show the advanced nutrition display by default.</summary>
         public const string AdvancedDisplayKey = "complexnutritionAdvancedDisplay";
@@ -88,11 +130,10 @@ namespace ComplexNutrition.Core
         }
 
         /// <summary>
-        /// The start conditions, best first, also used for respawning. Each value divided by <see cref="FullValue"/> is the share
-        /// of every store it fills (Full 100%, Easy 70%, ... Rock Bottom 0.1%): the calorie reserve and each vitamin and mineral
-        /// store alike. Until v0.4.1 the value was the calorie reserve in % of a day, when the reserve always held 10 days, so
-        /// saved worlds keep the same numbers.
-        /// worldconfig.json lists the same values and names for both settings (a test checks).
+        /// The start conditions, best first, for Starting calories and Starting vitamin and mineral reserves. Each value divided
+        /// by <see cref="FullValue"/> is the share of a store it fills (Full 100%, Easy 70%, ... Rock Bottom 0.1%). Until v0.4.1
+        /// the value was the calorie reserve in % of a day, when the reserve always held 10 days, so saved worlds keep the same
+        /// numbers. worldconfig.json lists the same values and names for both settings (a test checks).
         /// </summary>
         public static readonly StartOption[] StartOptions =
         {
@@ -107,8 +148,11 @@ namespace ComplexNutrition.Core
         /// <summary>The start condition a new world gets.</summary>
         public const string DefaultStart = "500";
 
-        /// <summary>The respawn condition a world gets when it has none (Brutal).</summary>
-        public const string DefaultRespawn = "100";
+        /// <summary>The Starting vitamin and mineral reserves choice a new world gets (Normal).</summary>
+        public const string DefaultStartStores = "500";
+
+        /// <summary><see cref="DefaultStartStores"/> as a number.</summary>
+        public static float DefaultStartStoresValue => Number(DefaultStartStores).Value;
 
         /// <summary>The calorie value of the Full option: a full reserve. Other options are this share of every store.</summary>
         public const float FullValue = 1000f;
@@ -134,11 +178,45 @@ namespace ComplexNutrition.Core
             return Math.Clamp(pct, 0f, 100f) / 100f;
         }
 
-        /// <summary>The world's start condition in % of a day, or null when the world has none (the nutrient's startReserve applies).</summary>
+        /// <summary>The world's Starting calories choice (one of <see cref="StartOptions"/>), or null when the world has none (the nutrient's startReserve applies).</summary>
         public static float? StartCalories(IWorldAccessor world) => Number(Text(world, StartConditionKey));
 
-        /// <summary>The world's respawn condition in % of a day; Brutal (1 day) for worlds without one.</summary>
-        public static float RespawnCalories(IWorldAccessor world) => Number(Text(world, RespawnConditionKey)) ?? Number(DefaultRespawn).Value;
+        /// <summary>
+        /// The world's Starting vitamin and mineral reserves choice. A world from before v0.4.2 has none, and its stores follow
+        /// Starting calories as they used to; null when it has neither (the nutrients' startReserve applies).
+        /// </summary>
+        public static float? StartStores(IWorldAccessor world) => Number(Text(world, StartStoresKey)) ?? StartCalories(world);
+
+        /// <summary>The name of the world's Starting calories choice ("Normal", "Brutal", "RockBottom"...), or null when it has none.</summary>
+        public static string StartCaloriesName(IWorldAccessor world)
+        {
+            float? value = StartCalories(world);
+            if (value == null) return null;
+            foreach (var option in StartOptions)
+            {
+                if (Number(option.Value) == value) return option.Name;
+            }
+            return null;
+        }
+
+        /// <summary>The world's Respawn effects: Calories/Diet Tier choice: lose, keep, reset or losetier. Lose for a world without one, or with a value we don't know.</summary>
+        public static string RespawnCalories(IWorldAccessor world)
+        {
+            string choice = Text(world, RespawnCaloriesKey);
+            return IsRespawnCaloriesOption(choice) ? choice : DefaultRespawnCalories;
+        }
+
+        public static bool IsRespawnCaloriesOption(string value) => Array.Exists(RespawnCaloriesOptions, o => o.Value == value);
+
+        /// <summary>Whether dying leaves the vitamin, mineral and fiber stores alone (on when the world has no such setting).</summary>
+        public static bool KeepStores(IWorldAccessor world) =>
+            !string.Equals(Text(world, KeepStoresKey), "false", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Whether the world's Starting calories is Rock Bottom, so a reset on death leaves almost nothing too.</summary>
+        public static bool RockBottomStart(IWorldAccessor world) => Text(world, StartConditionKey) == StartOptions[^1].Value;
+
+        /// <summary>The Rock Bottom option's value as a number (its share of a store is <see cref="StoreShare"/> of this).</summary>
+        public static float RockBottomValue => Number(StartOptions[^1].Value).Value;
 
         /// <summary>The share of each vitamin and mineral store that goes with a start or respawn option (Full 1, Easy 0.7, ...).</summary>
         public static float StoreShare(float optionValue) => Math.Clamp(optionValue / FullValue, 0f, 1f);

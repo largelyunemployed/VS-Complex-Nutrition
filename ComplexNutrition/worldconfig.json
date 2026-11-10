@@ -2,7 +2,9 @@
 	"playStyles": [],
 	"worldConfigAttributes": [
 		{ "category": "complexnutrition", "code": "complexnutritionStart", "dataType": "dropdown", "values": [ "1000", "700", "500", "300", "100", "1" ], "names": [ "Full", "Easy", "Normal", "Hard", "Brutal", "RockBottom" ], "default": "500" },
-		{ "category": "complexnutrition", "code": "complexnutritionRespawn", "dataType": "dropdown", "values": [ "1000", "700", "500", "300", "100", "1" ], "names": [ "Full", "Easy", "Normal", "Hard", "Brutal", "RockBottom" ], "default": "100" },
+		{ "category": "complexnutrition", "code": "complexnutritionStartStores", "dataType": "dropdown", "values": [ "1000", "700", "500", "300", "100", "1" ], "names": [ "Full", "Easy", "Normal", "Hard", "Brutal", "RockBottom" ], "default": "500" },
+		{ "category": "complexnutrition", "code": "complexnutritionRespawnCalories", "dataType": "dropdown", "values": [ "lose", "keep", "reset", "losetier" ], "names": [ "Lose", "Keep", "Reset", "LoseTier" ], "default": "lose" },
+		{ "category": "complexnutrition", "code": "complexnutritionKeepStores", "dataType": "bool", "default": "true" },
 		{ "category": "complexnutrition", "code": "complexnutritionAdvancedDisplay", "dataType": "bool", "default": "false" },
 		{ "category": "complexnutrition", "code": "complexnutritionMeatInPots", "dataType": "bool", "default": "false" },
 		{ "category": "complexnutrition", "code": "complexnutritionDiscover", "dataType": "bool", "default": "false" },

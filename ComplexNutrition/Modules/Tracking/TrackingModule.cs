@@ -178,6 +178,8 @@ namespace ComplexNutrition.Modules.Tracking
         {
             if (player?.Entity == null) return;
             var state = NutritionState.GetOrCreate(player.Entity, Core.Nutrients, NowHours, out bool created);
+            // The diet tier first: it sets the calorie reserve's size (since v0.4.4), which Starting calories fills a share of.
+            StartDietScore(state);
             if (created) ApplyStartCondition(player, state);
             MigrateGut(state);
             FitStores(state);
@@ -219,34 +221,60 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// A character new to Complex Nutrition starts with what the world's start condition picks: the same share of the
-        /// calorie reserve and of every vitamin and mineral store (Full 100%, Easy 70%, Normal 50%, Hard 30%, Brutal 10%,
-        /// Rock Bottom 0.1%). Only on first join; respawning uses the respawn condition.
-        /// Worlds from before v0.2.4 have none, and the nutrients' startReserve applies.
+        /// A character new to Complex Nutrition starts with what the world's two start settings pick (since v0.4.2): Starting
+        /// calories fills that share of the calorie reserve, and Starting vitamin and mineral reserves that share of every
+        /// vitamin, mineral and fiber store (Full 100%, Easy 70%, Normal 50%, Hard 30%, Brutal 10%, Rock Bottom 0.1%).
+        /// Only on first join. A world from before v0.4.2 has no stores setting, and its stores follow Starting calories as
+        /// before; a world from before v0.2.4 has neither, and the nutrients' startReserve applies.
         /// </summary>
         private void ApplyStartCondition(IServerPlayer player, NutritionState state)
         {
-            float? start = WorldSettings.StartCalories(sapi.World);
-            if (start != null) ApplyCondition(player, state, start.Value, publish: false);
+            float? caloriesChoice = WorldSettings.StartCalories(sapi.World);
+            float? storesChoice = WorldSettings.StartStores(sapi.World);
+            if (caloriesChoice != null) FillCalories(player, state, WorldSettings.StoreShare(caloriesChoice.Value), publish: false);
+            if (storesChoice != null) FillStores(player, state, WorldSettings.StoreShare(storesChoice.Value), publish: false);
         }
 
         /// <summary>
-        /// Fills the calorie reserve and every vitamin and mineral store to the share a start or respawn option gives
-        /// (<see cref="WorldSettings.StoreShare"/>: Full 100%, Easy 70%, Normal 50% ... of each store's size). Since v0.4.1 the
-        /// calorie reserve's size is the player's own (<see cref="NutrientDefinition.CapFor"/>), so Normal gives half of it.
+        /// Gives a character without a diet score (new, or tracked before v0.4.3) the starting tier and its starting score:
+        /// Getting By, or Malnourished on a Brutal start and Starving on a Rock Bottom start (config/diet.json).
         /// </summary>
-        private void ApplyCondition(IServerPlayer player, NutritionState state, float optionValue, bool publish)
+        private void StartDietScore(NutritionState state)
         {
-            float shareOfStore = WorldSettings.StoreShare(optionValue);
-            foreach (var n in Core.Nutrients.All)
+            if (state.HasDietScore) return;
+            int tier = StartingDietTier();
+            state.SetDiet(DietScore.Settings.Tier(tier)?.StartScore ?? 50f, tier);
+        }
+
+        /// <summary>The tier a new character starts on in this world, from its Starting calories choice.</summary>
+        private int StartingDietTier() => DietScore.Settings.StartTierFor(WorldSettings.StartCaloriesName(sapi.World));
+
+        /// <summary>Sets the calorie reserve to <paramref name="shareOfReserve"/> (0 to 1) of its size for this player.</summary>
+        private void FillCalories(IServerPlayer player, NutritionState state, float shareOfReserve, bool publish)
+        {
+            var calories = Core.Nutrients.Get(NutrientCodes.Calories);
+            if (calories != null) SetReserveTo(player, state, calories, calories.CapFor(state) * shareOfReserve, publish);
+        }
+
+        /// <summary>
+        /// Sets every vitamin and mineral store, and the fiber store, to <paramref name="shareOfStore"/> (0 to 1) of its size:
+        /// Normal (0.5) gives 10 days of each 20-day store and 1 day of the 2-day ones (vitamin C, the B vitamins and fiber).
+        /// </summary>
+        private void FillStores(IServerPlayer player, NutritionState state, float shareOfStore, bool publish)
+        {
+            foreach (var nutrient in Core.Nutrients.All)
             {
-                float value;
-                if (n.IsCalories || n.IsMicronutrient) value = n.CapFor(state) * shareOfStore;
-                else continue;
-                float old = state.GetReserve(n.Code);
-                state.SetReserve(n.Code, value);
-                if (publish && old != value) Core.PublishReserveChanged(player, n.Code, old, value);
+                if (nutrient.IsMicronutrient || nutrient.Code == NutrientCodes.Fiber)
+                    SetReserveTo(player, state, nutrient, nutrient.CapFor(state) * shareOfStore, publish);
             }
+        }
+
+        /// <summary>Sets one reserve (in % of a day) and, when <paramref name="publish"/> is on, tells other mods it changed.</summary>
+        private void SetReserveTo(IServerPlayer player, NutritionState state, NutrientDefinition nutrient, float value, bool publish)
+        {
+            float old = state.GetReserve(nutrient.Code);
+            state.SetReserve(nutrient.Code, value);
+            if (publish && old != value) Core.PublishReserveChanged(player, nutrient.Code, old, value);
         }
 
         /// <summary>Saves from v0.2.2 to v0.3.0 kept the gut as batches as well as in the reserves; since v0.3.1 the reserve is the one record.</summary>
@@ -262,15 +290,101 @@ namespace ComplexNutrition.Modules.Tracking
         }
 
         /// <summary>
-        /// A respawned character gets the world's respawn condition (Brutal unless set: 10% of the calorie reserve and of each
-        /// vitamin and mineral store). The gut and the last 24 hours of digestion are cleared, so the new body starts fresh.
-        /// Fiber empties too: a new gut starts with none. Vanilla gives half a stomach of fullness.
+        /// A character respawns after dying (reworked in v0.4.2 to be gentler). Three things happen:
+        /// 1. The calorie reserve follows Respawn effects: Calories/Diet Tier (<see cref="SetRespawnCalories"/>).
+        /// 2. With Keep vitamin and mineral reserves on death switched on (the default), the vitamin, mineral and fiber stores
+        ///    and the vitamin C and B vitamin day counts stay as they were. Switched off, the stores go back to what a new
+        ///    character starts with (Starting vitamin and mineral reserves) and the day counts start again.
+        /// 3. The gut always empties, with the last 24 hours of digestion, so the new body starts digesting from nothing.
+        /// Vanilla gives half a stomach of fullness.
         /// </summary>
         private void OnRespawn(IServerPlayer player)
         {
             var state = player?.Entity == null ? null : StateOf(player.Entity);
             if (state == null) return;
-            ApplyCondition(player, state, WorldSettings.RespawnCalories(sapi.World), publish: true);
+            SetRespawnCalories(player, state);
+            if (!WorldSettings.KeepStores(sapi.World))
+            {
+                float storesChoice = WorldSettings.StartStores(sapi.World) ?? WorldSettings.DefaultStartStoresValue;
+                FillStores(player, state, WorldSettings.StoreShare(storesChoice), publish: true);
+                Effects?.Reset(state);
+            }
+            EmptyGut(player, state);
+            state.MarkDirty();
+            // Trend arrows compare against the new body, not the old one.
+            var history = NutrientHistory.Of(player.Entity);
+            history.ClearHours();
+            history.RecordHour(CurrentHour, Reserves(state));
+        }
+
+        /// <summary>
+        /// Sets the calorie reserve of a character who just respawned, by the world's Respawn effects: Calories/Diet Tier choice:
+        /// - Lose calories on death (the default): a tenth of what the reserve held (respawnKeptShare), but at least 1,000kcal
+        ///   (respawnMinKcal), and never more than the reserve holds.
+        /// - Keep calories on death: unchanged.
+        /// - Reset calorie progress on death: 1,000kcal (respawnResetKcal), or Rock Bottom's share of the reserve on a world
+        ///   that starts at Rock Bottom, and the diet goes back to the first tier.
+        /// </summary>
+        private void SetRespawnCalories(IServerPlayer player, NutritionState state)
+        {
+            var calories = Core.Nutrients.Get(NutrientCodes.Calories);
+            if (calories == null) return;
+            string choice = WorldSettings.RespawnCalories(sapi.World);
+            // The diet changes first, so the reserve's size is the new tier's when the new amount is worked out.
+            if (choice == WorldSettings.RespawnReset) ResetDiet(player, state);
+            else if (choice == WorldSettings.RespawnLoseTier) LoseDietTier(player, state);
+            float atDeath = state.GetReserve(calories.Code);
+            float afterRespawn = Settings.CaloriesOnRespawn(choice, atDeath, calories.CapFor(state), calories, WorldSettings.RockBottomStart(sapi.World));
+            SetReserveTo(player, state, calories, afterRespawn, publish: true);
+        }
+
+        /// <summary>
+        /// "Reset calorie progress on death": the diet goes back to the tier a new character starts on, at its starting score.
+        /// A player already below that tier stays where they are, so dying never helps.
+        /// </summary>
+        private void ResetDiet(IServerPlayer player, NutritionState state)
+        {
+            int start = StartingDietTier();
+            if (state.DietTier < start || (state.DietTier == start && state.DietScoreValue <= (DietScore.Settings.Tier(start)?.StartScore ?? 0f)))
+            {
+                state.DietProgress = new DietTierProgress(state.DietTier, state.DietTier, 0);
+                return;
+            }
+            SetDietTier(player, state, start);
+        }
+
+        /// <summary>"Lose one diet tier on death": the diet drops one tier, to that tier's starting score. Starving can't drop further.</summary>
+        private void LoseDietTier(IServerPlayer player, NutritionState state)
+        {
+            int below = state.DietTier - 1;
+            if (below < NutritionState.FirstDietTier)
+            {
+                state.DietProgress = new DietTierProgress(state.DietTier, state.DietTier, 0);
+                return;
+            }
+            SetDietTier(player, state, below);
+        }
+
+        /// <summary>Puts a player on a tier straight away, at its starting score, and tells them.</summary>
+        private void SetDietTier(IServerPlayer player, NutritionState state, int tier)
+        {
+            int before = state.DietTier;
+            state.SetDiet(DietScore.Settings.Tier(tier)?.StartScore ?? 0f, tier);
+            if (tier != before) TellTierChanged(player, before, tier);
+        }
+
+        /// <summary>Tells a player in chat that their diet tier changed.</summary>
+        private void TellTierChanged(IServerPlayer player, int before, int after)
+        {
+            var tier = DietScore.Settings.Tier(after);
+            if (tier == null) return;
+            string key = after > before ? "complexnutrition:diet-tier-up" : "complexnutrition:diet-tier-down";
+            player.SendMessage(GlobalConstants.GeneralChatGroup, Lang.GetL(player.LanguageCode, key, Lang.GetL(player.LanguageCode, tier.LangKey)), EnumChatType.Notification);
+        }
+
+        /// <summary>Empties the gut on death: carbs, fats, protein and fiber still being digested, and the 24-hour digestion logs.</summary>
+        private void EmptyGut(IServerPlayer player, NutritionState state)
+        {
             foreach (var kv in Digest.Pools)
             {
                 var def = Core.Nutrients.Get(kv.Key);
@@ -283,25 +397,12 @@ namespace ComplexNutrition.Modules.Tracking
                 state.SetAbsorbedLog(kv.Key, new float[24]);
                 state.SetAbsorbedLog(Digestion.KcalLogKey(kv.Key), new float[24]);
             }
-            var fiber = Core.Nutrients.Get(NutrientCodes.Fiber);
-            if (fiber != null)
-            {
-                float old = state.GetReserve(fiber.Code);
-                state.SetReserve(fiber.Code, 0f);
-                if (old != 0f) Core.PublishReserveChanged(player, fiber.Code, old, 0f);
-            }
             state.FiberGut = 0f;
             state.SetGutHours(NutrientCodes.Fiber, 0f);
             state.SetAbsorbedLog(NutrientCodes.Fiber, new float[24]);
             state.SetAbsorbedLog(Digestion.KcalLogKey(NutrientCodes.Fiber), new float[24]);
             state.Protein24 = 0f;
             state.ClearSitting();
-            Effects?.Reset(state);
-            state.MarkDirty();
-            // Trend arrows compare against the new body, not the old one.
-            var history = NutrientHistory.Of(player.Entity);
-            history.ClearHours();
-            history.RecordHour(CurrentHour, Reserves(state));
         }
 
         /// <summary>Lets vanilla recompute its nutrition HP bonus; our patch keeps it at zero while tracking is on.</summary>
@@ -327,11 +428,39 @@ namespace ComplexNutrition.Modules.Tracking
             if (day != int.MinValue && day < today)
             {
                 Core.PublishDailyRollover(player, ledger.Get(day));
+                ScoreDay(player, state, day, history);
             }
+            if (state.HasDietScore) history.SetDietScore(today, state.DietScoreValue);
             state.ClearToday();
+            state.ClearDietToday();
             state.Day = today;
             ledger.Prune(today, Settings.LedgerDays);
             history.Prune(today, Settings.LedgerDays);
+        }
+
+        /// <summary>
+        /// Midnight for the diet score (since v0.4.3): the day that just ended gets its score, the diet score closes part of the
+        /// gap to it, and the tier moves if the score has pointed past it for long enough. A day the player's body never ran
+        /// (logged out, in creative mode or dead the whole time) doesn't count.
+        /// </summary>
+        private void ScoreDay(IServerPlayer player, NutritionState state, int day, NutrientHistory history)
+        {
+            if (!state.PlayedToday) return;
+            var settings = DietScore.Settings;
+            float dayScore = DietScore.DayScore(settings, code => DietScore.Brought(state, code, day));
+            history.SetDayScore(day, dayScore);
+            foreach (var code in settings.Weights.Keys) state.SetLastDayShare(code, DietScore.Share(DietScore.Brought(state, code, day)));
+            state.LastDayScore = dayScore;
+            state.DietScoreBefore = state.DietScoreValue;
+            state.DietScoreValue = DietScore.Follow(settings, state.DietScoreValue, dayScore);
+            int before = state.DietTier;
+            state.DietProgress = DietScore.NextTier(settings, state.DietProgress, state.DietScoreValue);
+            if (state.DietTier != before)
+            {
+                TellTierChanged(player, before, state.DietTier);
+                Effects?.Apply(player, state, Runs(player));
+            }
+            state.MarkDirty();
         }
 
         private long CurrentHour => (long)Math.Floor(NowHours);
@@ -348,7 +477,10 @@ namespace ComplexNutrition.Modules.Tracking
         private void RecordHourly(IServerPlayer player, NutritionState state)
         {
             var history = NutrientHistory.Of(player.Entity);
-            if (history.LastHour != CurrentHour) history.RecordHour(CurrentHour, Reserves(state));
+            if (history.LastHour == CurrentHour) return;
+            history.RecordHour(CurrentHour, Reserves(state));
+            // The diet score for the History chart: also kept hourly, so a score set by command mid-day shows too.
+            if (state.HasDietScore) history.SetDietScore(Today, state.DietScoreValue);
         }
 
         /// <summary>The nutrition window's history for a player, or null when tracking is not running for them.</summary>
@@ -400,6 +532,7 @@ namespace ComplexNutrition.Modules.Tracking
 
                 if (drains)
                 {
+                    state.PlayedToday = true;
                     foreach (var n in Core.Nutrients.All)
                     {
                         if (n.IsCalories || Digest.Pool(n.Code) != null) continue;   // calories follow the hunger rate; gut pools digest below
@@ -514,6 +647,7 @@ namespace ComplexNutrition.Modules.Tracking
                     kcal += got;
                     log[(int)(hour % 24)] += absorbed;
                     kcalLog[(int)(hour % 24)] += got;
+                    if (def != null) state.AddDigestedToday(code, def.ToPercent(absorbed));
                 }
                 state.SetAbsorbedLog(code, log);
                 state.SetAbsorbedLog(Digestion.KcalLogKey(code), kcalLog);
@@ -530,8 +664,11 @@ namespace ComplexNutrition.Modules.Tracking
             float fiberKcal = DigestFiber(state, hours);
             if (fiberKcal > 0f)
             {
+                float fiberGrams = fiberKcal / Math.Max(0.01f, Digest.FiberKcalPerGram);
                 fiberKcalLog[(int)(hour % 24)] += fiberKcal;
-                fiberLog[(int)(hour % 24)] += fiberKcal / Math.Max(0.01f, Digest.FiberKcalPerGram);
+                fiberLog[(int)(hour % 24)] += fiberGrams;
+                var fiberNutrient = Core.Nutrients.Get(NutrientCodes.Fiber);
+                if (fiberNutrient != null) state.AddDigestedToday(NutrientCodes.Fiber, fiberNutrient.ToPercent(fiberGrams));
             }
             state.SetAbsorbedLog(NutrientCodes.Fiber, fiberLog);
             state.SetAbsorbedLog(Digestion.KcalLogKey(NutrientCodes.Fiber), fiberKcalLog);
@@ -769,6 +906,18 @@ namespace ComplexNutrition.Modules.Tracking
                     .WithArgs(parsers.OnlinePlayer("player"), parsers.Word("nutrient"), parsers.Float("days"))
                     .HandleWith(args => SetDaysLowCommand((IServerPlayer)args[0], (string)args[1], (float)args[2]))
                 .EndSubCommand()
+                .BeginSubCommand("setdietscore")
+                    .WithDescription("For testing diet tiers: set a player's diet score (0 to 100) and put them on its tier straight away: /cnutrition setdietscore <player> <score>")
+                    .RequiresPrivilege(Privilege.controlserver)
+                    .WithArgs(parsers.OnlinePlayer("player"), parsers.Float("score"))
+                    .HandleWith(args => SetDietScoreCommand((IServerPlayer)args[0], (float)args[1]))
+                .EndSubCommand()
+                .BeginSubCommand("endday")
+                    .WithDescription("For testing the diet score: score a player's day so far as if it were midnight, and start a new day's record: /cnutrition endday <player>")
+                    .RequiresPrivilege(Privilege.controlserver)
+                    .WithArgs(parsers.OnlinePlayer("player"))
+                    .HandleWith(args => EndDayCommand((IServerPlayer)args[0]))
+                .EndSubCommand()
                 .BeginSubCommand("ledger")
                     .WithDescription("Show a player's diet ledger: calories per food category for each recorded day")
                     .RequiresPrivilege(Privilege.controlserver)
@@ -833,6 +982,36 @@ namespace ComplexNutrition.Modules.Tracking
             Effects?.Apply(target, state, Runs(target));
             state.MarkDirty();
             return TextCommandResult.Success($"Set {code} to {days} days without a full day stored for {target.PlayerName}.");
+        }
+
+        private TextCommandResult SetDietScoreCommand(IServerPlayer target, float score)
+        {
+            var state = StateOf(target.Entity);
+            if (state == null) return TextCommandResult.Error("Tracking is not running for " + target.PlayerName);
+            int before = state.DietTier;
+            int tier = DietScore.Settings.TierFor(score);
+            state.SetDiet(score, tier);
+            NutrientHistory.Of(target.Entity).SetDietScore(Today, state.DietScoreValue);
+            if (tier != before) TellTierChanged(target, before, tier);
+            Effects?.Apply(target, state, Runs(target));
+            state.MarkDirty();
+            return TextCommandResult.Success($"Set the diet score of {target.PlayerName} to {Math.Round(state.DietScoreValue, 1)} ({Lang.Get(DietScore.Settings.Tier(tier)?.LangKey ?? "")}).");
+        }
+
+        private TextCommandResult EndDayCommand(IServerPlayer target)
+        {
+            var state = StateOf(target.Entity);
+            if (state == null) return TextCommandResult.Error("Tracking is not running for " + target.PlayerName);
+            state.PlayedToday = true;
+            var history = NutrientHistory.Of(target.Entity);
+            ScoreDay(target, state, Today, history);
+            history.SetDietScore(Today, state.DietScoreValue);
+            state.ClearToday();
+            state.ClearDietToday();
+            state.MarkDirty();
+            var p = state.DietProgress;
+            string pending = p.PendingTier != p.Tier ? $", {p.PendingDays} of {DietScore.Settings.DaysToChangeTier} days towards {Lang.Get(DietScore.Settings.Tier(p.PendingTier)?.LangKey ?? "")}" : "";
+            return TextCommandResult.Success($"{target.PlayerName}: day score {Math.Round(state.LastDayScore, 1)}, diet score {Math.Round(state.DietScoreValue, 1)} ({Lang.Get(DietScore.Settings.Tier(p.Tier)?.LangKey ?? "")}{pending}).");
         }
 
         private TextCommandResult LedgerCommand(IServerPlayer target)

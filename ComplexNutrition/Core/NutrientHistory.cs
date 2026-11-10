@@ -15,6 +15,10 @@ namespace ComplexNutrition.Core
         public float Gained;
         /// <summary>Calories burned from the reserve that day: activity and healing (v0.3.3).</summary>
         public float Burned;
+        /// <summary>The diet score the player had that day (since 0.4.3b); null for a day with no record.</summary>
+        public float? DietScore;
+        /// <summary>That day's own score, worked out at its midnight (since 0.4.3b); null until then, or for a day not played.</summary>
+        public float? DayScore;
 
         public float TotalKcal => KcalByCategory.Values.Sum();
     }
@@ -91,6 +95,21 @@ namespace ComplexNutrition.Core
                 FlowHours[key] = slot;
             }
             if (burned > 0f) slot.SetFloat("burned", slot.GetFloat("burned") + burned);
+        }
+
+        /// <summary>Records the diet score a player has on a day (since 0.4.3b), for the History chart's diet line.</summary>
+        public void SetDietScore(int day, float score) => Flow.GetOrAddTreeAttribute("d" + day).SetFloat("diet", score);
+
+        /// <summary>Records a day's own score once its midnight has passed (since 0.4.3b).</summary>
+        public void SetDayScore(int day, float score) => Flow.GetOrAddTreeAttribute("d" + day).SetFloat("dayScore", score);
+
+        /// <summary>A day's diet score and its own score, each null when not recorded.</summary>
+        public (float? diet, float? dayScore) DietDay(int day)
+        {
+            var dayTree = Flow.GetTreeAttribute("d" + day);
+            if (dayTree == null) return (null, null);
+            float? Read(string key) => dayTree.HasAttribute(key) ? dayTree.GetFloat(key) : null;
+            return (Read("diet"), Read("dayScore"));
         }
 
         public (float gained, float burned) DayFlow(int day)
@@ -216,6 +235,7 @@ namespace ComplexNutrition.Core
                 };
                 if (ledger != null) entry.KcalByCategory = ledger.Get(day).KcalByCategory;
                 (entry.Gained, entry.Burned) = DayFlow(day);
+                (entry.DietScore, entry.DayScore) = DietDay(day);
                 data.Days.Add(entry);
             }
             data.BurnedHour = BurnedOver(nowHours, 1);

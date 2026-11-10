@@ -175,7 +175,7 @@ namespace ComplexNutrition.UI
             float r = d.State.GetReserve(n.Code);
             return new BarBlock
             {
-                Label = StatsHover.Esc(label ?? Lang.Get(n.LangKey)),
+                Label = StatsHover.Esc(label ?? NutrientDisplay.BarName(n)),
                 Value = r,
                 Max = Math.Max(n.CapFor(d.State), r),
                 LineInterval = 100,
@@ -239,6 +239,8 @@ namespace ComplexNutrition.UI
                 blocks.Add(new TextBlock(L("window-healing-tip"), true));
             }
 
+            AddDiet(blocks, d);
+
             // The last 24 hours of each macro as one table (v0.3.6i): digested, the limit, and the calories it gave.
             var s = d.Digest;
             if (s != null)
@@ -257,7 +259,7 @@ namespace ComplexNutrition.UI
                     float limit;
                     if (code == NutrientCodes.Fiber) limit = DigestionSettings.FiberGutRate(n) * 24f;
                     else if (pool == null) continue;
-                    // Carbs' 12-hour limit, scaled to the 24 hours shown (300g -> 600g); a visual match only.
+                    // A pool's limit over its own window, scaled to the 24 hours shown (all three use 24 hours since 0.4.3b).
                     else limit = code == NutrientCodes.Protein ? s.ProteinNeedGrams : pool.DiminishingAboveGrams * 24f / Math.Clamp(pool.WindowHours, 1, 24);
                     float grams = Digestion.Last24(d.State, code);
                     float kcal = Digestion.Last24(d.State, Digestion.KcalLogKey(code));
@@ -319,6 +321,100 @@ namespace ComplexNutrition.UI
                 }
             }
             return blocks;
+        }
+
+        /// <summary>
+        /// The Diet section (since v0.4.3): the diet score with its tier and which way it is going, what the tier does, and how
+        /// close a tier change is. The score's hover explains it and shows today so far, nutrient by nutrient.
+        /// </summary>
+        private static void AddDiet(List<PageBlock> blocks, NutritionPageData d)
+        {
+            var settings = DietScore.Settings;
+            var state = d.State;
+            if (settings.Tiers.Count == 0 || !state.HasDietScore) return;
+            var tier = settings.Tier(state.DietTier);
+            string tierName = Lang.Get(tier.LangKey);
+            float score = state.DietScoreValue;
+            float change = score - state.DietScoreBefore;
+            string trend = change > 0.05f ? L("window-diet-rising") : change < -0.05f ? L("window-diet-falling") : L("window-diet-steady");
+
+            blocks.Add(new HeadingBlock(L("window-heading-diet")));
+            blocks.Add(new TextBlock(StatsHover.Text(L("window-diet-score", Math.Round(score).ToString("0"), tierName, trend)), false, DietTip(d))
+            {
+                InfoTip = DietInfo(settings),
+            });
+
+            // The tier is already named on the line above, so this line gives only what it does (0.4.3b).
+            string effects = NutrientDisplay.TierEffectText(tier, d.BaseMaxHealth);
+            if (!NutrientEffects.WorldOn) blocks.Add(new TextBlock(StatsHover.Text(L("window-diet-effects-worldoff")), true));
+            else if (effects == "") blocks.Add(new TextBlock(StatsHover.Text(L("window-diet-effects-none")), true));
+            else
+            {
+                bool bonus = tier.Effects.Any(e => e.Value > 0f);
+                blocks.Add(new TextBlock(StatsHover.Paint(L("window-diet-effects", effects), bonus ? Good : Empty), true));
+            }
+
+            // The calorie reserve's size on this tier (since v0.4.4), which applies even with nutrient effects switched off.
+            if (tier.CalorieReserveDays > 0f)
+                blocks.Add(new TextBlock(StatsHover.Text(tier.CalorieReserveDays == 1f ? L("window-diet-reserve-one") : L("window-diet-reserve", Num(tier.CalorieReserveDays))), true));
+
+            var progress = state.DietProgress;
+            if (progress.PendingTier != progress.Tier)
+            {
+                int left = Math.Max(1, settings.DaysToChangeTier - progress.PendingDays);
+                string days = left == 1 ? L("window-diet-day") : L("window-diet-days", left);
+                string next = Lang.Get(settings.Tier(progress.PendingTier).LangKey);
+                string key = progress.PendingTier > progress.Tier ? "window-diet-pending-up" : "window-diet-pending-down";
+                blocks.Add(new TextBlock(StatsHover.Text(L(key, days, next)), true));
+            }
+        }
+
+        /// <summary>
+        /// The white "i" right of the diet score (0.4.3b, Miles's wording): how the tier changes, with "digested" in bold green
+        /// and "not eaten" in italics, "eaten" orange.
+        /// </summary>
+        private static string DietInfo(DietSettings settings) => StatsHover.Vtml("complexnutrition:window-diet-info",
+            settings.DaysToChangeTier,
+            "<strong><font color=\"" + Good + "\">" + StatsHover.Esc(L("window-diet-info-digested")) + "</font></strong>",
+            // One italic run for "not eaten": VTML drops a space that stands alone between two tags.
+            "<i>" + StatsHover.Esc(L("window-diet-info-not")) + " <font color=\"" + UnitColors.Kcal + "\">" + StatsHover.Esc(L("window-diet-info-eaten")) + "</font></i>");
+
+        /// <summary>
+        /// A nutrient's name in its colour on the diet score hover: macros in their bar colours, vitamins yellow and minerals blue,
+        /// as their amounts are in food tooltips.
+        /// </summary>
+        private static string NutrientName(NutrientDefinition n, string before = "")
+        {
+            string color = NutrientDisplay.MacroColors.TryGetValue(n.Code, out var macro) ? StatsHover.Hex(macro)
+                : n.Group == "Mineral" ? UnitColors.Mineral
+                : UnitColors.Micro;
+            return "<font color=\"" + color + "\">" + StatsHover.Esc(before + NutrientDisplay.BarName(n)) + "</font>";
+        }
+
+        /// <summary>The diet score's hover: what it is, yesterday's score, and today's score so far by nutrient.</summary>
+        private static string DietTip(NutritionPageData d)
+        {
+            var settings = DietScore.Settings;
+            var state = d.State;
+            var lines = new List<string>
+            {
+                "<strong>" + StatsHover.Esc(L("window-diet-name")) + "</strong>: " + StatsHover.Text(L("window-diet-what")),
+                "",
+            };
+            if (state.LastDayScore >= 0f) lines.Add(StatsHover.Text(L("window-diet-lastday", Math.Round(state.LastDayScore).ToString("0"))));
+            float today = DietScore.DayScore(settings, code => DietScore.Brought(state, code, d.Today));
+            lines.Add(StatsHover.Text(L("window-diet-today", Math.Round(today).ToString("0"))));
+            foreach (var kv in settings.Weights)
+            {
+                var n = d.Nutrients.Get(kv.Key);
+                if (n == null || kv.Value <= 0f) continue;
+                float share = DietScore.Share(DietScore.Brought(state, kv.Key, d.Today));
+                string pct = Math.Round(share * 100f).ToString("0") + "%";
+                string color = share >= 0.999f ? Good : share < 0.5f ? Empty : Low;
+                // The spaces go inside the coloured runs: VTML drops a space that ends a run just before a tag.
+                lines.Add("•" + StatsHover.Vtml("complexnutrition:window-diet-nutrient", NutrientName(n, " "), StatsHover.Esc(Num(kv.Value)), StatsHover.Paint(" " + pct, color)));
+            }
+            return string.Join("<br>", lines);
         }
 
         /// <summary>A macro's 24-hour calories, red when diminishing returns took some.</summary>
@@ -556,6 +652,8 @@ namespace ComplexNutrition.UI
         }
 
         public static readonly double[] GainedColor = { 0.45, 0.78, 0.40, 1.0 };
+        /// <summary>The diet score's line on the food chart (since 0.4.3b), lavender so it stands apart from every food type.</summary>
+        public static readonly double[] DietColor = { 0.78, 0.64, 0.96, 1.0 };
         public static readonly double[] BurnedColor = { 0.93, 0.42, 0.37, 1.0 };
 
         /// <summary>The top of both History charts unless a day went past it, in kcal.</summary>
@@ -585,8 +683,8 @@ namespace ComplexNutrition.UI
             return (avg, StatsHover.Text(full.Count == 1 ? L("history-mark-burn-one", Kcal(d, avg)) : L("history-mark-burn", Kcal(d, avg), full.Count)));
         }
 
-        /// <summary>A food chart day's hover: the calories eaten in all and by food type.</summary>
-        private static string FoodTip(NutritionPageData d, float[] stack, int daysAgo)
+        /// <summary>A food chart day's hover: the calories eaten in all and by food type, then its diet score and its own score.</summary>
+        private static string FoodTip(NutritionPageData d, float[] stack, int daysAgo, float? diet, float? dayScore)
         {
             var sb = new StringBuilder(Bold(DayName(daysAgo)));
             float total = stack.Sum();
@@ -598,6 +696,12 @@ namespace ComplexNutrition.UI
                 sb.Append("<br>").Append("<font color=\"").Append(StatsHover.Hex(CategoryColors[Categories[i]], 0)).Append("\">\u25a0</font> ")
                   .Append(StatsHover.Text(L("history-tip-category", L("history-cat-" + Categories[i].ToLowerInvariant()), Kcal(d, stack[i]), pct)));
             }
+            if (diet != null || dayScore != null) sb.Append("<br>");
+            if (diet != null)
+                sb.Append("<br>").Append("<font color=\"").Append(StatsHover.Hex(DietColor, 0)).Append("\">\u25a0</font> ")
+                  .Append(StatsHover.Text(L("history-tip-diet", Math.Round(diet.Value).ToString("0"))));
+            if (dayScore != null)
+                sb.Append("<br>").Append(StatsHover.Text(L(daysAgo <= 0 ? "window-diet-today" : "history-tip-dayscore", Math.Round(dayScore.Value).ToString("0"))));
             return sb.ToString();
         }
 
@@ -675,6 +779,16 @@ namespace ComplexNutrition.UI
             blocks.Add(new HeadingBlock(L("history-heading-food")));
             blocks.Add(new GapBlock(2));
 
+            // The diet score as a line over the bars (since 0.4.3b), on its own scale of 0 to 100. Today's point is the live score
+            // and today's own score so far; past days show what the server recorded.
+            var settings = DietScore.Settings;
+            bool hasDiet = d.State.HasDietScore && settings.Tiers.Count > 0;
+            int last = h.Days.Count - 1;
+            var diet = h.Days.Select((day, i) => !hasDiet ? null : i == last ? d.State.DietScoreValue : day.DietScore).ToArray();
+            var dayScores = h.Days.Select((day, i) => !hasDiet ? null
+                : i == last ? DietScore.DayScore(settings, code => DietScore.Brought(d.State, code, d.Today))
+                : day.DayScore).ToArray();
+
             var chart = new ChartBlock
             {
                 Bars = stacks,
@@ -682,8 +796,12 @@ namespace ComplexNutrition.UI
                 BarMax = barMax,
                 BarMark = mark,
                 MarkTip = markTip,
+                Line = diet,
+                LineMax = 100f,
+                LineColor = DietColor,
                 TopLeft = TopValue(Kcal(d, barMax)),
-                Tips = h.Days.Select((day, i) => FoodTip(d, stacks[i], h.Days.Count - 1 - i)).ToArray(),
+                TopRight = hasDiet ? "<font color=\"" + StatsHover.Hex(DietColor, 0) + "\">" + StatsHover.Esc(L("history-diet-top")) + "</font>" : null,
+                Tips = h.Days.Select((day, i) => FoodTip(d, stacks[i], last - i, diet[i], dayScores[i])).ToArray(),
                 BottomLeft = StatsHover.Text(L("history-days-ago", h.Days.Count - 1)),
                 BottomRight = StatsHover.Text(L("history-today")),
             };
@@ -692,6 +810,14 @@ namespace ComplexNutrition.UI
                 bool any = stacks.Any(st => st[i] > 0);
                 if (Categories[i] == "Unknown" && !any) continue;
                 chart.Legend.Add((CategoryColors[Categories[i]], StatsHover.Esc(L("history-cat-" + Categories[i].ToLowerInvariant()))));
+            }
+            // The diet line's key says what the line means when hovered (0.4.3b; it was a paragraph under the chart at first).
+            if (hasDiet)
+            {
+                string swatch = "<font color=\"" + StatsHover.Hex(DietColor, 0) + "\">\u25a0</font>";
+                chart.LegendTips[chart.Legend.Count] = StatsHover.Vtml("complexnutrition:history-diet-explain", swatch,
+                    Num(Math.Max(1f, settings.FollowDays)), Math.Max(1, settings.DaysToChangeTier));
+                chart.Legend.Add((DietColor, StatsHover.Esc(L("history-diet"))));
             }
             blocks.Add(chart);
             return blocks;

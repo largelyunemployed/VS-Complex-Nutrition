@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ComplexNutrition.Core;
 using Vintagestory.API.Common;
 using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
 using Vintagestory.API.Server;
 using Vintagestory.GameContent;
@@ -63,7 +64,7 @@ namespace ComplexNutrition.Modules.Tracking
             sapi.Logger.Error("[complexnutrition] Failed {0}: {1}", what, e);
         }
 
-        /// <summary>A body that has just respawned starts its timed counters again.</summary>
+        /// <summary>Starts the timed counters (vitamin C and the B vitamins) again, for a respawn with Keep vitamin and mineral reserves on death switched off.</summary>
         public void Reset(NutritionState state)
         {
             foreach (var code in S.WithEffects)
@@ -118,6 +119,30 @@ namespace ComplexNutrition.Modules.Tracking
             float baseHealth = health?.BaseMaxHealth ?? 15f;
             if (!applied.TryGetValue(entity.EntityId, out var mine)) applied[entity.EntityId] = mine = new Dictionary<string, float>();
             bool healthChanged = false;
+            bool armorChanged = false;
+
+            // Puts one modifier (named after its source, a nutrient code or the diet tier) on a stat, or takes it off at zero.
+            void SetModifier(EffectTarget target, string source, float delta)
+            {
+                string key = target.Stat + "|" + source;
+                bool had = mine.TryGetValue(key, out float last);
+                if (Math.Abs(delta) < 0.0005f)
+                {
+                    if (!had) return;
+                    entity.Stats.Remove(target.Stat, NutrientEffects.StatPrefix + source);
+                    mine.Remove(key);
+                }
+                else
+                {
+                    // Shares move in steps of 0.1% and health in 0.05 points, so a slowly draining store doesn't resend the stats every few seconds.
+                    float step = target.PerBaseHealth ? 0.05f : 0.001f;
+                    if (had && Math.Abs(delta - last) < step) return;
+                    entity.Stats.Set(target.Stat, NutrientEffects.StatPrefix + source, delta, false);
+                    mine[key] = delta;
+                }
+                if (target.PerBaseHealth) healthChanged = true;
+                if (target.Stat == ArmorSlowdownStat) armorChanged = true;
+            }
 
             foreach (var code in S.WithEffects)
             {
@@ -125,27 +150,45 @@ namespace ComplexNutrition.Modules.Tracking
                 foreach (var t in S.Of(code).Targets)
                 {
                     if (string.IsNullOrEmpty(t.Stat) || t.Stat == NutrientEffects.PhysicalResistance) continue;
-                    string key = t.Stat + "|" + code;
-                    float delta = NutrientEffects.StatDelta(t, strength, baseHealth);
-                    bool had = mine.TryGetValue(key, out float last);
-                    if (Math.Abs(delta) < 0.0005f)
-                    {
-                        if (!had) continue;
-                        entity.Stats.Remove(t.Stat, NutrientEffects.StatPrefix + code);
-                        mine.Remove(key);
-                    }
-                    else
-                    {
-                        // Shares move in steps of 0.1% and health in 0.05 points, so a slowly draining store doesn't resend the stats every few seconds.
-                        float step = t.PerBaseHealth ? 0.05f : 0.001f;
-                        if (had && Math.Abs(delta - last) < step) continue;
-                        entity.Stats.Set(t.Stat, NutrientEffects.StatPrefix + code, delta, false);
-                        mine[key] = delta;
-                    }
-                    if (t.PerBaseHealth) healthChanged = true;
+                    SetModifier(t, code, NutrientEffects.StatDelta(t, strength, baseHealth));
                 }
             }
+
+            // The diet tier's effects (since v0.4.3): every stat any tier changes, at the current tier's value or nothing.
+            var tier = running && NutrientEffects.WorldOn ? DietScore.Settings.Tier(state.DietTier) : null;
+            foreach (var target in DietScore.TierStats(DietScore.Settings))
+            {
+                var current = tier?.Effects.Find(e => e.Stat == target.Stat);
+                SetModifier(target, DietScore.TierSource, current == null ? 0f : NutrientEffects.StatDelta(current, current.Value, baseHealth));
+            }
             if (healthChanged) health?.UpdateMaxHealth();
+            if (armorChanged) RefreshArmorSlowdown(player);
+        }
+
+        /// <summary>The vanilla stat for how much worn armor slows you down (vitamin E's effect since 0.4.2d).</summary>
+        private const string ArmorSlowdownStat = "armorWalkSpeedAffectedness";
+
+        /// <summary>The game's own method that works out walk speed from worn armor. It is private, so it is found once by name.</summary>
+        private static readonly System.Reflection.MethodInfo UpdateWearableStats =
+            HarmonyLib.AccessTools.Method(typeof(ModSystemWearableStats), "updateWearableStats");
+
+        /// <summary>
+        /// The game only works out armor's slowdown when a clothing slot changes or the player joins. When vitamin E's effect
+        /// changes, this asks it to work it out again, so the new slowdown applies straight away.
+        /// </summary>
+        private void RefreshArmorSlowdown(IServerPlayer player)
+        {
+            try
+            {
+                var wearableStats = player.Entity?.Api?.ModLoader.GetModSystem<ModSystemWearableStats>();
+                var characterInventory = player.InventoryManager?.GetOwnInventory(GlobalConstants.characterInvClassName);
+                if (wearableStats == null || characterInventory == null || UpdateWearableStats == null) return;
+                UpdateWearableStats.Invoke(wearableStats, new object[] { characterInventory, player });
+            }
+            catch (Exception e)
+            {
+                LogOnce("armor slowdown", e);
+            }
         }
 
         /// <summary>Takes every modifier and hook off a player (tracking switched off, or the player leaving).</summary>
@@ -156,14 +199,17 @@ namespace ComplexNutrition.Modules.Tracking
             if (applied.TryGetValue(entity.EntityId, out var mine))
             {
                 bool healthChanged = false;
+                bool armorChanged = false;
                 foreach (var key in mine.Keys)
                 {
                     int bar = key.IndexOf('|');
                     entity.Stats.Remove(key.Substring(0, bar), NutrientEffects.StatPrefix + key.Substring(bar + 1));
                     if (key.StartsWith("maxhealthExtraPoints|")) healthChanged = true;
+                    if (key.StartsWith(ArmorSlowdownStat + "|")) armorChanged = true;
                 }
                 applied.Remove(entity.EntityId);
                 if (healthChanged) entity.GetBehavior<EntityBehaviorHealth>()?.UpdateMaxHealth();
+                if (armorChanged) RefreshArmorSlowdown(player);
             }
             if (hooks.TryGetValue(entity.EntityId, out var h))
             {
@@ -222,6 +268,7 @@ namespace ComplexNutrition.Modules.Tracking
                     if (t.Stat == stat) sum += NutrientEffects.StatDelta(t, strength, 0f);
                 }
             }
+            sum += DietScore.TierEffect(state, stat);
             return sum;
         }
     }
